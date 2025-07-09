@@ -46,6 +46,9 @@ logger.info("Initializing Crawl4AI MCP Server")
 async def web_content_extract(url: str) -> str:
     """Extract clean text content from a webpage.
     
+    This tool crawls a webpage and extracts its content in markdown format,
+    suitable for AI processing and analysis.
+    
     Args:
         url: URL of the webpage to crawl
         
