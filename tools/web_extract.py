@@ -4,7 +4,7 @@ import logging
 from typing import Dict, Any
 from urllib.parse import urlparse
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from crawl4ai import AsyncWebCrawler
 
 # Configure logging
@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 class WebExtractParams(BaseModel):
     """Parameters for web content extraction."""
+    
+    model_config = ConfigDict(frozen=True)
     
     url: str = Field(..., description="URL of the webpage to crawl")
     
