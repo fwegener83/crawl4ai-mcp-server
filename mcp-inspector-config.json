@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "crawl4ai": {
+      "command": "/Users/florianwegener/Projects/crawl4ai-mcp-server/.venv/bin/python",
+      "args": ["/Users/florianwegener/Projects/crawl4ai-mcp-server/server.py"],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}
