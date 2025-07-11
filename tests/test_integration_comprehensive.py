@@ -440,7 +440,7 @@ class TestSystemEdgeCases:
         # Test intermittent errors
         call_count = 0
         
-        def mock_arun_with_intermittent_errors(url):
+        def mock_arun_with_intermittent_errors(url, config=None):
             nonlocal call_count
             call_count += 1
             
@@ -480,7 +480,7 @@ class TestSystemEdgeCases:
         from server import mcp
         
         # Test delayed response
-        async def delayed_arun(url):
+        async def delayed_arun(url, config=None):
             await asyncio.sleep(0.1)  # Small delay
             mock_result = MagicMock()
             mock_result.markdown = "Delayed response"

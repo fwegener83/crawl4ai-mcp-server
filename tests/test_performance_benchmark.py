@@ -700,7 +700,7 @@ class TestPerformanceRegression:
         # Mix of successful and failing requests
         call_count = 0
         
-        def mock_arun_with_errors(url):
+        def mock_arun_with_errors(url, config=None):
             nonlocal call_count
             call_count += 1
             

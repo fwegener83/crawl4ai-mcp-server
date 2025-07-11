@@ -396,7 +396,7 @@ class TestWorkflowStateManagement:
             "https://example3.com": "Content from site 3"
         }
         
-        async def mock_arun(url):
+        async def mock_arun(url, config=None):
             mock_result = MagicMock()
             mock_result.markdown = responses.get(url, "Default content")
             mock_result.title = f"Page for {url}"

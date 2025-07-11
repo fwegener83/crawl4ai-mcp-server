@@ -4,6 +4,10 @@ from pydantic import ValidationError
 import json
 from typing import Dict, Any
 
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from tools.web_extract import WebExtractParams
 
 
