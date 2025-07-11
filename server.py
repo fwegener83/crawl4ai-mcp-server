@@ -42,7 +42,7 @@ mcp = FastMCP("Crawl4AI-MCP-Server")
 logger.info("Initializing Crawl4AI MCP Server")
 
 
-@mcp.tool
+@mcp.tool()
 async def web_content_extract(url: str) -> str:
     """Extract clean text content from a webpage.
     
@@ -66,12 +66,15 @@ async def web_content_extract(url: str) -> str:
         
         result = await extract_func(params)
         
-        if result.startswith("Error extracting content"):
-            logger.error(f"Content extraction failed: {result}")
-        else:
-            logger.info(f"Successfully extracted {len(result)} characters from {url}")
+        # Ensure result is a proper string (convert from StringCompatibleMarkdown if needed)
+        result_str = str(result)
         
-        return result
+        if result_str.startswith("Error extracting content"):
+            logger.error(f"Content extraction failed: {result_str}")
+        else:
+            logger.info(f"Successfully extracted {len(result_str)} characters from {url}")
+        
+        return result_str
         
     except Exception as e:
         error_msg = f"Unexpected error during content extraction: {str(e)}"
@@ -79,13 +82,13 @@ async def web_content_extract(url: str) -> str:
         return f"Error extracting content: {str(e)}"
 
 
-async def main():
-    """Main entry point for the server."""
+if __name__ == "__main__":
     logger.info("Starting Crawl4AI MCP Server")
     
     try:
-        # Start the server
-        await mcp.run()
+        # Let FastMCP handle the event loop internally with anyio.run()
+        # Don't wrap in asyncio.run() as it creates nested event loops
+        mcp.run()
     except KeyboardInterrupt:
         logger.info("Server shutdown requested")
     except Exception as e:
@@ -93,7 +96,3 @@ async def main():
         raise
     finally:
         logger.info("Server shutdown complete")
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
