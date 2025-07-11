@@ -5,7 +5,7 @@ from typing import Dict, Any
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, field_validator, ConfigDict
-from crawl4ai import AsyncWebCrawler
+from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -46,8 +46,21 @@ async def web_content_extract(params: WebExtractParams) -> str:
         str: Extracted content in markdown format, or error message
     """
     try:
-        async with AsyncWebCrawler() as crawler:
-            result = await crawler.arun(url=params.url)
+        # Configure browser to run silently
+        browser_config = BrowserConfig(
+            headless=True,
+            verbose=False  # Disable browser-level verbose output
+        )
+        
+        # Configure crawler to run silently
+        run_config = CrawlerRunConfig(
+            verbose=False,  # Disable crawler-level verbose output (critical for eliminating progress output)
+            stream=False,   # Ensure no streaming output
+            log_console=False  # Disable console logging
+        )
+        
+        async with AsyncWebCrawler(config=browser_config) as crawler:
+            result = await crawler.arun(url=params.url, config=run_config)
             
             # Handle case where markdown is None
             if result.markdown is None:
@@ -70,14 +83,27 @@ async def safe_extract(url: str) -> Dict[str, Any]:
         Dict containing success status, content, and metadata
     """
     try:
-        async with AsyncWebCrawler() as crawler:
-            result = await crawler.arun(url=url)
+        # Configure browser to run silently
+        browser_config = BrowserConfig(
+            headless=True,
+            verbose=False  # Disable browser-level verbose output
+        )
+        
+        # Configure crawler to run silently
+        run_config = CrawlerRunConfig(
+            verbose=False,  # Disable crawler-level verbose output (critical for eliminating progress output)
+            stream=False,   # Ensure no streaming output
+            log_console=False  # Disable console logging
+        )
+        
+        async with AsyncWebCrawler(config=browser_config) as crawler:
+            result = await crawler.arun(url=url, config=run_config)
             
             return {
                 "success": True,
                 "content": result.markdown or "",
                 "url": url,
-                "title": result.title or "No title"
+                "title": getattr(result, 'title', 'No title') or "No title"
             }
             
     except Exception as e:
