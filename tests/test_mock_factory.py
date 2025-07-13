@@ -1,6 +1,8 @@
 """Mock factory framework tests."""
 import pytest
 import asyncio
+import os
+import time
 from unittest.mock import AsyncMock, patch, MagicMock
 
 
@@ -376,7 +378,9 @@ class TestMockIntegration:
             assert result.success is True
         
         factory_duration = time.perf_counter() - start_time
-        assert factory_duration < 0.1, f"CrawlResultFactory too slow: {factory_duration:.4f}s"
+        # CI environments can be slower, allow more generous timeout
+        max_duration = 0.2 if os.getenv('CI') else 0.1
+        assert factory_duration < max_duration, f"CrawlResultFactory too slow: {factory_duration:.4f}s (max: {max_duration}s)"
         
         # Test SecurityMockFactory performance
         factory = SecurityMockFactory()
