@@ -41,15 +41,16 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .
         pip install pytest pytest-asyncio pytest-timeout pytest-cov
+        pip install fastmcp python-dotenv pydantic
+        python setup_ci_mocks.py
         
     - name: Run fast tests
       run: |
         pytest -xvs -m "not slow" --timeout=60 --cov=. --cov-report=xml --durations=10
         
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         file: ./coverage.xml
         fail_ci_if_error: false
@@ -82,8 +83,9 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .
         pip install pytest pytest-asyncio pytest-timeout pytest-cov
+        pip install fastmcp python-dotenv pydantic
+        python setup_ci_mocks.py
         
     - name: Run optimized security tests
       env:
@@ -128,15 +130,16 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .
-        pip install pytest pytest-asyncio pytest-timeout pytest-cov pytest-xdist
+        pip install pytest pytest-asyncio pytest-timeout pytest-cov
+        pip install fastmcp python-dotenv pydantic
+        python setup_ci_mocks.py pytest-xdist
         
     - name: Run comprehensive test suite
       run: |
         pytest -x --timeout=300 --cov=. --cov-report=xml --durations=20 -n auto
         
     - name: Upload comprehensive coverage
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         file: ./coverage.xml
         fail_ci_if_error: false
@@ -173,7 +176,7 @@ jobs:
       continue-on-error: true
       
     - name: Upload security reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: security-reports
         path: |
