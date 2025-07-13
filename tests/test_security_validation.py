@@ -254,6 +254,7 @@ class TestURLSecurityValidation:
 class TestInputSanitization:
     """Test input sanitization and validation."""
     
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_special_character_handling(self):
         """Test handling of special characters in URLs."""
@@ -306,6 +307,7 @@ class TestInputSanitization:
                     assert "\x01" not in content
                     assert "\x1f" not in content
     
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_length_limit_enforcement(self):
         """Test enforcement of URL length limits."""
@@ -347,6 +349,7 @@ class TestInputSanitization:
                     content = result.content[0].text
                     assert isinstance(content, str)
     
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_encoding_bypass_attempts(self):
         """Test resistance to encoding bypass attempts."""
@@ -392,6 +395,7 @@ class TestInputSanitization:
 class TestSecurityHeaders:
     """Test security-related headers and responses."""
     
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_information_disclosure_prevention(self):
         """Test prevention of information disclosure."""
@@ -429,6 +433,7 @@ class TestSecurityHeaders:
                 assert "PASSWORD" not in content
                 assert "TOKEN" not in content
     
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_error_message_sanitization(self):
         """Test that error messages don't leak sensitive information."""
