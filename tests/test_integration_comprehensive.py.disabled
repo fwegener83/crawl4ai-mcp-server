@@ -14,7 +14,7 @@ import os
 
 from fastmcp import FastMCP, Client
 from mcp.types import TextContent, CallToolResult
-from crawl4ai import AsyncWebCrawler
+# from crawl4ai import AsyncWebCrawler  # Disabled for CI
 
 
 class TestMCPServerSystemIntegration:
