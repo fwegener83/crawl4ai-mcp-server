@@ -111,7 +111,10 @@ pytest tests/test_stdout_contamination.py tests/test_models.py tests/test_server
 # Critical regression tests (~10 seconds)
 pytest tests/test_mcp_protocol_regression.py tests/test_server.py::TestComponentRegression -v
 
-# Full test suite
+# Full test suite (excluding slow security tests)
+pytest -m "not slow"
+
+# Full test suite including slow tests (can take 5+ minutes)
 pytest
 ```
 
