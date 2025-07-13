@@ -403,3 +403,103 @@ class TestServerPerformance:
                 
                 # Should handle concurrent requests efficiently
                 assert total_time < 2.0  # 10 concurrent requests in under 2 seconds
+
+
+class TestComponentRegression:
+    """REGRESSION: Component-level testing without AsyncIO conflicts.
+    
+    These tests extract valuable patterns from temporary debug files to ensure
+    basic component functionality and dependency management work correctly.
+    """
+    
+    def test_module_imports_without_asyncio(self):
+        """REGRESSION: Ensure components import cleanly without AsyncIO conflicts."""
+        # Test direct module imports (pattern from simple_test.py)
+        from server import mcp, load_environment
+        
+        assert mcp is not None
+        assert isinstance(mcp, FastMCP)
+        assert mcp.name == "Crawl4AI-MCP-Server"
+        assert callable(load_environment)
+    
+    def test_url_validation_regression(self):
+        """REGRESSION: Ensure URL validation works correctly."""
+        # Test URL validation patterns that were critical in debugging
+        from tools.web_extract import WebExtractParams
+        
+        # Valid URL should work
+        params = WebExtractParams(url="https://example.com")
+        assert params.url == "https://example.com"
+        
+        # Invalid URL should raise validation error
+        with pytest.raises(Exception) as exc_info:
+            WebExtractParams(url="not-a-url")
+        
+        # Should be a validation error
+        assert "validation error" in str(exc_info.value).lower() or "invalid" in str(exc_info.value).lower()
+    
+    def test_dependency_versions_compatibility(self):
+        """REGRESSION: Catch dependency version conflicts."""
+        # Test dependency availability (pattern from simple_test.py)
+        import crawl4ai
+        import fastmcp
+        import pydantic
+        
+        # Basic import tests
+        assert hasattr(crawl4ai, '__version__') or hasattr(crawl4ai, '__version__')
+        assert hasattr(pydantic, '__version__')
+        
+        # Test that key classes are available
+        from crawl4ai import AsyncWebCrawler
+        from fastmcp import FastMCP
+        from pydantic import BaseModel
+        
+        assert AsyncWebCrawler is not None
+        assert FastMCP is not None  
+        assert BaseModel is not None
+    
+    def test_environment_configuration_regression(self):
+        """REGRESSION: Environment configuration loading works."""
+        from server import load_environment
+        
+        # Should not raise exception
+        load_environment()
+        
+        # Test that environment loading is idempotent
+        load_environment()
+        load_environment()
+    
+    def test_server_component_integration(self):
+        """REGRESSION: Server components integrate correctly."""
+        from server import mcp
+        
+        # Test that server has expected tools registered
+        assert hasattr(mcp, 'get_tools')
+        
+        # Test async context
+        async def check_tools():
+            tools = await mcp.get_tools()
+            assert "web_content_extract" in tools
+            return tools
+        
+        import asyncio
+        tools = asyncio.run(check_tools())
+        assert len(tools) == 1
+    
+    def test_critical_imports_no_circular_dependencies(self):
+        """REGRESSION: Ensure no circular import dependencies."""
+        # Test that critical imports work independently
+        from tools.web_extract import WebExtractParams, web_content_extract
+        assert WebExtractParams is not None
+        assert callable(web_content_extract)
+        
+        from server import mcp, load_environment, logger
+        assert mcp is not None
+        assert callable(load_environment)
+        assert logger is not None
+        
+        # Test that imports don't interfere with each other
+        from tools.web_extract import WebExtractParams as WEP2
+        from server import mcp as mcp2
+        assert WEP2 is WebExtractParams
+        assert mcp2 is mcp

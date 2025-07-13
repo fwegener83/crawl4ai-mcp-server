@@ -105,8 +105,11 @@ python test_mcp_tool_call.py
 ### Running Tests
 
 ```bash
-# Quick core functionality tests (~13 seconds)
-pytest tests/test_stdout_contamination.py tests/test_models.py tests/test_server.py::TestFastMCPServerIntegration -v
+# Quick core functionality tests (~15 seconds)  
+pytest tests/test_stdout_contamination.py tests/test_models.py tests/test_server.py::TestFastMCPServerIntegration tests/test_server.py::TestComponentRegression -v
+
+# Critical regression tests (~10 seconds)
+pytest tests/test_mcp_protocol_regression.py tests/test_server.py::TestComponentRegression -v
 
 # Full test suite
 pytest
