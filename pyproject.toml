@@ -34,6 +34,14 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "security: marks tests as security-related",
+    "regression: marks tests as critical regression tests",
+]
+timeout = 300
+addopts = [
+    "--strict-markers",
+    "--maxfail=3",
+    "--tb=short",
 ]
 
 [tool.coverage.run]
@@ -56,5 +64,6 @@ test = [
     "pytest>=8.4.1",
     "pytest-asyncio>=1.0.0",
     "pytest-cov>=6.2.1",
+    "pytest-timeout>=2.4.0",
     "tomli>=2.2.1",
 ]
