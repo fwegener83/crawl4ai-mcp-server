@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "crawl4ai-mcp-server"
 version = "0.1.0"
@@ -10,6 +14,14 @@ dependencies = [
     "python-dotenv",
     "pydantic>=2.0.0",
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["tools*", "tests*"]
+exclude = ["main", "server", "test_mcp_tool_call"]
+
+[tool.setuptools]
+py-modules = ["server"]
 
 [project.optional-dependencies]
 test = [
@@ -34,6 +46,14 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "security: marks tests as security-related",
+    "regression: marks tests as critical regression tests",
+]
+timeout = 300
+addopts = [
+    "--strict-markers",
+    "--maxfail=3",
+    "--tb=short",
 ]
 
 [tool.coverage.run]
@@ -56,5 +76,6 @@ test = [
     "pytest>=8.4.1",
     "pytest-asyncio>=1.0.0",
     "pytest-cov>=6.2.1",
+    "pytest-timeout>=2.4.0",
     "tomli>=2.2.1",
 ]
