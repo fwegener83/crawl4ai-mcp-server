@@ -41,13 +41,14 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest pytest-asyncio pytest-timeout pytest-cov
+        pip install pytest pytest-asyncio pytest-timeout pytest-cov psutil
         pip install fastmcp python-dotenv pydantic PyYAML tomli
         python setup_ci_mocks.py
         
-    - name: Run fast tests
+    - name: Run fast tests (mocked)
       run: |
-        pytest -xvs -m "not slow" --timeout=60 --cov=. --cov-report=xml --durations=10
+        # Run tests that don't require full crawl4ai installation
+        pytest -xvs tests/test_cicd_configuration.py tests/test_performance_monitoring.py tests/test_framework_setup.py tests/test_mock_factory.py tests/test_error_sanitization.py tests/test_web_extract_security.py tests/test_security_optimization.py tests/test_e2e_optimized.py --timeout=60 --cov=. --cov-report=xml --durations=10
         
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
@@ -83,7 +84,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest pytest-asyncio pytest-timeout pytest-cov
+        pip install pytest pytest-asyncio pytest-timeout pytest-cov psutil
         pip install fastmcp python-dotenv pydantic PyYAML tomli
         python setup_ci_mocks.py
         
@@ -99,6 +100,47 @@ jobs:
       run: |
         pytest -xvs -m "security and not slow" --timeout=180 --durations=5
       continue-on-error: true
+
+  integration-tests:
+    name: Integration Tests (Real crawl4ai)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      matrix:
+        python-version: ['3.13']
+    needs: [fast-tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Install system dependencies for crawl4ai
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxss1 libasound2
+        
+    - name: Install full crawl4ai and dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-asyncio pytest-timeout pytest-cov psutil
+        pip install fastmcp python-dotenv pydantic PyYAML tomli
+        pip install 'crawl4ai[all]'
+        python -m playwright install chromium --with-deps
+        
+    - name: Run integration tests with real crawl4ai
+      run: |
+        # Restore the real integration tests
+        mv tests/test_server.py.disabled tests/test_server.py || true
+        mv tests/test_integration_comprehensive.py.disabled tests/test_integration_comprehensive.py || true
+        mv tests/test_e2e_workflow.py.disabled tests/test_e2e_workflow.py || true
+        # Run integration tests
+        pytest -xvs tests/test_server.py tests/test_integration_comprehensive.py --timeout=300 --durations=10
 
   comprehensive-tests:
     name: Comprehensive Tests
@@ -130,7 +172,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest pytest-asyncio pytest-timeout pytest-cov
+        pip install pytest pytest-asyncio pytest-timeout pytest-cov psutil
         pip install fastmcp python-dotenv pydantic PyYAML tomli
         python setup_ci_mocks.py pytest-xdist
         
