@@ -60,7 +60,184 @@ Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/
 
 **Important**: Use absolute paths in the configuration.
 
-## Testing and Development
+## Testing Strategy & Development
+
+### Test Architecture Overview
+
+This project uses a comprehensive testing strategy designed for reliability, speed, and thorough validation. Our test suite is organized into categories that balance development velocity with production confidence.
+
+#### Test Categories & Performance Targets
+
+- **Fast Tests** (`pytest -m "not slow"`): <1 minute total
+  - Unit tests with mocked dependencies
+  - Integration tests using FastMCP Client (no subprocess)
+  - Mocked security validation tests
+  - Target: <1 second per test, immediate feedback for development
+
+- **Slow Tests** (`pytest -m "slow"`): <5 minutes total (optimization target)
+  - Real network operations for security validation
+  - Subprocess-based MCP protocol testing
+  - Performance and load testing scenarios
+  - Target: <30 seconds per test, thorough validation
+
+- **Regression Tests**: <30 seconds total
+  - Critical MCP protocol sequence validation
+  - Core functionality that must never break
+  - Component integration preventing regressions
+  - Target: <10 seconds per test, CI/CD gate
+
+### Development Workflows
+
+#### Quick Development Feedback (<1 minute)
+For immediate feedback during active development:
+```bash
+# Core functionality only - fastest feedback loop
+pytest tests/test_stdout_contamination.py tests/test_models.py tests/test_server.py::TestFastMCPServerIntegration -v
+
+# Alternative: exclude all slow tests
+pytest -m "not slow" --tb=short
+```
+
+#### Critical Regression Validation (<30 seconds)
+Before commits, ensure core functionality works:
+```bash
+# Critical MCP protocol and component regression
+pytest tests/test_mcp_protocol_regression.py tests/test_server.py::TestComponentRegression -v
+
+# Verify no protocol violations that would break Claude Desktop
+pytest tests/test_mcp_protocol_regression.py::TestMCPProtocolRegression::test_complete_mcp_initialization_sequence -v
+```
+
+#### Pre-Commit Validation (<2 minutes)
+Before push, run comprehensive validation excluding heavy operations:
+```bash
+# All tests except marked slow ones
+pytest -m "not slow" --timeout=120
+
+# Verify security without performance overhead
+pytest tests/test_security_validation.py::TestURLSecurityValidation::test_malicious_url_blocking -v
+```
+
+#### Security Validation (<5 minutes target)
+Full security test suite (currently being optimized):
+```bash
+# Current security tests (some may be slow)
+pytest tests/test_security_validation.py -v
+
+# Fast security tests only (recommended during optimization)
+pytest tests/test_security_validation.py::TestURLSecurityValidation::test_malicious_url_blocking -v
+```
+
+#### Complete Test Suite (<10 minutes target)
+Full validation including all test categories:
+```bash
+# Everything - use for final validation
+pytest
+
+# With coverage reporting
+pytest --cov=. --cov-report=html
+```
+
+### Performance Monitoring & Optimization
+
+#### Expected Execution Times
+- **Individual fast tests**: <1 second each
+- **Individual slow tests**: <30 seconds each (optimization target)
+- **MCP protocol regression**: <10 seconds total
+- **Security test suite**: <5 minutes total (optimization in progress)
+- **Complete test suite**: <10 minutes total
+
+#### Performance Optimization Guidelines
+
+1. **Mock External Dependencies**: All network operations should be mocked in fast tests
+2. **Use @pytest.mark.slow**: Mark any test that takes >5 seconds or uses real networks
+3. **Implement Timeouts**: No test should run indefinitely
+4. **Monitor Test Performance**: Track execution times in CI/CD
+
+#### Identifying Slow Tests
+```bash
+# Find tests taking longer than expected
+pytest --durations=10
+
+# Run only fast tests to identify slow unmarked tests
+pytest -m "not slow" --tb=short
+```
+
+### Writing Tests
+
+#### Test Classification Guidelines
+
+**Mark as Fast (default)**:
+- Unit tests with mocked dependencies
+- Integration tests using FastMCP Client
+- Validation logic tests
+- Error handling with mock exceptions
+
+**Mark as Slow (`@pytest.mark.slow`)**:
+- Real network operations
+- Subprocess communication tests
+- Performance testing with concurrency
+- Security tests requiring actual connections
+
+#### Security Test Best Practices
+
+1. **Mock by Default**: Use mocked AsyncWebCrawler for security validation
+2. **Test Logic, Not Network**: Focus on validation logic rather than network behavior
+3. **Error Message Sanitization**: Ensure no sensitive data leaks in error responses
+4. **Timeout Implementation**: All security tests must have reasonable timeouts
+
+Example secure test pattern:
+```python
+@pytest.mark.asyncio
+async def test_malicious_url_blocking(self):
+    """Test URL blocking logic without real network operations."""
+    # Mock the crawler to avoid network calls
+    mock_result = MagicMock()
+    mock_result.markdown = "Blocked content"
+    
+    with patch('tools.web_extract.AsyncWebCrawler') as mock_crawler:
+        mock_instance = AsyncMock()
+        mock_crawler.return_value.__aenter__.return_value = mock_instance
+        mock_instance.arun.return_value = mock_result
+        
+        # Test validation logic
+        async with Client(mcp) as client:
+            result = await client.call_tool_mcp("web_content_extract", {
+                "url": "javascript:alert('xss')"
+            })
+            assert result.isError
+```
+
+#### Error Message Security
+
+All error messages must be sanitized to prevent sensitive information leakage:
+- Filter out passwords from connection strings
+- Remove system paths from error messages  
+- Sanitize API keys and tokens
+- Validate error message content in tests
+
+### CI/CD Integration Strategy
+
+#### GitHub Actions Workflow (Planned)
+```yaml
+# Fast feedback for all PRs
+fast-tests:
+  - pytest -m "not slow" --timeout=120
+  
+# Comprehensive validation for main branch  
+comprehensive-tests:
+  - pytest --timeout=600
+  
+# Security validation with performance monitoring
+security-tests:
+  - pytest tests/test_security_validation.py --timeout=300
+```
+
+#### Branch Protection Strategy
+- **Required**: Fast tests must pass for all PRs
+- **Required**: Regression tests must pass for main branch
+- **Optional**: Slow tests for comprehensive validation
+- **Monitoring**: Track test performance over time
 
 ### MCP Inspector Setup
 
@@ -102,14 +279,45 @@ Test the server directly:
 python test_mcp_tool_call.py
 ```
 
-### Running Tests
+### Test Performance Troubleshooting
 
+#### Common Issues & Solutions
+
+1. **Tests Running Too Slow**:
+   ```bash
+   # Identify slow tests
+   pytest --durations=10
+   
+   # Run only fast tests
+   pytest -m "not slow"
+   ```
+
+2. **Security Tests Hanging**:
+   - Ensure proper mocking of AsyncWebCrawler
+   - Add timeouts to async operations
+   - Check for real network operations in test code
+
+3. **MCP Protocol Failures**:
+   ```bash
+   # Test complete protocol sequence
+   pytest tests/test_mcp_protocol_regression.py::TestMCPProtocolRegression::test_complete_mcp_initialization_sequence -v
+   ```
+
+4. **Memory/Resource Issues**:
+   - Monitor test resource usage
+   - Use proper async context management
+   - Clean up subprocess tests properly
+
+#### Performance Monitoring Commands
 ```bash
-# Quick core functionality tests (~13 seconds)
-pytest tests/test_stdout_contamination.py tests/test_models.py tests/test_server.py::TestFastMCPServerIntegration -v
+# Monitor test performance over time
+pytest --durations=0 > test_performance.log
 
-# Full test suite
-pytest
+# Check for memory leaks in long-running tests  
+pytest tests/test_security_validation.py -v --tb=short
+
+# Validate timeout implementation
+timeout 300 pytest tests/test_security_validation.py
 ```
 
 ## Available Tools

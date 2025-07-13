@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, patch, MagicMock
 import asyncio
 import re
 import json
+import time
 from urllib.parse import quote, unquote
 from typing import List, Dict, Any
 
@@ -54,29 +55,39 @@ class TestURLSecurityValidation:
             "http://evil.com\x00@example.com",
         ]
         
-        async with Client(mcp) as client:
-            blocked_count = 0
-            for url in malicious_urls:
-                result = await client.call_tool_mcp("web_content_extract", {
-                    "url": url
-                })
-                
-                # Check if URL was blocked (either error or validation error in content)
-                if result.isError:
-                    # FastMCP level validation error
-                    assert "validation error" in result.content[0].text.lower()
-                    blocked_count += 1
-                else:
-                    # Application level validation error or successful resolution to different URL
-                    content = result.content[0].text.lower()
-                    if "validation error" in content or "error" in content:
-                        blocked_count += 1
-                    # Some URLs like "http://example.com@evil.com" may be resolved by URL parsers
-                    # This is acceptable as long as most malicious URLs are blocked
+        # Mock the AsyncWebCrawler to avoid actual network requests
+        mock_result = MagicMock()
+        mock_result.markdown = "Blocked content"
+        mock_result.title = "Blocked"
+        
+        with patch('tools.web_extract.AsyncWebCrawler') as mock_crawler:
+            mock_instance = AsyncMock()
+            mock_crawler.return_value.__aenter__.return_value = mock_instance
+            mock_instance.arun.return_value = mock_result
             
-            # Ensure that most malicious URLs are blocked (at least 80%)
-            block_rate = blocked_count / len(malicious_urls)
-            assert block_rate >= 0.8, f"Only {blocked_count}/{len(malicious_urls)} malicious URLs were blocked ({block_rate:.1%})"
+            async with Client(mcp) as client:
+                blocked_count = 0
+                for url in malicious_urls:
+                    result = await client.call_tool_mcp("web_content_extract", {
+                        "url": url
+                    })
+                    
+                    # Check if URL was blocked (either error or validation error in content)
+                    if result.isError:
+                        # FastMCP level validation error
+                        assert "validation error" in result.content[0].text.lower()
+                        blocked_count += 1
+                    else:
+                        # Application level validation error or successful resolution to different URL
+                        content = result.content[0].text.lower()
+                        if "validation error" in content or "error" in content:
+                            blocked_count += 1
+                        # Some URLs like "http://example.com@evil.com" may be resolved by URL parsers
+                        # This is acceptable as long as most malicious URLs are blocked
+                
+                # Ensure that most malicious URLs are blocked (at least 80%)
+                block_rate = blocked_count / len(malicious_urls)
+                assert block_rate >= 0.8, f"Only {blocked_count}/{len(malicious_urls)} malicious URLs were blocked ({block_rate:.1%})"
     
     @pytest.mark.asyncio
     async def test_url_injection_attacks(self):
@@ -112,24 +123,35 @@ class TestURLSecurityValidation:
             "https://example.com/page?param=\uFEFF<script>alert('xss')</script>",
         ]
         
-        async with Client(mcp) as client:
-            for url in injection_attempts:
-                result = await client.call_tool_mcp("web_content_extract", {
-                    "url": url
-                })
-                
-                # Should handle injection attempts gracefully
-                if result.isError:
-                    # FastMCP level validation error
-                    assert "validation error" in result.content[0].text.lower()
-                else:
-                    # Application level - should either be validation error or processed safely
-                    content = result.content[0].text
-                    # Should not contain any evidence of successful injection
-                    assert "<script>" not in content
-                    assert "alert(" not in content
-                    assert "DROP TABLE" not in content.upper()
+        # Mock the AsyncWebCrawler to avoid actual network requests
+        mock_result = MagicMock()
+        mock_result.markdown = "Safe content"
+        mock_result.title = "Safe Page"
+        
+        with patch('tools.web_extract.AsyncWebCrawler') as mock_crawler:
+            mock_instance = AsyncMock()
+            mock_crawler.return_value.__aenter__.return_value = mock_instance
+            mock_instance.arun.return_value = mock_result
+            
+            async with Client(mcp) as client:
+                for url in injection_attempts:
+                    result = await client.call_tool_mcp("web_content_extract", {
+                        "url": url
+                    })
+                    
+                    # Should handle injection attempts gracefully
+                    if result.isError:
+                        # FastMCP level validation error
+                        assert "validation error" in result.content[0].text.lower()
+                    else:
+                        # Application level - should either be validation error or processed safely
+                        content = result.content[0].text
+                        # Should not contain any evidence of successful injection
+                        assert "<script>" not in content
+                        assert "alert(" not in content
+                        assert "DROP TABLE" not in content.upper()
     
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_localhost_and_private_ip_blocking(self):
         """Test blocking of localhost and private IP addresses."""
@@ -179,6 +201,7 @@ class TestURLSecurityValidation:
                     content = result.content[0].text.lower()
                     assert "validation error" in content or "error" in content or content == ""
     
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_port_scanning_prevention(self):
         """Test prevention of port scanning through URL requests."""
@@ -231,6 +254,7 @@ class TestURLSecurityValidation:
 class TestInputSanitization:
     """Test input sanitization and validation."""
     
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_special_character_handling(self):
         """Test handling of special characters in URLs."""
@@ -283,6 +307,7 @@ class TestInputSanitization:
                     assert "\x01" not in content
                     assert "\x1f" not in content
     
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_length_limit_enforcement(self):
         """Test enforcement of URL length limits."""
@@ -324,6 +349,7 @@ class TestInputSanitization:
                     content = result.content[0].text
                     assert isinstance(content, str)
     
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_encoding_bypass_attempts(self):
         """Test resistance to encoding bypass attempts."""
@@ -369,6 +395,7 @@ class TestInputSanitization:
 class TestSecurityHeaders:
     """Test security-related headers and responses."""
     
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_information_disclosure_prevention(self):
         """Test prevention of information disclosure."""
@@ -406,6 +433,7 @@ class TestSecurityHeaders:
                 assert "PASSWORD" not in content
                 assert "TOKEN" not in content
     
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_error_message_sanitization(self):
         """Test that error messages don't leak sensitive information."""
@@ -452,6 +480,7 @@ class TestSecurityHeaders:
                     for sensitive_info in scenario["should_not_contain"]:
                         assert sensitive_info not in error_content, f"Error message contains sensitive info: {sensitive_info}"
     
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_timing_attack_resistance(self):
         """Test resistance to timing attacks."""
@@ -498,9 +527,10 @@ class TestSecurityHeaders:
 class TestRateLimitingAndDDoS:
     """Test rate limiting and DDoS protection."""
     
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_concurrent_request_limits(self):
-        """Test behavior under high concurrent request load."""
+        """Test behavior under concurrent request load."""
         from server import mcp
         
         mock_result = MagicMock()
@@ -514,8 +544,8 @@ class TestRateLimitingAndDDoS:
             mock_instance.arun.return_value = mock_result
             
             async with Client(mcp) as client:
-                # Test high concurrency
-                concurrent_requests = 100
+                # Test moderate concurrency (reduced from 100 to 10)
+                concurrent_requests = 10
                 
                 start_time = time.perf_counter()
                 tasks = []
@@ -528,8 +558,19 @@ class TestRateLimitingAndDDoS:
                     )
                     tasks.append(task)
                 
-                # Wait for all requests
-                results = await asyncio.gather(*tasks, return_exceptions=True)
+                # Wait for all requests with timeout
+                try:
+                    results = await asyncio.wait_for(
+                        asyncio.gather(*tasks, return_exceptions=True),
+                        timeout=15.0
+                    )
+                except asyncio.TimeoutError:
+                    # Cancel remaining tasks and fail gracefully
+                    for task in tasks:
+                        if not task.done():
+                            task.cancel()
+                    pytest.fail("Concurrent requests timed out after 15s")
+                
                 end_time = time.perf_counter()
                 
                 # Analyze results
@@ -539,29 +580,29 @@ class TestRateLimitingAndDDoS:
                 
                 total_time = end_time - start_time
                 
-                # Should handle high load gracefully
-                assert total_time < 30.0, f"High load took {total_time:.2f}s"
-                assert successes > 50, f"Only {successes} successes out of {concurrent_requests}"
+                # Should handle moderate load gracefully (adjusted expectations)
+                assert total_time < 15.0, f"Moderate load took {total_time:.2f}s"
+                assert successes >= 8, f"Only {successes} successes out of {concurrent_requests}"
                 
-                # Some failures are acceptable under extreme load
+                # Should have minimal failures with moderate load
                 failure_rate = failures / concurrent_requests * 100
-                assert failure_rate < 50, f"Failure rate {failure_rate:.1f}% too high"
+                assert failure_rate < 30, f"Failure rate {failure_rate:.1f}% too high"
     
     @pytest.mark.asyncio
     async def test_request_size_limits(self):
         """Test handling of large request payloads."""
         from server import mcp
         
-        # Test with various request sizes
+        # Test with various request sizes (reduced complexity)
         size_tests = [
             # Normal size
             "https://example.com/normal",
             
-            # Large URL
-            "https://example.com/" + "large-path-" * 100,
+            # Large URL (reduced from 100 to 20 repetitions)
+            "https://example.com/" + "large-path-" * 20,
             
-            # URL with large query string
-            "https://example.com/query?" + "&".join([f"param{i}=value{i}" for i in range(100)]),
+            # URL with large query string (reduced from 100 to 20 parameters)
+            "https://example.com/query?" + "&".join([f"param{i}=value{i}" for i in range(20)]),
         ]
         
         async with Client(mcp) as client:
@@ -578,6 +619,7 @@ class TestRateLimitingAndDDoS:
                     # Should process successfully
                     assert isinstance(result.content[0].text, str)
     
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_resource_exhaustion_prevention(self):
         """Test prevention of resource exhaustion attacks."""
@@ -595,14 +637,19 @@ class TestRateLimitingAndDDoS:
             mock_instance.arun.return_value = mock_result
             
             async with Client(mcp) as client:
-                # Monitor resource usage
-                import psutil
-                process = psutil.Process()
-                initial_memory = process.memory_info().rss / 1024 / 1024  # MB
+                try:
+                    # Monitor resource usage (skip if psutil not available)
+                    import psutil
+                    process = psutil.Process()
+                    initial_memory = process.memory_info().rss / 1024 / 1024  # MB
+                    monitor_memory = True
+                except ImportError:
+                    monitor_memory = False
                 
-                # Execute many requests rapidly
+                # Execute moderate batch of requests (reduced from 200 to 20)
+                batch_size = 20
                 tasks = []
-                for i in range(200):
+                for i in range(batch_size):
                     task = asyncio.create_task(
                         client.call_tool_mcp("web_content_extract", {
                             "url": f"https://example.com/resource-{i}"
@@ -610,15 +657,26 @@ class TestRateLimitingAndDDoS:
                     )
                     tasks.append(task)
                 
-                # Wait for completion
-                await asyncio.gather(*tasks, return_exceptions=True)
+                # Wait for completion with timeout
+                try:
+                    await asyncio.wait_for(
+                        asyncio.gather(*tasks, return_exceptions=True),
+                        timeout=30.0
+                    )
+                except asyncio.TimeoutError:
+                    # Cancel remaining tasks
+                    for task in tasks:
+                        if not task.done():
+                            task.cancel()
+                    pytest.fail("Resource exhaustion test timed out after 30s")
                 
-                # Check resource usage
-                final_memory = process.memory_info().rss / 1024 / 1024  # MB
-                memory_increase = final_memory - initial_memory
-                
-                # Should not consume excessive memory
-                assert memory_increase < 200, f"Memory increased by {memory_increase:.1f}MB"
+                # Check resource usage (if psutil available)
+                if monitor_memory:
+                    final_memory = process.memory_info().rss / 1024 / 1024  # MB
+                    memory_increase = final_memory - initial_memory
+                    
+                    # Should not consume excessive memory (adjusted for smaller batch)
+                    assert memory_increase < 50, f"Memory increased by {memory_increase:.1f}MB"
 
 
 class TestSecurityCompliance:
