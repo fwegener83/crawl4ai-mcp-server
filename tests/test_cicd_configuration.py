@@ -36,7 +36,9 @@ class TestGitHubActionsConfiguration:
         # Validate timeout configurations for CI efficiency
         for job_name, job_config in jobs.items():
             if 'timeout-minutes' in job_config:
-                assert job_config['timeout-minutes'] <= 20, f"Job {job_name} timeout too long for CI"
+                # Integration tests with real crawl4ai need more time
+                max_timeout = 25 if 'integration' in job_name else 20
+                assert job_config['timeout-minutes'] <= max_timeout, f"Job {job_name} timeout too long for CI"
     
     def test_workflow_job_structure(self):
         """Test individual job structure and configuration."""
