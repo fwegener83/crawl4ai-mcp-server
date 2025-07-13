@@ -1,0 +1,36 @@
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+venv/
+test_env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+
+# Environment variables
+.env
+.env.local
+
+# Planning archives
+.planning/archive/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
