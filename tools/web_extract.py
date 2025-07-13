@@ -7,6 +7,9 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 
+# Import error sanitization
+from .error_sanitizer import sanitize_error_message
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -69,8 +72,12 @@ async def web_content_extract(params: WebExtractParams) -> str:
             return result.markdown
             
     except Exception as e:
-        logger.error(f"Content extraction failed for {params.url}: {str(e)}")
-        return f"Error extracting content: {str(e)}"
+        # Sanitize error message for logging and response
+        original_error = str(e)
+        sanitized_error = sanitize_error_message(original_error)
+        
+        logger.error(f"Content extraction failed for {params.url}: {sanitized_error}")
+        return f"Error extracting content: {sanitized_error}"
 
 
 async def safe_extract(url: str) -> Dict[str, Any]:
@@ -107,10 +114,14 @@ async def safe_extract(url: str) -> Dict[str, Any]:
             }
             
     except Exception as e:
-        logger.error(f"Content extraction failed for {url}: {str(e)}")
+        # Sanitize error message for logging and response
+        original_error = str(e)
+        sanitized_error = sanitize_error_message(original_error)
+        
+        logger.error(f"Content extraction failed for {url}: {sanitized_error}")
         return {
             "success": False,
-            "error": str(e),
+            "error": sanitized_error,
             "url": url,
             "content": None
         }
