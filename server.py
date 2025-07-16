@@ -8,6 +8,7 @@ from fastmcp import FastMCP
 from dotenv import load_dotenv
 
 from tools.web_extract import WebExtractParams, web_content_extract
+from tools.mcp_domain_tools import domain_deep_crawl, domain_link_preview
 
 # Configure logging
 logging.basicConfig(
@@ -80,6 +81,73 @@ async def web_content_extract(url: str) -> str:
         error_msg = f"Unexpected error during content extraction: {str(e)}"
         logger.error(error_msg)
         return f"Error extracting content: {str(e)}"
+
+
+@mcp.tool()
+async def domain_deep_crawl_tool(
+    domain_url: str,
+    max_depth: int = 2,
+    crawl_strategy: str = "bfs",
+    max_pages: int = 50,
+    include_external: bool = False,
+    url_patterns: list[str] = None,
+    exclude_patterns: list[str] = None,
+    keywords: list[str] = None,
+    stream_results: bool = False
+) -> str:
+    """Crawl a complete domain with configurable depth and strategies.
+    
+    This tool performs deep crawling of a domain using various strategies 
+    (BFS, DFS, BestFirst) with configurable filtering and scoring.
+    
+    Args:
+        domain_url: The base URL/domain to crawl
+        max_depth: Maximum crawl depth (0-10)
+        crawl_strategy: Crawling strategy (bfs, dfs, best_first)
+        max_pages: Maximum pages to crawl (1-1000)
+        include_external: Whether to include external links
+        url_patterns: URL patterns to include (glob patterns)
+        exclude_patterns: URL patterns to exclude (glob patterns)
+        keywords: Keywords for BestFirst scoring
+        stream_results: Whether to stream results in real-time
+        
+    Returns:
+        str: JSON string with crawl results or error information
+    """
+    return await domain_deep_crawl(
+        domain_url=domain_url,
+        max_depth=max_depth,
+        crawl_strategy=crawl_strategy,
+        max_pages=max_pages,
+        include_external=include_external,
+        url_patterns=url_patterns,
+        exclude_patterns=exclude_patterns,
+        keywords=keywords,
+        stream_results=stream_results
+    )
+
+
+@mcp.tool()
+async def domain_link_preview_tool(
+    domain_url: str,
+    include_external: bool = False
+) -> str:
+    """Get a quick preview of links available on a domain.
+    
+    This tool provides a fast overview of available links on a domain
+    without performing full crawling.
+    
+    Args:
+        domain_url: The base URL/domain to analyze
+        include_external: Whether to include external links
+        
+    Returns:
+        str: JSON string with link preview or error information
+    """
+    return await domain_link_preview(
+        domain_url=domain_url,
+        include_external=include_external
+    )
 
 
 if __name__ == "__main__":
