@@ -9,34 +9,8 @@ from datetime import datetime, timezone
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from urllib.parse import urlparse
 
-# Mock imports for testing (will be replaced with real imports later)
-try:
-    from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
-except ImportError:
-    # Create mock classes for testing
-    class AsyncWebCrawler:
-        def __init__(self, config=None):
-            self.config = config
-        
-        async def __aenter__(self):
-            return self
-        
-        async def __aexit__(self, exc_type, exc_val, exc_tb):
-            pass
-        
-        async def arun(self, url, config=None):
-            return {"success": True, "url": url}
-    
-    class BrowserConfig:
-        def __init__(self, headless=True, verbose=False):
-            self.headless = headless
-            self.verbose = verbose
-    
-    class CrawlerRunConfig:
-        def __init__(self, verbose=False, stream=False, log_console=False):
-            self.verbose = verbose
-            self.stream = stream
-            self.log_console = log_console
+# Real Crawl4AI imports
+from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -73,36 +47,142 @@ class DomainLinkPreviewParams(BaseModel):
 
 
 def sanitize_error_message(error_message: str) -> str:
-    """Sanitize error message (placeholder - will use actual sanitizer)."""
-    # This is a placeholder - will integrate with actual error sanitizer
-    return error_message
+    """Sanitize error message using actual sanitizer."""
+    try:
+        from tools.error_sanitizer import sanitize_error_message as real_sanitizer
+        return real_sanitizer(error_message)
+    except ImportError:
+        # Fallback if sanitizer not available
+        return error_message
 
 
 async def extract_links_from_domain(domain_url: str, include_external: bool = False) -> str:
-    """Extract links from domain (mock implementation)."""
-    # Mock implementation for testing
-    parsed = urlparse(domain_url)
-    domain = parsed.netloc
-    
-    mock_links = [
-        {"url": f"{domain_url}/about", "text": "About", "type": "internal"},
-        {"url": f"{domain_url}/contact", "text": "Contact", "type": "internal"}
-    ]
-    
-    if include_external:
-        mock_links.append({"url": "https://external.com", "text": "External", "type": "external"})
-    
-    internal_count = sum(1 for link in mock_links if link["type"] == "internal")
-    external_count = sum(1 for link in mock_links if link["type"] == "external")
-    
-    return json.dumps({
-        "success": True,
-        "domain": domain,
-        "total_links": len(mock_links),
-        "internal_links": internal_count,
-        "external_links": external_count,
-        "links": mock_links
-    })
+    """Extract links from domain using real Crawl4AI."""
+    try:
+        # Extract domain from URL
+        parsed = urlparse(domain_url)
+        domain = parsed.netloc
+        
+        # Configure browser for link extraction
+        browser_config = BrowserConfig(headless=True, verbose=False)
+        config = CrawlerRunConfig(verbose=False, log_console=False)
+        
+        # Perform crawl to extract links
+        async with AsyncWebCrawler(config=browser_config) as crawler:
+            result = await crawler.arun(url=domain_url, config=config)
+            
+            if not result.success:
+                return json.dumps({
+                    "success": False,
+                    "error": "Failed to crawl domain",
+                    "domain": domain,
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                })
+            
+            # Extract links from the result
+            links = []
+            internal_count = 0
+            external_count = 0
+            
+            # Get links from result (if available)
+            if hasattr(result, 'links') and result.links:
+                # Handle both dict and list formats
+                if isinstance(result.links, dict):
+                    links_data = result.links.get('internal', []) + result.links.get('external', [])
+                else:
+                    links_data = result.links
+                
+                for link in links_data:
+                    # Handle different link formats
+                    if isinstance(link, dict):
+                        link_url = link.get('href', '') or link.get('url', '')
+                        link_text = link.get('text', '') or link.get('title', '')
+                    else:
+                        # Handle string links
+                        link_url = str(link)
+                        link_text = link_url
+                    
+                    # Determine if link is internal or external
+                    if link_url.startswith(('http://', 'https://')):
+                        link_parsed = urlparse(link_url)
+                        is_internal = link_parsed.netloc == domain
+                    else:
+                        # Relative links are internal
+                        is_internal = True
+                        if link_url.startswith('/'):
+                            link_url = f"{parsed.scheme}://{domain}{link_url}"
+                        else:
+                            link_url = f"{domain_url.rstrip('/')}/{link_url}"
+                    
+                    link_type = "internal" if is_internal else "external"
+                    
+                    # Count links
+                    if is_internal:
+                        internal_count += 1
+                    else:
+                        external_count += 1
+                    
+                    # Add to links list if appropriate
+                    if is_internal or include_external:
+                        links.append({
+                            "url": link_url,
+                            "text": link_text,
+                            "type": link_type
+                        })
+            
+            # If no links found in result, try to extract from markdown
+            if not links and hasattr(result, 'markdown') and result.markdown:
+                # Simple markdown link extraction
+                import re
+                link_pattern = r'\[([^\]]+)\]\(([^)]+)\)'
+                markdown_links = re.findall(link_pattern, result.markdown)
+                
+                for link_text, link_url in markdown_links:
+                    # Determine if link is internal or external
+                    if link_url.startswith(('http://', 'https://')):
+                        link_parsed = urlparse(link_url)
+                        is_internal = link_parsed.netloc == domain
+                    else:
+                        # Relative links are internal
+                        is_internal = True
+                        if link_url.startswith('/'):
+                            link_url = f"{parsed.scheme}://{domain}{link_url}"
+                        else:
+                            link_url = f"{domain_url.rstrip('/')}/{link_url}"
+                    
+                    link_type = "internal" if is_internal else "external"
+                    
+                    # Count links
+                    if is_internal:
+                        internal_count += 1
+                    else:
+                        external_count += 1
+                    
+                    # Add to links list if appropriate
+                    if is_internal or include_external:
+                        links.append({
+                            "url": link_url,
+                            "text": link_text,
+                            "type": link_type
+                        })
+            
+            return json.dumps({
+                "success": True,
+                "domain": domain,
+                "total_links": len(links),
+                "internal_links": internal_count,
+                "external_links": external_count,
+                "links": links
+            })
+            
+    except Exception as e:
+        logger.error(f"Link extraction failed: {e}")
+        return json.dumps({
+            "success": False,
+            "error": str(e),
+            "domain": domain,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
 
 
 async def domain_link_preview_impl(params: DomainLinkPreviewParams) -> str:

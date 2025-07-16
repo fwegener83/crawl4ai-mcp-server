@@ -10,38 +10,17 @@ from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import List, Optional, Any, Dict
 from urllib.parse import urlparse, urljoin
 
-# Mock imports for testing (will be replaced with real imports later)
-try:
-    from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
-except ImportError:
-    # Create mock classes for testing
-    class AsyncWebCrawler:
-        def __init__(self, config=None):
-            self.config = config
-        
-        async def __aenter__(self):
-            return self
-        
-        async def __aexit__(self, exc_type, exc_val, exc_tb):
-            pass
-        
-        async def arun(self, url, config=None):
-            return {"success": True, "url": url}
-    
-    class BrowserConfig:
-        def __init__(self, headless=True, verbose=False):
-            self.headless = headless
-            self.verbose = verbose
-    
-    class CrawlerRunConfig:
-        def __init__(self, deep_crawl_strategy=None, stream=False, verbose=False, 
-                     log_console=False, memory_threshold_percent=70.0, **kwargs):
-            self.deep_crawl_strategy = deep_crawl_strategy
-            self.stream = stream
-            self.verbose = verbose
-            self.log_console = log_console
-            self.memory_threshold_percent = memory_threshold_percent
-            # Accept any additional arguments for flexibility
+# Real Crawl4AI imports
+from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
+from crawl4ai.deep_crawling import (
+    BFSDeepCrawlStrategy, 
+    DFSDeepCrawlStrategy, 
+    BestFirstCrawlingStrategy,
+    FilterChain,
+    DomainFilter,
+    URLPatternFilter,
+    KeywordRelevanceScorer
+)
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -93,75 +72,50 @@ class DomainDeepCrawlParams(BaseModel):
         return v
 
 
-# Mock strategy classes for testing (will be replaced with real Crawl4AI strategies later)
-class MockCrawlStrategy:
-    """Mock base crawl strategy for testing."""
-    
-    def __init__(self, strategy_type: str, max_depth: int, max_pages: int, 
-                 filter_chain: Optional[Any] = None, keywords: Optional[List[str]] = None):
-        self.strategy_type = strategy_type
-        self.max_depth = max_depth
-        self.max_pages = max_pages
-        self.filter_chain = filter_chain
-        self.keywords = keywords or []
-        self.url_scorer = None
-        
-        # Set up URL scorer for best_first strategy
-        if strategy_type == "best_first" and keywords:
-            self.url_scorer = create_keyword_scorer(keywords, weight=0.8)
-
-
-class MockFilterChain:
-    """Mock filter chain for testing."""
-    
-    def __init__(self, domain: str, include_external: bool = False):
-        self.domain = domain
-        self.include_external = include_external
-        self.filters = []
-        self.include_patterns = []
-        self.exclude_patterns = []
-        
-        # Add domain filter
-        self.filters.append("domain_filter")
-        
-    def add_pattern_filter(self, include_patterns: List[str], exclude_patterns: List[str]):
-        """Add pattern filters."""
-        if include_patterns:
-            self.include_patterns.extend(include_patterns)
-            self.filters.append("include_pattern_filter")
-        if exclude_patterns:
-            self.exclude_patterns.extend(exclude_patterns)
-            self.filters.append("exclude_pattern_filter")
-
-
-class MockKeywordScorer:
-    """Mock keyword scorer for testing."""
-    
-    def __init__(self, keywords: List[str], weight: float):
-        self.keywords = [kw.lower() for kw in keywords]  # Normalize to lowercase
-        self.weight = weight
+# Real Crawl4AI strategy implementations
 
 
 def create_crawl_strategy(
     strategy_name: str,
     max_depth: int,
     max_pages: int,
-    filter_chain: Optional[Any],
+    filter_chain: Optional[FilterChain],
     keywords: List[str]
-) -> MockCrawlStrategy:
-    """Create a crawl strategy based on strategy name."""
+) -> Any:
+    """Create a real Crawl4AI deep crawling strategy."""
     
     valid_strategies = ['bfs', 'dfs', 'best_first']
     if strategy_name not in valid_strategies:
         raise ValueError(f"Unknown strategy: {strategy_name}")
     
-    return MockCrawlStrategy(
-        strategy_type=strategy_name,
-        max_depth=max_depth,
-        max_pages=max_pages,
-        filter_chain=filter_chain,
-        keywords=keywords
-    )
+    # Create the appropriate strategy
+    if strategy_name == "bfs":
+        return BFSDeepCrawlStrategy(
+            max_depth=max_depth,
+            max_pages=max_pages,
+            filter_chain=filter_chain,
+            include_external=False
+        )
+    elif strategy_name == "dfs":
+        return DFSDeepCrawlStrategy(
+            max_depth=max_depth,
+            max_pages=max_pages,
+            filter_chain=filter_chain,
+            include_external=False
+        )
+    elif strategy_name == "best_first":
+        # Create keyword scorer if keywords are provided
+        scorer = None
+        if keywords:
+            scorer = KeywordRelevanceScorer(keywords=keywords, weight=0.8)
+        
+        return BestFirstCrawlingStrategy(
+            max_depth=max_depth,
+            max_pages=max_pages,
+            filter_chain=filter_chain,
+            url_scorer=scorer,
+            include_external=False
+        )
 
 
 def build_filter_chain(
@@ -169,30 +123,40 @@ def build_filter_chain(
     include_external: bool,
     url_patterns: List[str],
     exclude_patterns: List[str]
-) -> MockFilterChain:
-    """Build filter chain for URL filtering."""
+) -> FilterChain:
+    """Build real Crawl4AI filter chain for URL filtering."""
     
     # Extract domain from URL
     parsed = urlparse(domain_url)
     domain = parsed.netloc
     
-    # Create filter chain
-    filter_chain = MockFilterChain(domain=domain, include_external=include_external)
+    # Create list of filters
+    filters = []
     
-    # Add pattern filters if provided
-    if url_patterns or exclude_patterns:
-        filter_chain.add_pattern_filter(url_patterns, exclude_patterns)
+    # Add domain filter if not including external links
+    if not include_external:
+        filters.append(DomainFilter(allowed_domains=[domain]))
     
-    return filter_chain
+    # Add URL pattern filters
+    if url_patterns:
+        filters.append(URLPatternFilter(patterns=url_patterns))
+    
+    # Add exclude pattern filters (implemented as reverse patterns)
+    if exclude_patterns:
+        # Create a filter that excludes the patterns using reverse=True
+        filters.append(URLPatternFilter(patterns=exclude_patterns, reverse=True))
+    
+    # Create and return filter chain
+    return FilterChain(filters=filters)
 
 
-def create_keyword_scorer(keywords: List[str], weight: float) -> Optional[MockKeywordScorer]:
-    """Create keyword scorer for BestFirst strategy."""
+def create_keyword_scorer(keywords: List[str], weight: float) -> Optional[KeywordRelevanceScorer]:
+    """Create real Crawl4AI keyword scorer for BestFirst strategy."""
     
     if not keywords:
         return None
     
-    return MockKeywordScorer(keywords=keywords, weight=weight)
+    return KeywordRelevanceScorer(keywords=keywords, weight=weight)
 
 
 def create_browser_config() -> BrowserConfig:
@@ -210,74 +174,186 @@ def create_run_config(
 ) -> CrawlerRunConfig:
     """Create crawler run configuration."""
     return CrawlerRunConfig(
-        deep_crawl_strategy=strategy,
-        stream=stream_results,
         verbose=False,
         log_console=False,
-        memory_threshold_percent=memory_threshold
+        deep_crawl_strategy=strategy,
+        stream=stream_results
     )
 
 
-async def handle_streaming_crawl(crawler: AsyncWebCrawler, domain_url: str, config: CrawlerRunConfig) -> str:
-    """Handle streaming crawl mode."""
-    # Mock implementation for testing
-    return json.dumps({
-        "success": True,
-        "streaming": True,
-        "crawl_summary": {
-            "total_pages": 1,
-            "strategy_used": "bfs",
-            "max_depth_reached": 0,
-            "pages_by_depth": {"0": 1}
-        },
-        "pages": [
-            {
-                "url": domain_url,
-                "depth": 0,
-                "title": "Mock Page",
-                "content": "Mock content",
-                "success": True,
-                "metadata": {
-                    "crawl_time": datetime.now(timezone.utc).isoformat(),
-                    "score": 1.0
-                }
-            }
-        ]
-    })
+async def handle_streaming_crawl(crawler: AsyncWebCrawler, domain_url: str, config: CrawlerRunConfig, strategy: Any) -> str:
+    """Handle streaming crawl mode with real Crawl4AI."""
+    try:
+        # Execute the crawl with deep crawling strategy in config
+        result = await crawler.arun(url=domain_url, config=config)
+        
+        # Process and format the result
+        return format_crawl_result(result, streaming=True)
+        
+    except Exception as e:
+        logger.error(f"Streaming crawl failed: {e}")
+        return json.dumps({
+            "success": False,
+            "error": str(e),
+            "domain": domain_url,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
 
 
-async def handle_batch_crawl(crawler: AsyncWebCrawler, domain_url: str, config: CrawlerRunConfig) -> str:
-    """Handle batch crawl mode."""
-    # Mock implementation for testing
-    return json.dumps({
-        "success": True,
-        "streaming": False,
-        "crawl_summary": {
-            "total_pages": 1,
-            "strategy_used": "bfs",
-            "max_depth_reached": 0,
-            "pages_by_depth": {"0": 1}
-        },
-        "pages": [
-            {
-                "url": domain_url,
-                "depth": 0,
-                "title": "Mock Page",
-                "content": "Mock content",
-                "success": True,
-                "metadata": {
-                    "crawl_time": datetime.now(timezone.utc).isoformat(),
-                    "score": 1.0
+async def handle_batch_crawl(crawler: AsyncWebCrawler, domain_url: str, config: CrawlerRunConfig, strategy: Any) -> str:
+    """Handle batch crawl mode with real Crawl4AI."""
+    try:
+        # Execute the crawl with deep crawling strategy in config
+        result = await crawler.arun(url=domain_url, config=config)
+        
+        # Process and format the result
+        return format_crawl_result(result, streaming=False)
+        
+    except Exception as e:
+        logger.error(f"Batch crawl failed: {e}")
+        return json.dumps({
+            "success": False,
+            "error": str(e),
+            "domain": domain_url,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+
+
+def format_crawl_result(result: Any, streaming: bool = False) -> str:
+    """Format crawl result into expected JSON structure."""
+    try:
+        # Handle different result types from Crawl4AI
+        if isinstance(result, list):
+            # List of CrawlResult objects from deep crawling
+            pages = []
+            pages_by_depth = {}
+            max_depth = 0
+            
+            for page_result in result:
+                depth = getattr(page_result, 'depth', 0)
+                max_depth = max(max_depth, depth)
+                
+                # Count pages by depth
+                depth_str = str(depth)
+                pages_by_depth[depth_str] = pages_by_depth.get(depth_str, 0) + 1
+                
+                # Format page data
+                page_data = {
+                    "url": page_result.url,
+                    "depth": depth,
+                    "title": page_result.metadata.get('title', '') if hasattr(page_result, 'metadata') else "",
+                    "content": page_result.markdown or "",
+                    "success": page_result.success,
+                    "metadata": {
+                        "crawl_time": datetime.now(timezone.utc).isoformat(),
+                        "score": getattr(page_result, 'score', 0.0)
+                    }
                 }
-            }
-        ]
-    })
+                pages.append(page_data)
+            
+            return json.dumps({
+                "success": True,
+                "streaming": streaming,
+                "crawl_summary": {
+                    "total_pages": len(pages),
+                    "strategy_used": "bfs",
+                    "max_depth_reached": max_depth,
+                    "pages_by_depth": pages_by_depth
+                },
+                "pages": pages
+            })
+            
+        elif hasattr(result, 'results') and result.results:
+            # Multi-page result
+            pages = []
+            pages_by_depth = {}
+            max_depth = 0
+            
+            for page_result in result.results:
+                depth = getattr(page_result, 'depth', 0)
+                max_depth = max(max_depth, depth)
+                
+                # Count pages by depth
+                depth_str = str(depth)
+                pages_by_depth[depth_str] = pages_by_depth.get(depth_str, 0) + 1
+                
+                # Format page data
+                page_data = {
+                    "url": page_result.url,
+                    "depth": depth,
+                    "title": page_result.metadata.get('title', '') if hasattr(page_result, 'metadata') else "",
+                    "content": page_result.markdown or "",
+                    "success": page_result.success,
+                    "metadata": {
+                        "crawl_time": datetime.now(timezone.utc).isoformat(),
+                        "score": getattr(page_result, 'score', 0.0)
+                    }
+                }
+                pages.append(page_data)
+            
+            return json.dumps({
+                "success": True,
+                "streaming": streaming,
+                "crawl_summary": {
+                    "total_pages": len(pages),
+                    "strategy_used": getattr(result, 'strategy_used', 'bfs'),
+                    "max_depth_reached": max_depth,
+                    "pages_by_depth": pages_by_depth
+                },
+                "pages": pages
+            })
+        
+        elif hasattr(result, 'url'):
+            # Single page result
+            return json.dumps({
+                "success": True,
+                "streaming": streaming,
+                "crawl_summary": {
+                    "total_pages": 1,
+                    "strategy_used": "bfs",
+                    "max_depth_reached": 0,
+                    "pages_by_depth": {"0": 1}
+                },
+                "pages": [{
+                    "url": result.url,
+                    "depth": 0,
+                    "title": result.metadata.get('title', '') if hasattr(result, 'metadata') else "",
+                    "content": result.markdown or "",
+                    "success": result.success,
+                    "metadata": {
+                        "crawl_time": datetime.now(timezone.utc).isoformat(),
+                        "score": getattr(result, 'score', 0.0)
+                    }
+                }]
+            })
+        
+        else:
+            # Fallback for unknown result format
+            return json.dumps({
+                "success": False,
+                "error": "Unknown result format",
+                "streaming": streaming,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            
+    except Exception as e:
+        logger.error(f"Error formatting crawl result: {e}")
+        return json.dumps({
+            "success": False,
+            "error": f"Result formatting failed: {str(e)}",
+            "streaming": streaming,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
 
 
 def sanitize_error_message(error_message: str) -> str:
-    """Sanitize error message (placeholder - will use actual sanitizer)."""
-    # This is a placeholder - will integrate with actual error sanitizer
-    return error_message
+    """Sanitize error message using actual sanitizer."""
+    try:
+        from tools.error_sanitizer import sanitize_error_message as real_sanitizer
+        return real_sanitizer(error_message)
+    except ImportError:
+        # Fallback if sanitizer not available
+        return error_message
 
 
 async def domain_deep_crawl_impl(params: DomainDeepCrawlParams) -> str:
@@ -313,9 +389,9 @@ async def domain_deep_crawl_impl(params: DomainDeepCrawlParams) -> str:
         # Execute crawl
         async with AsyncWebCrawler(config=browser_config) as crawler:
             if params.stream_results:
-                return await handle_streaming_crawl(crawler, params.domain_url, run_config)
+                return await handle_streaming_crawl(crawler, params.domain_url, run_config, strategy)
             else:
-                return await handle_batch_crawl(crawler, params.domain_url, run_config)
+                return await handle_batch_crawl(crawler, params.domain_url, run_config, strategy)
                 
     except Exception as e:
         sanitized_error = sanitize_error_message(str(e))
