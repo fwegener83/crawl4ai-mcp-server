@@ -1,0 +1,17 @@
+fastmcp>=2.0.0
+crawl4ai[all]
+python-dotenv
+pydantic>=2.0.0
+
+[dev]
+mypy
+ruff
+bandit
+safety
+
+[test]
+pytest
+pytest-asyncio
+pytest-cov
+httpx
+tomli

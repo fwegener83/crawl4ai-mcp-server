@@ -255,8 +255,11 @@ class TestSystemIntegration:
                 # Test MCP protocol sequence
                 # 1. List tools
                 tools = await client.list_tools()
-                assert len(tools) == 1
-                assert tools[0].name == "web_content_extract"
+                assert len(tools) == 3
+                tool_names = [tool.name for tool in tools]
+                assert "web_content_extract" in tool_names
+                assert "domain_deep_crawl_tool" in tool_names
+                assert "domain_link_preview_tool" in tool_names
                 
                 # 2. Tool execution
                 result = await client.call_tool_mcp("web_content_extract", {
