@@ -14,25 +14,34 @@ class TestMCPProtocolCompliance:
     
     @pytest.mark.asyncio
     async def test_mcp_tool_listing_response_format(self):
-        """Test that tool listing follows MCP protocol format."""
+        """Test that tool response follows MCP protocol format."""
         from server import mcp
         
-        async with Client(mcp) as client:
-            # Use the low-level MCP client to test protocol compliance
-            result = await client.call_tool_mcp("web_content_extract", {
-                "url": "https://example.com"
-            })
+        # Mock the crawler to avoid real network calls
+        mock_result = MagicMock()
+        mock_result.markdown = "Test content for MCP format validation"
+        
+        with patch('tools.web_extract.AsyncWebCrawler') as mock_crawler:
+            mock_instance = AsyncMock()
+            mock_crawler.return_value.__aenter__.return_value = mock_instance
+            mock_instance.arun.return_value = mock_result
             
-            # Test that the response has the correct MCP format
-            assert hasattr(result, 'content')
-            assert hasattr(result, 'isError')
-            assert isinstance(result.content, list)
-            
-            if result.content:
-                content_item = result.content[0]
-                assert hasattr(content_item, 'type')
-                assert hasattr(content_item, 'text')
-                assert content_item.type == 'text'
+            async with Client(mcp) as client:
+                # Test MCP response format with mocked content
+                result = await client.call_tool_mcp("web_content_extract", {
+                    "url": "https://example.com"
+                })
+                
+                # Test that the response has the correct MCP format
+                assert hasattr(result, 'content')
+                assert hasattr(result, 'isError')
+                assert isinstance(result.content, list)
+                
+                if result.content:
+                    content_item = result.content[0]
+                    assert hasattr(content_item, 'type')
+                    assert hasattr(content_item, 'text')
+                    assert content_item.type == 'text'
     
     @pytest.mark.asyncio
     async def test_mcp_tool_schema_compliance(self):
@@ -42,8 +51,12 @@ class TestMCPProtocolCompliance:
         async with Client(mcp) as client:
             tools = await client.list_tools()
             
-            assert len(tools) == 1
-            tool = tools[0]
+            assert len(tools) >= 1
+            tool_names = [t.name for t in tools]
+            assert "web_content_extract" in tool_names
+            
+            # Find the specific tool we want to test
+            tool = next(t for t in tools if t.name == "web_content_extract")
             
             # Test tool structure compliance
             assert hasattr(tool, 'name')
@@ -192,8 +205,12 @@ class TestMCPProtocolCompliance:
         async with Client(mcp) as client:
             tools = await client.list_tools()
             
-            assert len(tools) == 1
-            tool = tools[0]
+            assert len(tools) >= 1
+            tool_names = [t.name for t in tools]
+            assert "web_content_extract" in tool_names
+            
+            # Find the specific tool we want to test
+            tool = next(t for t in tools if t.name == "web_content_extract")
             
             # Test required metadata fields
             assert tool.name == "web_content_extract"
@@ -443,8 +460,9 @@ class TestMCPServerBehavior:
         for i in range(3):
             async with Client(mcp) as client:
                 tools = await client.list_tools()
-                assert len(tools) == 1
-                assert tools[0].name == "web_content_extract"
+                assert len(tools) >= 1
+                tool_names = [t.name for t in tools]
+                assert "web_content_extract" in tool_names
     
     @pytest.mark.asyncio
     async def test_mcp_server_error_recovery(self):

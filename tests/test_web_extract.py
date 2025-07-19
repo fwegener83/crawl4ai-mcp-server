@@ -78,7 +78,11 @@ class TestWebContentExtract:
             result = await web_content_extract(params)
             
             assert result == "# Test Content\n\nThis is test content."
-            mock_instance.arun.assert_called_once_with(url="https://example.com")
+            # Verify arun was called with URL and config
+            mock_instance.arun.assert_called_once()
+            call_args = mock_instance.arun.call_args
+            assert call_args[1]['url'] == "https://example.com"
+            assert 'config' in call_args[1]
     
     @pytest.mark.asyncio
     async def test_extraction_with_empty_content(self):

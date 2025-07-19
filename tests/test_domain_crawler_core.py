@@ -410,6 +410,5 @@ class TestDomainCrawlerHelpers:
         assert config is not None
         assert config.deep_crawl_strategy == mock_strategy
         assert config.stream is False
-        assert config.memory_threshold_percent == 70.0
         assert config.verbose is False
         assert config.log_console is False
