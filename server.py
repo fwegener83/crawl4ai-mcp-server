@@ -86,9 +86,9 @@ async def web_content_extract(url: str) -> str:
 @mcp.tool()
 async def domain_deep_crawl_tool(
     domain_url: str,
-    max_depth: int = 2,
+    max_depth: int = 1,
     crawl_strategy: str = "bfs",
-    max_pages: int = 50,
+    max_pages: int = 10,
     include_external: bool = False,
     url_patterns: Optional[List[str]] = None,
     exclude_patterns: Optional[List[str]] = None,
@@ -114,17 +114,34 @@ async def domain_deep_crawl_tool(
     Returns:
         str: JSON string with crawl results or error information
     """
-    return await domain_deep_crawl(
-        domain_url=domain_url,
-        max_depth=max_depth,
-        crawl_strategy=crawl_strategy,
-        max_pages=max_pages,
-        include_external=include_external,
-        url_patterns=url_patterns,
-        exclude_patterns=exclude_patterns,
-        keywords=keywords,
-        stream_results=stream_results
-    )
+    logger.info(f"Starting domain crawl for {domain_url} (max_depth={max_depth}, max_pages={max_pages})")
+    
+    try:
+        # Add timeout protection
+        result = await asyncio.wait_for(
+            domain_deep_crawl(
+                domain_url=domain_url,
+                max_depth=max_depth,
+                crawl_strategy=crawl_strategy,
+                max_pages=max_pages,
+                include_external=include_external,
+                url_patterns=url_patterns,
+                exclude_patterns=exclude_patterns,
+                keywords=keywords,
+                stream_results=stream_results
+            ),
+            timeout=60.0  # 60 second timeout
+        )
+        logger.info(f"Domain crawl completed for {domain_url}")
+        return result
+    except asyncio.TimeoutError:
+        error_msg = f"Domain crawl timed out after 60 seconds for {domain_url}"
+        logger.error(error_msg)
+        return f"{{\"success\": false, \"error\": \"Crawl timed out - try reducing max_pages or max_depth\", \"domain\": \"{domain_url}\"}}"
+    except Exception as e:
+        error_msg = f"Domain crawl failed for {domain_url}: {str(e)}"
+        logger.error(error_msg)
+        return f"{{\"success\": false, \"error\": \"{str(e)}\", \"domain\": \"{domain_url}\"}}"
 
 
 @mcp.tool()

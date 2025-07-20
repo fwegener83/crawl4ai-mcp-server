@@ -79,7 +79,7 @@ jobs:
     - name: Install system dependencies for crawl4ai
       run: |
         sudo apt-get update
-        sudo apt-get install -y libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxss1 libasound2
+        sudo apt-get install -y libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxss1 libasound2t64
         
     - name: Install full crawl4ai and dependencies
       run: |
@@ -122,5 +122,5 @@ jobs:
       
     - name: Check for known vulnerabilities
       run: |
-        safety check
+        safety scan
       continue-on-error: true
