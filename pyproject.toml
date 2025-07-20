@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "fastmcp>=2.0.0",
-    "crawl4ai[all]",
+    "crawl4ai[all]>=0.7.0",
     "python-dotenv",
     "pydantic>=2.0.0",
 ]
