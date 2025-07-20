@@ -30,8 +30,8 @@ class TestGitHubActionsConfiguration:
         
         # Validate job structure
         jobs = workflow['jobs']
-        assert 'fast-tests' in jobs, "Must have fast-tests job"
-        assert 'security-tests' in jobs, "Must have security-tests job"
+        assert 'test-suite' in jobs, "Must have test-suite job (runs all tests)"
+        assert 'security-scanning' in jobs, "Must have security-scanning job"
         
         # Validate timeout configurations for CI efficiency
         for job_name, job_config in jobs.items():
@@ -49,15 +49,15 @@ class TestGitHubActionsConfiguration:
         
         jobs = workflow['jobs']
         
-        # Test fast-tests job
-        fast_tests = jobs['fast-tests']
-        assert 'runs-on' in fast_tests, "fast-tests must specify runner"
-        assert 'steps' in fast_tests, "fast-tests must have steps"
+        # Test main test-suite job
+        test_suite = jobs['test-suite']
+        assert 'runs-on' in test_suite, "test-suite must specify runner"
+        assert 'steps' in test_suite, "test-suite must have steps"
         
-        # Test security-tests job
-        security_tests = jobs['security-tests']
-        assert 'runs-on' in security_tests, "security-tests must specify runner"
-        assert 'steps' in security_tests, "security-tests must have steps"
+        # Test security-scanning job
+        security_scanning = jobs['security-scanning']
+        assert 'runs-on' in security_scanning, "security-scanning must specify runner"
+        assert 'steps' in security_scanning, "security-scanning must have steps"
         
         # Validate Python version matrix
         for job_name, job_config in jobs.items():
@@ -81,8 +81,12 @@ class TestGitHubActionsConfiguration:
             'PYTHONUNBUFFERED': '1'
         }
         
-        # These can be set at job level or step level
+        # These can be set at global, job level or step level
         found_env_vars = {}
+        
+        # Check global env vars
+        if 'env' in workflow:
+            found_env_vars.update(workflow['env'])
         
         for job_name, job_config in workflow['jobs'].items():
             # Check job-level env
@@ -97,7 +101,7 @@ class TestGitHubActionsConfiguration:
         
         # Validate at least some critical env vars are set
         assert any(var in found_env_vars for var in required_env_vars), \
-               "Required environment variables not found in workflow"
+               f"Required environment variables not found in workflow. Found: {list(found_env_vars.keys())}"
     
     def test_workflow_branch_triggers(self):
         """Test workflow branch trigger configuration."""
