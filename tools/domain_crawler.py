@@ -132,6 +132,10 @@ class DomainDeepCrawlParams(BaseModel):
         # Strip whitespace
         v = v.strip()
         
+        # Auto-add https:// if no scheme provided
+        if '://' not in v:
+            v = f"https://{v}"
+        
         # Parse URL
         parsed = urlparse(v)
         if not parsed.scheme or not parsed.netloc:
@@ -151,6 +155,12 @@ class DomainDeepCrawlParams(BaseModel):
         if v not in allowed_strategies:
             raise ValueError(f"Strategy must be one of: {allowed_strategies}")
         return v
+    
+    @field_validator('url_patterns', 'exclude_patterns', 'keywords', mode='before')
+    @classmethod
+    def convert_none_to_empty_list(cls, v):
+        """Convert None values to empty lists for array fields."""
+        return v if v is not None else []
 
 
 # Real Crawl4AI strategy implementations
