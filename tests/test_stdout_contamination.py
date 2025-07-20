@@ -136,7 +136,7 @@ class TestStdoutContamination:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            cwd="/Users/florianwegener/Projects/crawl4ai-mcp-server"
+            cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         )
         
         # Let it run for a brief moment then terminate
