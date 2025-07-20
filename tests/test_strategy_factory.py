@@ -279,7 +279,7 @@ class TestKeywordScorer:
     
     def test_keyword_scorer_creation(self):
         """Test keyword scorer creation."""
-        from tools.domain_crawler import create_keyword_scorer
+        from tools.domain_crawler import create_keyword_scorer, CRAWL4AI_AVAILABLE
         
         scorer = create_keyword_scorer(
             keywords=["python", "crawler", "tutorial"],
@@ -304,7 +304,7 @@ class TestKeywordScorer:
     
     def test_keyword_scorer_weight_validation(self):
         """Test keyword scorer weight validation."""
-        from tools.domain_crawler import create_keyword_scorer
+        from tools.domain_crawler import create_keyword_scorer, CRAWL4AI_AVAILABLE
         
         # Test valid weights
         scorer = create_keyword_scorer(keywords=["test"], weight=0.5)
@@ -327,7 +327,7 @@ class TestKeywordScorer:
     
     def test_keyword_scorer_normalization(self):
         """Test keyword scorer normalizes keywords."""
-        from tools.domain_crawler import create_keyword_scorer
+        from tools.domain_crawler import create_keyword_scorer, CRAWL4AI_AVAILABLE
         
         scorer = create_keyword_scorer(
             keywords=["Python", "CRAWLER", "Tutorial"],

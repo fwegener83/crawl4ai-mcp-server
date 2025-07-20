@@ -32,7 +32,7 @@ class TestDomainDeepCrawlParamsValidation:
         """Test invalid URL format raises ValueError."""
         with pytest.raises(ValidationError) as exc_info:
             from tools.domain_crawler import DomainDeepCrawlParams
-            DomainDeepCrawlParams(domain_url="invalid-url")
+            DomainDeepCrawlParams(domain_url="://invalid-url")  # Really invalid format
         
         assert "Invalid domain URL format" in str(exc_info.value)
     
@@ -192,6 +192,23 @@ class TestDomainDeepCrawlParamsValidation:
         # Should not be able to modify attributes
         with pytest.raises(ValidationError):
             params.domain_url = "https://other.com"
+    
+    def test_none_values_converted_to_empty_lists(self):
+        """Test that None values for list fields are converted to empty lists."""
+        from tools.domain_crawler import DomainDeepCrawlParams
+        
+        # Test with None values (as sent by MCP Inspector)
+        params = DomainDeepCrawlParams(
+            domain_url="bpv-consult.de",
+            exclude_patterns=None,
+            keywords=None,
+            url_patterns=None
+        )
+        
+        assert params.domain_url == "https://bpv-consult.de"
+        assert params.exclude_patterns == []
+        assert params.keywords == []
+        assert params.url_patterns == []
 
 
 class TestDomainLinkPreviewParamsValidation:

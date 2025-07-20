@@ -132,6 +132,10 @@ class DomainDeepCrawlParams(BaseModel):
         # Strip whitespace
         v = v.strip()
         
+        # Auto-add https:// if no scheme provided
+        if '://' not in v:
+            v = f"https://{v}"
+        
         # Parse URL
         parsed = urlparse(v)
         if not parsed.scheme or not parsed.netloc:
@@ -151,6 +155,12 @@ class DomainDeepCrawlParams(BaseModel):
         if v not in allowed_strategies:
             raise ValueError(f"Strategy must be one of: {allowed_strategies}")
         return v
+    
+    @field_validator('url_patterns', 'exclude_patterns', 'keywords', mode='before')
+    @classmethod
+    def convert_none_to_empty_list(cls, v):
+        """Convert None values to empty lists for array fields."""
+        return v if v is not None else []
 
 
 # Real Crawl4AI strategy implementations
@@ -303,6 +313,14 @@ async def handle_batch_crawl(crawler: AsyncWebCrawler, domain_url: str, config: 
 def format_crawl_result(result: Any, streaming: bool = False) -> str:
     """Format crawl result into expected JSON structure."""
     try:
+        # Handle dictionary result (from mocks or pre-formatted results)
+        if isinstance(result, dict):
+            # If it's already a properly formatted result, return it
+            if "success" in result and "pages" in result:
+                result["streaming"] = streaming
+                return json.dumps(result)
+            # Otherwise, treat it as raw data to be formatted
+        
         # Handle different result types from Crawl4AI or Mock
         if isinstance(result, list):
             # List of CrawlResult objects from deep crawling

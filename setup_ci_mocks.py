@@ -4,6 +4,11 @@
 import os
 import sys
 
+# Only create mocks in CI environment
+if not os.getenv('CI'):
+    print("⚠️  Not in CI environment - skipping mock setup")
+    sys.exit(0)
+
 # Create crawl4ai mock package
 crawl4ai_dir = "crawl4ai"
 os.makedirs(crawl4ai_dir, exist_ok=True)

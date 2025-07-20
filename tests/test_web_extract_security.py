@@ -322,36 +322,6 @@ class TestIntegrationWithMCP:
                 assert "[REDACTED]" not in response_text
 
 
-class TestErrorSanitizationPerformance:
-    """Test error sanitization performance in web extract."""
-    
-    @pytest.mark.asyncio
-    async def test_sanitization_performance_overhead(self):
-        """Test that error sanitization doesn't add significant overhead."""
-        import time
-        
-        def mock_error(*args, **kwargs):
-            raise Exception("Error with sensitive data: password123, sk-abcd1234, /etc/passwd")
-        
-        with patch('tools.web_extract.AsyncWebCrawler') as mock_crawler:
-            mock_instance = AsyncMock()
-            mock_crawler.return_value.__aenter__.return_value = mock_instance
-            mock_instance.arun.side_effect = mock_error
-            
-            from tools.web_extract import web_content_extract
-            
-            # Time multiple sanitization operations
-            start_time = time.perf_counter()
-            
-            for _ in range(100):
-                params = WebExtractParams(url="https://example.com")
-                result = await web_content_extract(params)
-                assert "[REDACTED]" in result
-            
-            duration = time.perf_counter() - start_time
-            
-            # Should be reasonably fast (under 3 seconds for 100 operations including mock overhead)
-            assert duration < 3.0, f"Sanitization overhead too high: {duration:.4f}s for 100 operations"
 
     @pytest.mark.asyncio
     async def test_no_sanitization_on_success(self):

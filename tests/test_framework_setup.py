@@ -227,9 +227,7 @@ class TestTestInfrastructureRequirements:
         
         # Test files that may be disabled for CI optimization
         ci_optimized_files = [
-            'test_server.py',
-            'test_integration_comprehensive.py',
-            'test_e2e_workflow.py'
+            # These files were removed during test cleanup
         ]
         
         # Check core test files always exist

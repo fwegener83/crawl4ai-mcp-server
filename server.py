@@ -2,7 +2,7 @@
 import asyncio
 import logging
 import os
-from typing import Dict, Any
+from typing import Dict, Any, Optional, List
 
 from fastmcp import FastMCP
 from dotenv import load_dotenv
@@ -90,9 +90,9 @@ async def domain_deep_crawl_tool(
     crawl_strategy: str = "bfs",
     max_pages: int = 50,
     include_external: bool = False,
-    url_patterns: list[str] = None,
-    exclude_patterns: list[str] = None,
-    keywords: list[str] = None,
+    url_patterns: Optional[List[str]] = None,
+    exclude_patterns: Optional[List[str]] = None,
+    keywords: Optional[List[str]] = None,
     stream_results: bool = False
 ) -> str:
     """Crawl a complete domain with configurable depth and strategies.

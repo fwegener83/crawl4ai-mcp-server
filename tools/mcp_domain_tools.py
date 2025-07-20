@@ -52,9 +52,9 @@ async def domain_deep_crawl(
             crawl_strategy=crawl_strategy,
             max_pages=max_pages,
             include_external=include_external,
-            url_patterns=url_patterns or [],
-            exclude_patterns=exclude_patterns or [],
-            keywords=keywords or [],
+            url_patterns=url_patterns,
+            exclude_patterns=exclude_patterns,
+            keywords=keywords,
             stream_results=stream_results
         )
         
