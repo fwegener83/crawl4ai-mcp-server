@@ -4,7 +4,7 @@ This module provides comprehensive test data factories for domain deep crawling 
 """
 
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Any
 from unittest.mock import MagicMock, AsyncMock
 
@@ -27,7 +27,7 @@ class CrawlResultFactory:
         result.success = success
         result.links = []
         result.metadata = {
-            "crawl_time": datetime.utcnow().isoformat(),
+            "crawl_time": datetime.now(timezone.utc).isoformat(),
             "status_code": 200
         }
         return result
