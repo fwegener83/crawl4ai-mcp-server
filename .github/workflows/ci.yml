@@ -122,5 +122,5 @@ jobs:
       
     - name: Check for known vulnerabilities
       run: |
-        safety check
+        safety scan
       continue-on-error: true
