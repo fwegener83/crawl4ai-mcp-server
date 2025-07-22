@@ -63,6 +63,7 @@ class EmbeddingService:
         try:
             embedding = self.model.encode(text, convert_to_tensor=False)
             # Ensure it's a list of floats
+            np = rag_deps.get_component('numpy')
             if isinstance(embedding, np.ndarray):
                 embedding = embedding.tolist()
             
@@ -109,6 +110,7 @@ class EmbeddingService:
             embeddings = self.model.encode(texts, **encode_kwargs)
             
             # Ensure embeddings are lists of floats
+            np = rag_deps.get_component('numpy')
             if isinstance(embeddings, np.ndarray):
                 embeddings = embeddings.tolist()
             elif isinstance(embeddings[0], np.ndarray):
@@ -151,6 +153,7 @@ class EmbeddingService:
         """
         try:
             # Convert to numpy arrays
+            np = rag_deps.get_component('numpy')
             emb1 = np.array(embedding1)
             emb2 = np.array(embedding2)
             
@@ -186,6 +189,7 @@ class EmbeddingService:
             Exception: If batch similarity calculation fails.
         """
         try:
+            np = rag_deps.get_component('numpy')
             query_emb = np.array(query_embedding)
             batch_embs = np.array(embeddings)
             
