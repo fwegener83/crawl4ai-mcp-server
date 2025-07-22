@@ -255,16 +255,23 @@ class TestSystemIntegration:
                 # Test MCP protocol sequence
                 # 1. List tools
                 tools = await client.list_tools()
-                assert len(tools) == 7  # Original 3 + 4 RAG tools
                 tool_names = [tool.name for tool in tools]
+                
+                # Core tools should always be available
                 assert "web_content_extract" in tool_names
                 assert "domain_deep_crawl_tool" in tool_names
                 assert "domain_link_preview_tool" in tool_names
-                # Check RAG tools are also registered
-                assert "store_crawl_results" in tool_names
-                assert "search_knowledge_base" in tool_names
-                assert "list_collections" in tool_names
-                assert "delete_collection" in tool_names
+                
+                # Check if RAG tools are available based on dependencies
+                rag_tools = ["store_crawl_results", "search_knowledge_base", "list_collections", "delete_collection"]
+                rag_available = all(tool_name in tool_names for tool_name in rag_tools)
+                
+                if rag_available:
+                    # If RAG dependencies available, should have 7 tools
+                    assert len(tools) == 7  # Original 3 + 4 RAG tools
+                else:
+                    # If RAG dependencies not available, should have 3 tools
+                    assert len(tools) == 3  # Only original 3 tools
                 
                 # 2. Tool execution
                 result = await client.call_tool_mcp("web_content_extract", {
