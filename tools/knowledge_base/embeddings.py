@@ -2,8 +2,7 @@
 import os
 import logging
 from typing import List, Union, Optional
-import numpy as np
-from sentence_transformers import SentenceTransformer
+from .dependencies import rag_deps, ensure_rag_available
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +23,8 @@ class EmbeddingService:
             device: Device to run the model on ('cpu', 'cuda', etc.).
             cache_folder: Folder to cache the model.
         """
+        ensure_rag_available()
+        
         self.model_name = model_name or os.getenv("RAG_MODEL_NAME", "all-MiniLM-L6-v2")
         self.device = device or os.getenv("RAG_DEVICE", "cpu")
         self.cache_folder = cache_folder
@@ -36,7 +37,8 @@ class EmbeddingService:
         """Load the SentenceTransformer model."""
         try:
             logger.info(f"Loading model: {self.model_name}")
-            self.model = SentenceTransformer(
+            sentence_transformer = rag_deps.get_component('SentenceTransformer')
+            self.model = sentence_transformer(
                 self.model_name,
                 device=self.device,
                 cache_folder=self.cache_folder

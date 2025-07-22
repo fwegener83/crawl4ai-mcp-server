@@ -4,7 +4,7 @@ import logging
 import hashlib
 import re
 from typing import Dict, Any, List, Optional, Union, Tuple
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from .dependencies import rag_deps, ensure_rag_available
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +25,13 @@ class ContentProcessor:
             chunk_overlap: Overlap between chunks.
             separators: List of separators for text splitting.
         """
+        ensure_rag_available()
+        
         self.chunk_size = chunk_size or int(os.getenv("RAG_CHUNK_SIZE", "1000"))
         self.chunk_overlap = chunk_overlap or int(os.getenv("RAG_CHUNK_OVERLAP", "200"))
         self.separators = separators or ["\n\n", "\n", " ", ""]
         
+        RecursiveCharacterTextSplitter = rag_deps.get_component('RecursiveCharacterTextSplitter')
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap,

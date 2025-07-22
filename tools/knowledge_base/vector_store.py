@@ -2,8 +2,7 @@
 import os
 import logging
 from typing import Dict, Any, List, Optional, Union
-import chromadb
-from chromadb.config import Settings
+from .dependencies import rag_deps, ensure_rag_available
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +21,8 @@ class VectorStore:
             persist_directory: Directory to persist the database. If None, uses memory only.
             collection_name: Name of the collection to use.
         """
+        ensure_rag_available()
+        
         self.persist_directory = persist_directory or os.getenv("RAG_DB_PATH", "./rag_db")
         self.collection_name = collection_name
         self.client = None
@@ -40,6 +41,7 @@ class VectorStore:
                 try:
                     # Ensure directory exists
                     os.makedirs(expanded_path, exist_ok=True)
+                    chromadb = rag_deps.get_component('chromadb')
                     self.client = chromadb.PersistentClient(path=expanded_path)
                     self.persist_directory = expanded_path  # Update with expanded path
                 except OSError as e:
@@ -47,12 +49,14 @@ class VectorStore:
                         logger.warning(f"Cannot write to {expanded_path} (read-only filesystem). Falling back to /tmp.")
                         fallback_path = f"/tmp/crawl4ai-rag-db"
                         os.makedirs(fallback_path, exist_ok=True)
+                        chromadb = rag_deps.get_component('chromadb')
                         self.client = chromadb.PersistentClient(path=fallback_path)
                         self.persist_directory = fallback_path
                     else:
                         raise
             else:
                 # In-memory client for testing
+                chromadb = rag_deps.get_component('chromadb')
                 self.client = chromadb.Client()
             
             logger.info(f"ChromaDB client initialized successfully at {self.persist_directory if self.persist_directory else 'memory'}")
