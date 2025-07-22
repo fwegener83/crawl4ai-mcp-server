@@ -4,8 +4,15 @@ import shutil
 import os
 from typing import Dict, Any, List, Optional, Union
 from unittest.mock import MagicMock, AsyncMock, patch
-import numpy as np
 import json
+
+# Optional numpy import - only needed for some test data generation
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    np = None
+    NUMPY_AVAILABLE = False
 
 
 class RAGTestData:
@@ -254,12 +261,21 @@ class SentenceTransformersMockFactory:
             for text in sentences:
                 # Simple hash-based embedding generation
                 hash_val = hash(text) % 1000000
-                embedding = np.random.RandomState(hash_val).rand(embedding_dim).astype(np.float32)
-                # Normalize to unit vector
-                embedding = embedding / np.linalg.norm(embedding)
+                if NUMPY_AVAILABLE:
+                    embedding = np.random.RandomState(hash_val).rand(embedding_dim).astype(np.float32)
+                    # Normalize to unit vector
+                    embedding = embedding / np.linalg.norm(embedding)
+                else:
+                    # Fallback to simple list-based embedding when numpy not available
+                    import random
+                    random.seed(hash_val)
+                    embedding = [random.random() for _ in range(embedding_dim)]
+                    # Simple normalization
+                    norm = sum(x*x for x in embedding) ** 0.5
+                    embedding = [x/norm for x in embedding]
                 embeddings.append(embedding)
             
-            return np.array(embeddings)
+            return np.array(embeddings) if NUMPY_AVAILABLE else embeddings
         
         mock_model.encode = MagicMock(side_effect=encode_side_effect)
         return mock_model

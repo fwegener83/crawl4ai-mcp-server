@@ -6,6 +6,20 @@ import shutil
 from unittest.mock import MagicMock, patch, AsyncMock
 from typing import Dict, Any, List
 
+# Check if RAG dependencies are available
+try:
+    import numpy as np
+    import chromadb
+    RAG_DEPENDENCIES_AVAILABLE = True
+except ImportError:
+    RAG_DEPENDENCIES_AVAILABLE = False
+
+# Skip all tests in this module if dependencies are not available
+pytestmark = pytest.mark.skipif(
+    not RAG_DEPENDENCIES_AVAILABLE, 
+    reason="RAG dependencies (numpy, chromadb) not available"
+)
+
 from tests.rag_factories import (
     setup_rag_test_environment,
     RAGTestData,
