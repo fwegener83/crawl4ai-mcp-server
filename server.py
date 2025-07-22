@@ -13,13 +13,16 @@ from tools.mcp_domain_tools import domain_deep_crawl, domain_link_preview
 # Try to import RAG tools, but don't fail if dependencies are missing
 try:
     from tools.knowledge_base.dependencies import is_rag_available
-    from tools.knowledge_base.rag_tools import (
-        store_crawl_results as rag_store_crawl_results,
-        search_knowledge_base as rag_search_knowledge_base,
-        list_collections as rag_list_collections,
-        delete_collection as rag_delete_collection
-    )
-    RAG_TOOLS_AVAILABLE = is_rag_available()
+    if is_rag_available():
+        from tools.knowledge_base.rag_tools import (
+            store_crawl_results as rag_store_crawl_results,
+            search_knowledge_base as rag_search_knowledge_base,
+            list_collections as rag_list_collections,
+            delete_collection as rag_delete_collection
+        )
+        RAG_TOOLS_AVAILABLE = True
+    else:
+        RAG_TOOLS_AVAILABLE = False
 except ImportError as e:
     logger.warning(f"RAG tools not available: {e}")
     RAG_TOOLS_AVAILABLE = False
@@ -182,123 +185,85 @@ async def domain_link_preview_tool(
 
 
 # RAG Knowledge Base Tools (conditional registration)
-if RAG_TOOLS_AVAILABLE:
+def register_rag_tools():
+    """Register RAG tools if dependencies are available."""
+    
     @mcp.tool()
     async def store_crawl_results(
         crawl_result: str,
         collection_name: str = "default"
     ) -> str:
-    """Store crawl results in RAG knowledge base.
-    
-    This tool stores web crawling results in a vector database for later
-    semantic search and retrieval. Supports both string format (from 
-    web_content_extract) and dict format (from domain_deep_crawl).
-    
-    Args:
-        crawl_result: Crawl result data (string or JSON object)
-        collection_name: Name of collection to store results in
+        """Store crawl results in RAG knowledge base."""
+        logger.info(f"Storing crawl results in collection: {collection_name}")
         
-    Returns:
-        str: JSON string with storage results
-    """
-    logger.info(f"Storing crawl results in collection: {collection_name}")
-    
-    try:
-        result = await rag_store_crawl_results(crawl_result, collection_name)
-        logger.info("Crawl results stored successfully")
-        return result
-    except Exception as e:
-        error_msg = f"Failed to store crawl results: {str(e)}"
-        logger.error(error_msg)
-        return f'{{"success": false, "message": "{str(e)}", "chunks_stored": 0}}'
-
+        try:
+            result = await rag_store_crawl_results(crawl_result, collection_name)
+            logger.info("Crawl results stored successfully")
+            return result
+        except Exception as e:
+            error_msg = f"Failed to store crawl results: {str(e)}"
+            logger.error(error_msg)
+            return f'{{"success": false, "message": "{str(e)}", "chunks_stored": 0}}'
 
     @mcp.tool()
     async def search_knowledge_base(
-    query: str,
-    collection_name: str = "default",
-    n_results: int = 5,
-    similarity_threshold: float = None
-) -> str:
-    """Search the RAG knowledge base for relevant content.
-    
-    This tool performs semantic search across stored documents using
-    vector similarity. Returns ranked results with similarity scores.
-    
-    Args:
-        query: Search query text
-        collection_name: Collection to search in
-        n_results: Maximum number of results to return (1-20)
-        similarity_threshold: Minimum similarity score (0.0-1.0)
+        query: str,
+        collection_name: str = "default",
+        n_results: int = 5,
+        similarity_threshold: float = None
+    ) -> str:
+        """Search the RAG knowledge base for relevant content."""
+        logger.info(f"Searching knowledge base: '{query[:50]}...' in collection '{collection_name}'")
         
-    Returns:
-        str: JSON string with search results
-    """
-    logger.info(f"Searching knowledge base: '{query[:50]}...' in collection '{collection_name}'")
-    
-    try:
-        result = await rag_search_knowledge_base(
-            query=query,
-            collection_name=collection_name,
-            n_results=n_results,
-            similarity_threshold=similarity_threshold
-        )
-        logger.info(f"Search completed successfully")
-        return result
-    except Exception as e:
-        error_msg = f"Search failed: {str(e)}"
-        logger.error(error_msg)
-        return f'{{"success": false, "query": "{query}", "message": "{str(e)}", "results": []}}'
-
+        try:
+            result = await rag_search_knowledge_base(
+                query=query,
+                collection_name=collection_name,
+                n_results=n_results,
+                similarity_threshold=similarity_threshold
+            )
+            logger.info("Search completed successfully")
+            return result
+        except Exception as e:
+            error_msg = f"Search failed: {str(e)}"
+            logger.error(error_msg)
+            return f'{{"success": false, "query": "{query}", "message": "{str(e)}", "results": []}}'
 
     @mcp.tool()
     async def list_collections() -> str:
-    """List all available collections in the knowledge base.
-    
-    This tool returns information about all collections in the vector
-    database, including document counts and basic statistics.
-    
-    Returns:
-        str: JSON string with collection information
-    """
-    logger.info("Listing knowledge base collections")
-    
-    try:
-        result = await rag_list_collections()
-        logger.info("Collections listed successfully")
-        return result
-    except Exception as e:
-        error_msg = f"Failed to list collections: {str(e)}"
-        logger.error(error_msg)
-        return f'{{"success": false, "message": "{str(e)}", "collections": []}}'
-
+        """List all available collections in the knowledge base."""
+        logger.info("Listing knowledge base collections")
+        
+        try:
+            result = await rag_list_collections()
+            logger.info("Collections listed successfully")
+            return result
+        except Exception as e:
+            error_msg = f"Failed to list collections: {str(e)}"
+            logger.error(error_msg)
+            return f'{{"success": false, "message": "{str(e)}", "collections": []}}'
 
     @mcp.tool()
     async def delete_collection(collection_name: str) -> str:
-    """Delete a collection from the knowledge base.
-    
-    This tool permanently deletes a collection and all its documents
-    from the vector database. This action cannot be undone.
-    
-    Args:
-        collection_name: Name of collection to delete
+        """Delete a collection from the knowledge base."""
+        logger.info(f"Deleting collection: {collection_name}")
         
-    Returns:
-        str: JSON string with deletion result
-    """
-    logger.info(f"Deleting collection: {collection_name}")
-    
-    try:
-        result = await rag_delete_collection(collection_name)
-        logger.info(f"Collection '{collection_name}' deleted successfully")
-        return result
-    except Exception as e:
-        error_msg = f"Failed to delete collection: {str(e)}"
-        logger.error(error_msg)
-        return f'{{"success": false, "message": "{str(e)}", "collection_name": "{collection_name}"}}'
+        try:
+            result = await rag_delete_collection(collection_name)
+            logger.info(f"Collection '{collection_name}' deleted successfully")
+            return result
+        except Exception as e:
+            error_msg = f"Failed to delete collection: {str(e)}"
+            logger.error(error_msg)
+            return f'{{"success": false, "message": "{str(e)}", "collection_name": "{collection_name}"}}'
 
+
+if RAG_TOOLS_AVAILABLE:
+    register_rag_tools()
+    logger.info("RAG tools registered successfully")
 else:
-    logger.info("RAG tools are not available - install RAG dependencies to enable: pip install chromadb sentence-transformers langchain-text-splitters numpy")
+    logger.info("RAG tools not available - install dependencies to enable: pip install chromadb sentence-transformers langchain-text-splitters numpy")
+
 
 
 if __name__ == "__main__":
