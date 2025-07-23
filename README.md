@@ -1,15 +1,29 @@
 # Crawl4AI MCP Server
 
-MCP Server für Web-Content-Extraktion mit [Crawl4AI](https://github.com/unclecode/crawl4ai).
+MCP Server für Web-Content-Extraktion mit [Crawl4AI](https://github.com/unclecode/crawl4ai) und RAG Knowledge Base Funktionalität.
 
 ## Installation
 
+### Basis Installation
 ```bash
 git clone <repository-url>
 cd crawl4ai-mcp-server
 uv install
 playwright install
 ```
+
+### RAG Knowledge Base (Optional)
+Für erweiterte Funktionalität mit semantischer Suche und Wissensspeicherung:
+
+```bash
+# RAG Dependencies installieren
+pip install chromadb sentence-transformers langchain-text-splitters numpy
+
+# Oder mit uv
+uv add chromadb sentence-transformers langchain-text-splitters numpy
+```
+
+**Hinweis:** Ohne RAG Dependencies sind nur die 3 Basis-Tools verfügbar. Mit RAG Dependencies erweitert sich die Funktionalität auf 7 Tools.
 
 ## MCP Inspector Setup
 
@@ -49,7 +63,9 @@ Konfiguration in `~/Library/Application Support/Claude/claude_desktop_config.jso
 
 ## Verfügbare Tools
 
-### `web_content_extract`
+### 🌐 Basis Web-Crawling Tools (immer verfügbar)
+
+#### `web_content_extract`
 Extrahiert Content von einzelnen Webseiten als Markdown.
 
 **Parameter:**
@@ -65,7 +81,7 @@ Extrahiert Content von einzelnen Webseiten als Markdown.
 }
 ```
 
-### `domain_deep_crawl_tool`
+#### `domain_deep_crawl_tool`
 Tiefes Crawling einer ganzen Domain mit konfigurierbaren Strategien.
 
 **Parameter:**
@@ -78,12 +94,184 @@ Tiefes Crawling einer ganzen Domain mit konfigurierbaren Strategien.
 - `exclude_patterns` (list, optional): URL-Patterns zum Ausschließen
 - `keywords` (list, optional): Keywords für BestFirst-Scoring
 
-### `domain_link_preview_tool`
+#### `domain_link_preview_tool`
 Schnelle Link-Vorschau einer Domain ohne vollständiges Crawling.
 
 **Parameter:**
 - `domain_url` (string, required): Basis-URL/Domain zum Analysieren  
 - `include_external` (bool, default: false): Externe Links einschließen
+
+### 🧠 RAG Knowledge Base Tools (erfordert optionale Dependencies)
+
+**Hinweis:** Diese Tools sind nur verfügbar wenn RAG Dependencies installiert sind (siehe Installation).
+
+#### `store_crawl_results`
+Speichert Crawl-Ergebnisse in der vektorbasierten Knowledge Base für spätere semantische Suche.
+
+**Parameter:**
+- `crawl_result` (string, required): Crawl-Ergebnis (String oder JSON)
+- `collection_name` (string, default: "default"): Name der Collection
+
+**Beispiel:**
+```json
+{
+  "name": "store_crawl_results",
+  "arguments": {
+    "crawl_result": "Content text or JSON from crawling",
+    "collection_name": "my_docs"
+  }
+}
+```
+
+#### `search_knowledge_base`
+Semantische Suche in der gespeicherten Knowledge Base mit Similarity-Scoring.
+
+**Parameter:**
+- `query` (string, required): Suchanfrage
+- `collection_name` (string, default: "default"): Collection zum Durchsuchen
+- `n_results` (int, default: 5): Maximale Anzahl Ergebnisse (1-20)
+- `similarity_threshold` (float, optional): Minimaler Similarity Score (0.0-1.0)
+
+**Beispiel:**
+```json
+{
+  "name": "search_knowledge_base",
+  "arguments": {
+    "query": "machine learning algorithms",
+    "collection_name": "tech_docs",
+    "n_results": 3
+  }
+}
+```
+
+#### `list_collections`
+Listet alle verfügbaren Collections in der Knowledge Base mit Statistiken auf.
+
+**Parameter:** Keine
+
+**Beispiel:**
+```json
+{
+  "name": "list_collections",
+  "arguments": {}
+}
+```
+
+#### `delete_collection`
+Löscht eine Collection permanent aus der Knowledge Base.
+
+**Parameter:**
+- `collection_name` (string, required): Name der zu löschenden Collection
+
+**Beispiel:**
+```json
+{
+  "name": "delete_collection",
+  "arguments": {
+    "collection_name": "old_docs"
+  }
+}
+```
+
+## RAG Knowledge Base - Quick Start
+
+### Grundlegende Konfiguration
+
+Erstelle optional eine `.env` Datei für Konfiguration:
+```env
+# RAG Knowledge Base Konfiguration
+RAG_DB_PATH=./my_knowledge_base    # Pfad zur ChromaDB Datenbank
+RAG_MODEL_NAME=all-MiniLM-L6-v2    # Embedding Model
+RAG_CHUNK_SIZE=1000                # Text Chunk Größe
+RAG_CHUNK_OVERLAP=200              # Overlap zwischen Chunks
+RAG_DEVICE=cpu                     # cpu oder cuda
+```
+
+### Typische Workflows
+
+#### 1. Content Crawlen und Speichern
+```json
+// 1. Webseite crawlen
+{
+  "name": "web_content_extract",
+  "arguments": {
+    "url": "https://docs.python.org/3/tutorial/"
+  }
+}
+
+// 2. Ergebnis in Knowledge Base speichern
+{
+  "name": "store_crawl_results", 
+  "arguments": {
+    "crawl_result": "[crawl output from step 1]",
+    "collection_name": "python_docs"
+  }
+}
+```
+
+#### 2. Domain Crawlen und Batch-Speichern
+```json
+// 1. Ganze Domain crawlen
+{
+  "name": "domain_deep_crawl_tool",
+  "arguments": {
+    "domain_url": "https://fastapi.tiangolo.com",
+    "max_depth": 2,
+    "max_pages": 20
+  }
+}
+
+// 2. Alle Ergebnisse speichern
+{
+  "name": "store_crawl_results",
+  "arguments": {
+    "crawl_result": "[domain crawl JSON output]",
+    "collection_name": "fastapi_docs"
+  }
+}
+```
+
+#### 3. Semantische Suche
+```json
+// Nach relevantem Content suchen
+{
+  "name": "search_knowledge_base",
+  "arguments": {
+    "query": "async database connections",
+    "collection_name": "fastapi_docs",
+    "n_results": 5
+  }
+}
+```
+
+#### 4. Collection Management
+```json
+// Alle Collections anzeigen
+{
+  "name": "list_collections",
+  "arguments": {}
+}
+
+// Collection löschen
+{
+  "name": "delete_collection",
+  "arguments": {
+    "collection_name": "old_collection"
+  }
+}
+```
+
+### Integration mit Claude/ChatGPT
+
+**Beispiel-Prompt:**
+```
+Bitte crawle die FastAPI Dokumentation und speichere sie in einer Knowledge Base:
+
+1. Nutze domain_deep_crawl_tool für https://fastapi.tiangolo.com 
+2. Speichere die Ergebnisse mit store_crawl_results in Collection "fastapi"
+3. Suche dann nach "authentication" in der Collection
+4. Fasse die gefundenen Informationen zusammen
+```
 
 ## Tests
 
@@ -96,6 +284,9 @@ pytest -m "not slow"
 
 # Mit Coverage
 pytest --cov=. --cov-report=html
+
+# RAG Tests (erfordern Dependencies)
+pytest tests/test_rag_integration.py tests/test_knowledge_base.py
 ```
 
 ## Entwicklung
@@ -107,9 +298,26 @@ uv run python server.py
 
 ## Troubleshooting
 
+### Allgemeine Probleme
 1. **Module not found**: Stelle sicher, dass alle Dependencies installiert sind: `uv install`
 2. **Playwright fehlt**: Browser installieren: `playwright install`
 3. **MCP Inspector verbindet nicht**: Prüfe ob Server läuft und Config korrekt ist
+
+### RAG-spezifische Probleme
+4. **"RAG tools not available"**: RAG Dependencies installieren (siehe Installation)
+5. **ChromaDB Fehler**: Prüfe `RAG_DB_PATH` Berechtigung und Speicherplatz
+6. **Embedding Model lädt nicht**: Internetverbindung prüfen (Model wird bei erstem Start heruntergeladen)
+7. **Speicher-Probleme bei großen Dokumenten**: `RAG_CHUNK_SIZE` reduzieren oder `RAG_DEVICE=cpu` setzen
+8. **Suche liefert keine Ergebnisse**: `similarity_threshold` reduzieren oder Collection mit `list_collections` prüfen
+
+### RAG Tools Test
+```bash
+# Prüfen ob RAG Dependencies verfügbar sind
+python3 -c "from tools.knowledge_base.dependencies import is_rag_available; print('RAG available:', is_rag_available())"
+
+# RAG funktionalität testen
+pytest tests/test_knowledge_base.py -v
+```
 
 ## Links
 
