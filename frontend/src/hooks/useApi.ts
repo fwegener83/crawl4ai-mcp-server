@@ -117,12 +117,13 @@ export function useCollections() {
   const searchInCollection = useCallback(async (
     query: string,
     collectionName?: string,
-    nResults?: number
+    nResults?: number,
+    similarityThreshold?: number
   ) => {
     const targetCollection = collectionName || selectedCollection;
     const { APIService } = await import('../services/api');
     return await searchApi.execute(() =>
-      APIService.searchCollections(query, targetCollection, nResults)
+      APIService.searchCollections(query, targetCollection, nResults, similarityThreshold)
     );
   }, [searchApi, selectedCollection]);
 

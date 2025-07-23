@@ -3,6 +3,7 @@ import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
 import SimpleCrawlPage from './pages/SimpleCrawlPage';
 import DeepCrawlPage from './pages/DeepCrawlPage';
+import CollectionsPage from './pages/CollectionsPage';
 
 type Page = 'home' | 'simple-crawl' | 'deep-crawl' | 'collections';
 
@@ -16,7 +17,7 @@ function App() {
       case 'deep-crawl':
         return <DeepCrawlPage />;
       case 'collections':
-        return <div>Collections Page (Coming Soon)</div>;
+        return <CollectionsPage />;
       default:
         return <HomePage onNavigate={setCurrentPage} />;
     }
