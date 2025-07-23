@@ -1,5 +1,11 @@
 
-export function HomePage() {
+type Page = 'home' | 'simple-crawl' | 'deep-crawl' | 'collections';
+
+interface HomePageProps {
+  onNavigate?: (page: Page) => void;
+}
+
+export function HomePage({ onNavigate }: HomePageProps) {
   return (
     <div className="space-y-8">
       {/* Hero Section */}
@@ -30,7 +36,10 @@ export function HomePage() {
           <p className="text-gray-600 dark:text-gray-300 mb-4">
             Extract content from individual web pages with clean markdown output.
           </p>
-          <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors">
+          <button 
+            onClick={() => onNavigate?.('simple-crawl')}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+          >
             Start Simple Crawl
           </button>
         </div>
@@ -50,7 +59,10 @@ export function HomePage() {
           <p className="text-gray-600 dark:text-gray-300 mb-4">
             Crawl entire domains with advanced strategies and filtering options.
           </p>
-          <button className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors">
+          <button 
+            onClick={() => onNavigate?.('deep-crawl')}
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+          >
             Start Deep Crawl
           </button>
         </div>
@@ -70,7 +82,10 @@ export function HomePage() {
           <p className="text-gray-600 dark:text-gray-300 mb-4">
             Organize and search your crawled content with RAG-powered semantic search.
           </p>
-          <button className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-md transition-colors">
+          <button 
+            onClick={() => onNavigate?.('collections')}
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+          >
             Manage Collections
           </button>
         </div>

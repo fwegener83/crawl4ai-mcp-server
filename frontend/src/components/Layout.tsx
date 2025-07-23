@@ -1,10 +1,14 @@
 import React from 'react';
 
+type Page = 'home' | 'simple-crawl' | 'deep-crawl' | 'collections';
+
 interface LayoutProps {
   children: React.ReactNode;
+  currentPage?: Page;
+  onNavigate?: (page: Page) => void;
 }
 
-export function Layout({ children }: LayoutProps) {
+export function Layout({ children, currentPage = 'home', onNavigate }: LayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
@@ -12,18 +16,42 @@ export function Layout({ children }: LayoutProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+              <button 
+                onClick={() => onNavigate?.('home')}
+                className="text-xl font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              >
                 Crawl4AI Web Interface
-              </h1>
+              </button>
             </div>
             <nav className="flex space-x-8">
-              <button className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
+              <button 
+                onClick={() => onNavigate?.('simple-crawl')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  currentPage === 'simple-crawl'
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
                 Simple Crawl
               </button>
-              <button className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
+              <button 
+                onClick={() => onNavigate?.('deep-crawl')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  currentPage === 'deep-crawl'
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
                 Deep Crawl
               </button>
-              <button className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
+              <button 
+                onClick={() => onNavigate?.('collections')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  currentPage === 'collections'
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
                 Collections
               </button>
             </nav>

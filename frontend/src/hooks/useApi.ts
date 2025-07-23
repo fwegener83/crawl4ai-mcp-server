@@ -88,9 +88,8 @@ export function useCollections() {
 
   const refreshCollections = useCallback(async () => {
     try {
-      const result = await listApi.execute(() => 
-        import('../services/api').then(({ APIService }) => APIService.listCollections())
-      );
+      const { APIService } = await import('../services/api');
+      const result = await listApi.execute(() => APIService.listCollections());
       setCollections(result || []);
       return result;
     } catch (error) {
@@ -100,18 +99,16 @@ export function useCollections() {
   }, [listApi]);
 
   const deleteCollection = useCallback(async (name: string) => {
-    await deleteApi.execute(() =>
-      import('../services/api').then(({ APIService }) => APIService.deleteCollection(name))
-    );
+    const { APIService } = await import('../services/api');
+    await deleteApi.execute(() => APIService.deleteCollection(name));
     await refreshCollections();
   }, [deleteApi, refreshCollections]);
 
   const storeContent = useCallback(async (content: string, collectionName?: string) => {
     const targetCollection = collectionName || selectedCollection;
-    const result = await storeApi.execute(() =>
-      import('../services/api').then(({ APIService }) => 
-        APIService.storeInCollection(content, targetCollection)
-      )
+    const { APIService } = await import('../services/api');
+    const result = await storeApi.execute(() => 
+      APIService.storeInCollection(content, targetCollection)
     );
     await refreshCollections();
     return result;
@@ -123,10 +120,9 @@ export function useCollections() {
     nResults?: number
   ) => {
     const targetCollection = collectionName || selectedCollection;
+    const { APIService } = await import('../services/api');
     return await searchApi.execute(() =>
-      import('../services/api').then(({ APIService }) =>
-        APIService.searchCollections(query, targetCollection, nResults)
-      )
+      APIService.searchCollections(query, targetCollection, nResults)
     );
   }, [searchApi, selectedCollection]);
 

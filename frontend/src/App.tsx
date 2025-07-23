@@ -1,10 +1,29 @@
+import { useState } from 'react';
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
+import SimpleCrawlPage from './pages/SimpleCrawlPage';
+
+type Page = 'home' | 'simple-crawl' | 'deep-crawl' | 'collections';
 
 function App() {
+  const [currentPage, setCurrentPage] = useState<Page>('home');
+
+  const renderCurrentPage = () => {
+    switch (currentPage) {
+      case 'simple-crawl':
+        return <SimpleCrawlPage />;
+      case 'deep-crawl':
+        return <div>Deep Crawl Page (Coming Soon)</div>;
+      case 'collections':
+        return <div>Collections Page (Coming Soon)</div>;
+      default:
+        return <HomePage onNavigate={setCurrentPage} />;
+    }
+  };
+
   return (
-    <Layout>
-      <HomePage />
+    <Layout currentPage={currentPage} onNavigate={setCurrentPage}>
+      {renderCurrentPage()}
     </Layout>
   );
 }
