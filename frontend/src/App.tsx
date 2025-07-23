@@ -4,6 +4,8 @@ import HomePage from './pages/HomePage';
 import SimpleCrawlPage from './pages/SimpleCrawlPage';
 import DeepCrawlPage from './pages/DeepCrawlPage';
 import CollectionsPage from './pages/CollectionsPage';
+import ErrorBoundary from './components/ErrorBoundary';
+import { ToastProvider } from './components/ToastContainer';
 
 type Page = 'home' | 'simple-crawl' | 'deep-crawl' | 'collections';
 
@@ -24,9 +26,13 @@ function App() {
   };
 
   return (
-    <Layout currentPage={currentPage} onNavigate={setCurrentPage}>
-      {renderCurrentPage()}
-    </Layout>
+    <ErrorBoundary>
+      <ToastProvider>
+        <Layout currentPage={currentPage} onNavigate={setCurrentPage}>
+          {renderCurrentPage()}
+        </Layout>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }
 
