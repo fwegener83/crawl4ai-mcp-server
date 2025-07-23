@@ -33,4 +33,5 @@ htmlcov/
 .DS_Store
 
 # Logs
-*.log
+*.log*.egg-info/
+rag_db/
