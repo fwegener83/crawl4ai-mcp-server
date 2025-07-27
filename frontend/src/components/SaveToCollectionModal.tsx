@@ -79,7 +79,7 @@ export function SaveToCollectionModal({
         zIndex: 999999,
         backgroundColor: 'rgba(0, 0, 0, 0.75)',
         display: 'flex !important',
-        visibility: 'visible !important',
+        visibility: 'visible' as any,
         opacity: '1 !important',
         position: 'fixed',
         top: 0,
