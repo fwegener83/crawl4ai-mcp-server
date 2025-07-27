@@ -792,11 +792,13 @@ source = { editable = "." }
 dependencies = [
     { name = "chromadb" },
     { name = "crawl4ai", extra = ["all"] },
+    { name = "fastapi" },
     { name = "fastmcp" },
     { name = "langchain-text-splitters" },
     { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "sentence-transformers" },
+    { name = "uvicorn" },
 ]
 
 [package.optional-dependencies]
@@ -829,6 +831,7 @@ requires-dist = [
     { name = "bandit", marker = "extra == 'dev'" },
     { name = "chromadb", specifier = ">=0.4.0" },
     { name = "crawl4ai", extras = ["all"], specifier = ">=0.7.0" },
+    { name = "fastapi", specifier = ">=0.116.1" },
     { name = "fastmcp", specifier = ">=2.0.0" },
     { name = "httpx", marker = "extra == 'test'" },
     { name = "langchain-text-splitters", specifier = ">=0.2.0" },
@@ -842,6 +845,7 @@ requires-dist = [
     { name = "safety", marker = "extra == 'dev'" },
     { name = "sentence-transformers", specifier = ">=2.0.0" },
     { name = "tomli", marker = "extra == 'test'" },
+    { name = "uvicorn", specifier = ">=0.35.0" },
 ]
 provides-extras = ["test", "dev"]
 
@@ -1025,6 +1029,20 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/41/43/948d10bf42735709edb5ae51e23297d034086f17fc7279fef385a7acb473/fake_useragent-2.2.0.tar.gz", hash = "sha256:4e6ab6571e40cc086d788523cf9e018f618d07f9050f822ff409a4dfe17c16b2", size = 158898, upload-time = "2025-04-14T15:32:19.238Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/51/37/b3ea9cd5558ff4cb51957caca2193981c6b0ff30bd0d2630ac62505d99d0/fake_useragent-2.2.0-py3-none-any.whl", hash = "sha256:67f35ca4d847b0d298187443aaf020413746e56acd985a611908c73dba2daa24", size = 161695, upload-time = "2025-04-14T15:32:17.732Z" },
+]
+
+[[package]]
+name = "fastapi"
+version = "0.116.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "starlette" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/78/d7/6c8b3bfe33eeffa208183ec037fee0cce9f7f024089ab1c5d12ef04bd27c/fastapi-0.116.1.tar.gz", hash = "sha256:ed52cbf946abfd70c5a0dccb24673f0670deeb517a88b3544d03c2a6bf283143", size = 296485, upload-time = "2025-07-11T16:22:32.057Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e5/47/d63c60f59a59467fda0f93f46335c9d18526d7071f025cb5b89d5353ea42/fastapi-0.116.1-py3-none-any.whl", hash = "sha256:c46ac7c312df840f0c9e220f7964bada936781bc4e2e6eb71f1c4d7553786565", size = 95631, upload-time = "2025-07-11T16:22:30.485Z" },
 ]
 
 [[package]]
