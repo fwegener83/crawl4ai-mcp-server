@@ -13,7 +13,7 @@ import type {
 // Configure axios instance with base URL for backend API
 const api = axios.create({
   baseURL: '/api', // Vite will proxy this to backend
-  timeout: 30000, // 30 second timeout for crawling operations
+  timeout: 120000, // 2 minute timeout for crawling operations
   headers: {
     'Content-Type': 'application/json',
   },
@@ -53,8 +53,8 @@ export class APIService {
    * Perform deep domain crawling with advanced configuration
    */
   static async deepCrawlDomain(config: DeepCrawlConfig): Promise<CrawlResult[]> {
-    const response: AxiosResponse<{ results: CrawlResult[] }> = await api.post('/deep-crawl', config);
-    return response.data.results;
+    const response: AxiosResponse<{ results: { success: boolean; pages: CrawlResult[]; crawl_summary: any; streaming: boolean } }> = await api.post('/deep-crawl', config);
+    return response.data.results.pages;
   }
 
   /**

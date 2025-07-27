@@ -20,7 +20,7 @@ export function LoadingSpinner({
       case 'lg':
         return 'h-8 w-8';
       case 'xl':
-        return 'h-12 w-12';
+        return 'h-8 w-8';
       default:
         return 'h-6 w-6';
     }
@@ -62,6 +62,8 @@ export function LoadingSpinner({
     <>
       <svg
         className={`animate-spin ${getSizeClasses()} ${getColorClasses()}`}
+        width={size === 'xl' ? '32' : size === 'lg' ? '32' : size === 'md' ? '24' : '16'}
+        height={size === 'xl' ? '32' : size === 'lg' ? '32' : size === 'md' ? '24' : '16'}
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"

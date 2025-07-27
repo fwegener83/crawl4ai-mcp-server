@@ -103,10 +103,17 @@ export function MarkdownEditor({
       </div>
 
       {/* Content Area */}
-      <div className="h-96" onKeyDown={handleKeyDown}>
+      <div 
+        className="h-96" 
+        style={{ 
+          height: '400px',
+          minHeight: '400px'
+        }}
+        onKeyDown={handleKeyDown}
+      >
         {!isPreview ? (
           <Editor
-            height="100%"
+            height="400px"
             defaultLanguage="markdown"
             value={currentContent}
             onChange={handleContentChange}
@@ -124,7 +131,13 @@ export function MarkdownEditor({
             data-testid="markdown-editor"
           />
         ) : (
-          <div className="h-full overflow-auto p-4 prose prose-sm max-w-none dark:prose-invert">
+          <div 
+            className="overflow-auto p-4 prose prose-sm max-w-none dark:prose-invert"
+            style={{
+              height: '400px',
+              minHeight: '400px'
+            }}
+          >
             <ReactMarkdown>{currentContent}</ReactMarkdown>
           </div>
         )}

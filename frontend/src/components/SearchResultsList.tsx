@@ -21,7 +21,15 @@ export function SearchResultsList({
     setExpandedIndex(expandedIndex === index ? null : index);
   };
 
-  const getScoreBadge = (score: number) => {
+  const getScoreBadge = (score: number | undefined) => {
+    if (score === undefined || score === null) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+          No Score
+        </span>
+      );
+    }
+    
     if (score >= 0.8) {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
@@ -64,7 +72,7 @@ export function SearchResultsList({
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8">
         <div className="text-center">
-          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="mx-auto h-8 w-8 text-gray-400" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
@@ -117,7 +125,7 @@ export function SearchResultsList({
                     
                     <div className="text-sm text-gray-600 dark:text-gray-300">
                       <span className="font-medium">Chunk {result.metadata.chunk_index + 1}</span>
-                      {' '} • Distance: {result.distance.toFixed(4)}
+                      {' '} • Distance: {result.distance ? result.distance.toFixed(4) : 'N/A'}
                     </div>
                   </div>
                 </div>
@@ -159,8 +167,8 @@ export function SearchResultsList({
                   <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-600 pb-2">
                     <div className="flex items-center space-x-4">
                       <span>Chunk: {result.metadata.chunk_index + 1}</span>
-                      <span>Score: {result.metadata.score.toFixed(4)}</span>
-                      <span>Distance: {result.distance.toFixed(4)}</span>
+                      <span>Score: {result.metadata.score ? result.metadata.score.toFixed(4) : 'N/A'}</span>
+                      <span>Distance: {result.distance ? result.distance.toFixed(4) : 'N/A'}</span>
                     </div>
                     {result.metadata.source_url && (
                       <a 
@@ -192,7 +200,7 @@ export function SearchResultsList({
         <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
           <div className="flex items-center space-x-4">
             <span>
-              Avg Score: {(results.reduce((sum, r) => sum + r.metadata.score, 0) / results.length).toFixed(3)}
+              Avg Score: {(results.reduce((sum, r) => sum + (r.metadata.score || 0), 0) / results.length).toFixed(3)}
             </span>
             <span>
               Total Characters: {results.reduce((sum, r) => sum + r.content.length, 0).toLocaleString()}

@@ -21,8 +21,16 @@ export function DeepCrawlPage() {
   };
 
   const handleBulkSaveClick = () => {
+    console.log('Bulk Save clicked:', { 
+      selectedIndices: selectedIndices.length, 
+      crawlResults: crawlResults.length,
+      selectedData: selectedIndices.map(i => ({index: i, hasSuccess: crawlResults[i]?.success}))
+    });
     if (selectedIndices.length > 0) {
+      console.log('Opening BulkSaveModal');
       setShowBulkSaveModal(true);
+    } else {
+      console.log('No items selected');
     }
   };
 
@@ -50,7 +58,7 @@ export function DeepCrawlPage() {
       {saveSuccess && (
         <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md" data-testid="bulk-success-message">
           <div className="flex">
-            <svg className="flex-shrink-0 h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+            <svg className="flex-shrink-0 h-5 w-5 text-green-400" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
             <div className="ml-3">
@@ -115,7 +123,7 @@ export function DeepCrawlPage() {
         />
       ) : (
         <div className="text-center py-12">
-          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="mx-auto h-8 w-8 text-gray-400" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
           </svg>
           <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">

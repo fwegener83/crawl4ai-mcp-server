@@ -102,7 +102,7 @@ export function useCollections() {
     const { APIService } = await import('../services/api');
     await deleteApi.execute(() => APIService.deleteCollection(name));
     await refreshCollections();
-  }, [deleteApi, refreshCollections]);
+  }, [deleteApi]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const storeContent = useCallback(async (content: string, collectionName?: string) => {
     const targetCollection = collectionName || selectedCollection;
@@ -112,7 +112,7 @@ export function useCollections() {
     );
     await refreshCollections();
     return result;
-  }, [storeApi, selectedCollection, refreshCollections]);
+  }, [storeApi, selectedCollection]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const searchInCollection = useCallback(async (
     query: string,

@@ -1,0 +1,60 @@
+# Page snapshot
+
+```yaml
+- banner:
+  - button "Crawl4AI Web Interface"
+  - navigation:
+    - button "Simple Crawl"
+    - button "Deep Crawl"
+    - button "Collections"
+- main:
+  - heading "Collection Management" [level=1]
+  - paragraph: Manage your saved content collections and search with RAG-powered semantic search.
+  - heading "Collections (3)" [level=3]
+  - button "default Default items":
+    - img
+    - heading "default" [level=4]
+    - text: Default
+    - paragraph: items
+  - text: Selected
+  - button "AxonIQ items":
+    - img
+    - heading "AxonIQ" [level=4]
+    - paragraph: items
+  - button "Delete collection":
+    - img
+  - button "bpv items":
+    - img
+    - heading "bpv" [level=4]
+    - paragraph: items
+  - button "Delete collection":
+    - img
+  - text: "Total Items: NaN Active: 3 Click to select • Delete to remove (except default)"
+  - heading "Statistics" [level=3]
+  - text: "3 Collections NaN Total Items Selected: default Items: 0"
+  - heading "Semantic Search" [level=3]
+  - img
+  - text: Vector Search Powered Search Query
+  - textbox "Search Query"
+  - img
+  - text: Max Results
+  - combobox "Max Results":
+    - option "3 results"
+    - option "5 results" [selected]
+    - option "10 results"
+    - option "20 results"
+  - text: Similarity Threshold(optional)
+  - spinbutton "Similarity Threshold(optional)"
+  - img
+  - paragraph: "Searching in: default"
+  - paragraph: Uses vector embeddings for semantic similarity matching
+  - text: Find semantically similar content
+  - button "Search" [disabled]:
+    - img
+    - text: Search
+  - img
+  - heading "No search performed" [level=3]
+  - paragraph: Enter a search query above to find relevant content.
+- contentinfo:
+  - paragraph: Powered by Crawl4AI MCP Server
+```

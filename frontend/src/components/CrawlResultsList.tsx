@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import DocumentViewerModal from './DocumentViewerModal';
 import type { CrawlResult } from '../types/api';
 
 interface CrawlResultsListProps {
@@ -16,12 +17,19 @@ export function CrawlResultsList({
 }: CrawlResultsListProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [localSelectedIndices, setLocalSelectedIndices] = useState<number[]>(selectedIndices);
+  const [showDocumentViewer, setShowDocumentViewer] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<CrawlResult | null>(null);
 
   const handleResultClick = (result: CrawlResult, index: number) => {
     if (onSelectResult) {
       onSelectResult(result, index);
     }
     setExpandedIndex(expandedIndex === index ? null : index);
+  };
+
+  const handleOpenDocumentViewer = (result: CrawlResult) => {
+    setSelectedDocument(result);
+    setShowDocumentViewer(true);
   };
 
   const handleCheckboxChange = (index: number, checked: boolean) => {
@@ -84,7 +92,7 @@ export function CrawlResultsList({
   if (results.length === 0) {
     return (
       <div className="text-center py-8">
-        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="mx-auto h-8 w-8 text-gray-400" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
         <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
@@ -157,6 +165,21 @@ export function CrawlResultsList({
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
                         Score: {result.metadata.score.toFixed(1)}
                       </span>
+                    )}
+                    {result.success && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenDocumentViewer(result);
+                        }}
+                        className="inline-flex items-center px-2.5 py-1 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                        data-testid="view-edit-button"
+                      >
+                        <svg className="h-3 w-3 mr-1" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                        View & Edit
+                      </button>
                     )}
                   </div>
                 </div>
@@ -234,6 +257,13 @@ export function CrawlResultsList({
           </div>
         </div>
       </div>
+
+      {/* Document Viewer Modal */}
+      <DocumentViewerModal
+        isOpen={showDocumentViewer}
+        onClose={() => setShowDocumentViewer(false)}
+        result={selectedDocument}
+      />
     </div>
   );
 }

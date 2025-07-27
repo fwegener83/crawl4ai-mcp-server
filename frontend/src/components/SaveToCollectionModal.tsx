@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useCollections } from '../hooks/useApi';
 
 interface SaveToCollectionModalProps {
@@ -30,7 +31,7 @@ export function SaveToCollectionModal({
     if (isOpen) {
       refreshCollections();
     }
-  }, [isOpen, refreshCollections]);
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = async () => {
     if (!content.trim()) return;
@@ -71,9 +72,32 @@ export function SaveToCollectionModal({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+  const modalContent = (
+    <div 
+      className="fixed inset-0 flex items-center justify-center" 
+      style={{ 
+        zIndex: 999999,
+        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        display: 'flex !important',
+        visibility: 'visible !important',
+        opacity: '1 !important',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0
+      }}
+    >
+      <div 
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4"
+        style={{
+          visibility: 'visible',
+          opacity: 1,
+          display: 'block',
+          backgroundColor: 'white',
+          border: '1px solid #e5e7eb'
+        }}
+      >
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Save to Collection
@@ -170,7 +194,7 @@ export function SaveToCollectionModal({
           >
             {storeLoading ? (
               <>
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg className="animate-spin h-4 w-4" width="16" height="16" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
@@ -184,6 +208,12 @@ export function SaveToCollectionModal({
       </div>
     </div>
   );
+
+  // Use portal but with better error handling
+  const portalRoot = typeof document !== 'undefined' ? document.body : null;
+  if (!portalRoot) return null;
+  
+  return createPortal(modalContent, portalRoot);
 }
 
 export default SaveToCollectionModal;
