@@ -1,0 +1,16 @@
+/* App-specific styles - most styling is handled by Tailwind */
+
+/* Root container - let Tailwind handle the layout */
+#root {
+  @apply min-h-screen;
+}
+
+/* Custom utilities */
+.prose {
+  @apply max-w-none;
+}
+
+/* Smooth transitions for dark mode */
+* {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
