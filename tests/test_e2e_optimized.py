@@ -266,12 +266,22 @@ class TestSystemIntegration:
                 rag_tools = ["store_crawl_results", "search_knowledge_base", "list_collections", "delete_collection"]
                 rag_available = all(tool_name in tool_names for tool_name in rag_tools)
                 
-                if rag_available:
-                    # If RAG dependencies available, should have 7 tools
-                    assert len(tools) == 7  # Original 3 + 4 RAG tools
+                # Collection management tools (always available)
+                collection_tools = [
+                    "create_collection", "save_to_collection", "list_file_collections", 
+                    "get_collection_info", "read_from_collection", "delete_file_collection"
+                ]
+                collection_available = all(tool_name in tool_names for tool_name in collection_tools)
+                
+                if rag_available and collection_available:
+                    # Original 3 + 4 RAG tools + 6 collection tools = 13 tools
+                    assert len(tools) == 13
+                elif collection_available:
+                    # Original 3 + 6 collection tools = 9 tools (RAG not available)
+                    assert len(tools) == 9
                 else:
-                    # If RAG dependencies not available, should have 3 tools
-                    assert len(tools) == 3  # Only original 3 tools
+                    # Only original 3 tools (neither RAG nor collection tools available)
+                    assert len(tools) == 3
                 
                 # 2. Tool execution
                 result = await client.call_tool_mcp("web_content_extract", {

@@ -1,5 +1,6 @@
 """Main MCP server with FastMCP and crawl4ai integration."""
 import asyncio
+import json
 import logging
 import os
 from typing import Dict, Any, Optional, List
@@ -9,6 +10,7 @@ from dotenv import load_dotenv
 
 from tools.web_extract import WebExtractParams, web_content_extract
 from tools.mcp_domain_tools import domain_deep_crawl, domain_link_preview
+from tools.collection_manager import CollectionFileManager
 
 # Try to import RAG tools, but don't fail if dependencies are missing
 try:
@@ -264,6 +266,243 @@ if RAG_TOOLS_AVAILABLE:
 else:
     logger.info("RAG tools not available - install dependencies to enable: pip install chromadb sentence-transformers langchain-text-splitters numpy")
 
+
+# Initialize Collection File Manager
+collection_manager = CollectionFileManager()
+
+
+# Collection Management Tools
+@mcp.tool()
+async def create_collection(name: str, description: str = "") -> str:
+    """Create a new collection for organizing crawled content.
+    
+    Creates a directory-based collection with metadata for storing 
+    crawled web content as editable Markdown files.
+    
+    Args:
+        name: Collection name (will be sanitized for filesystem safety)
+        description: Optional description of the collection's purpose
+        
+    Returns:
+        str: JSON string with operation result including success status and path
+    """
+    logger.info(f"Creating collection: {name}")
+    
+    try:
+        result = collection_manager.create_collection(name, description)
+        
+        if result["success"]:
+            logger.info(f"Successfully created collection '{name}' at {result['path']}")
+        else:
+            logger.error(f"Failed to create collection '{name}': {result.get('error', 'Unknown error')}")
+            
+        return json.dumps(result)
+        
+    except Exception as e:
+        error_result = {
+            "success": False,
+            "error": str(e),
+            "message": f"Unexpected error creating collection '{name}'"
+        }
+        logger.error(f"Unexpected error creating collection '{name}': {str(e)}")
+        return json.dumps(error_result)
+
+
+@mcp.tool()
+async def save_to_collection(
+    collection_name: str, 
+    filename: str, 
+    content: str, 
+    folder: str = ""
+) -> str:
+    """Save crawled content to a collection as a Markdown file.
+    
+    Saves content to a specified collection with optional folder organization.
+    Files are stored as UTF-8 encoded text with automatic metadata tracking.
+    
+    Args:
+        collection_name: Name of the target collection
+        filename: Name of the file (must have .md, .txt, or .json extension)
+        content: Content to save (typically Markdown from web crawling)
+        folder: Optional subfolder path for hierarchical organization
+        
+    Returns:
+        str: JSON string with operation result including success status and file path
+    """
+    logger.info(f"Saving file '{filename}' to collection '{collection_name}'")
+    
+    try:
+        # Ensure collection exists, create if needed
+        collection_path = collection_manager.base_dir / collection_name
+        if not collection_path.exists():
+            logger.info(f"Collection '{collection_name}' doesn't exist, creating it")
+            create_result = collection_manager.create_collection(collection_name)
+            if not create_result["success"]:
+                return json.dumps(create_result)
+        
+        result = collection_manager.save_file(collection_name, filename, content, folder)
+        
+        if result["success"]:
+            logger.info(f"Successfully saved '{filename}' to collection '{collection_name}'")
+        else:
+            logger.error(f"Failed to save '{filename}': {result.get('error', 'Unknown error')}")
+            
+        return json.dumps(result)
+        
+    except Exception as e:
+        error_result = {
+            "success": False,
+            "error": str(e),
+            "message": f"Unexpected error saving file '{filename}' to collection '{collection_name}'"
+        }
+        logger.error(f"Unexpected error saving to collection: {str(e)}")
+        return json.dumps(error_result)
+
+
+@mcp.tool()
+async def list_file_collections() -> str:
+    """List all available collections.
+    
+    Returns information about all collections including names, descriptions,
+    file counts, and folder structures.
+    
+    Returns:
+        str: JSON string with list of collections and metadata
+    """
+    logger.info("Listing all collections")
+    
+    try:
+        result = collection_manager.list_collections()
+        
+        if result["success"]:
+            logger.info(f"Found {result['total']} collections")
+        else:
+            logger.error(f"Failed to list collections: {result.get('error', 'Unknown error')}")
+            
+        return json.dumps(result)
+        
+    except Exception as e:
+        error_result = {
+            "success": False,
+            "error": str(e),
+            "message": "Unexpected error listing collections"
+        }
+        logger.error(f"Unexpected error listing collections: {str(e)}")
+        return json.dumps(error_result)
+
+
+@mcp.tool()
+async def get_collection_info(collection_name: str) -> str:
+    """Get detailed information about a specific collection.
+    
+    Returns comprehensive metadata including file count, folder structure,
+    creation date, and description.
+    
+    Args:
+        collection_name: Name of the collection to inspect
+        
+    Returns:
+        str: JSON string with detailed collection information
+    """
+    logger.info(f"Getting info for collection: {collection_name}")
+    
+    try:
+        result = collection_manager.get_collection_info(collection_name)
+        
+        if result["success"]:
+            logger.info(f"Retrieved info for collection '{collection_name}'")
+        else:
+            logger.error(f"Failed to get collection info: {result.get('error', 'Unknown error')}")
+            
+        return json.dumps(result)
+        
+    except Exception as e:
+        error_result = {
+            "success": False,
+            "error": str(e),
+            "message": f"Unexpected error getting info for collection '{collection_name}'"
+        }
+        logger.error(f"Unexpected error getting collection info: {str(e)}")
+        return json.dumps(error_result)
+
+
+@mcp.tool()
+async def read_from_collection(
+    collection_name: str, 
+    filename: str, 
+    folder: str = ""
+) -> str:
+    """Read content from a file in a collection.
+    
+    Retrieves the content of a previously saved file from a collection.
+    
+    Args:
+        collection_name: Name of the collection containing the file
+        filename: Name of the file to read
+        folder: Optional subfolder path where the file is located
+        
+    Returns:
+        str: JSON string with file content and metadata
+    """
+    logger.info(f"Reading file '{filename}' from collection '{collection_name}'")
+    
+    try:
+        result = collection_manager.read_file(collection_name, filename, folder)
+        
+        if result["success"]:
+            content_length = len(result.get("content", ""))
+            logger.info(f"Successfully read '{filename}' ({content_length} characters)")
+        else:
+            logger.error(f"Failed to read file: {result.get('error', 'Unknown error')}")
+            
+        return json.dumps(result)
+        
+    except Exception as e:
+        error_result = {
+            "success": False,
+            "error": str(e),
+            "message": f"Unexpected error reading file '{filename}' from collection '{collection_name}'"
+        }
+        logger.error(f"Unexpected error reading from collection: {str(e)}")
+        return json.dumps(error_result)
+
+
+@mcp.tool()
+async def delete_file_collection(collection_name: str) -> str:
+    """Delete a collection and all its files.
+    
+    WARNING: This operation is irreversible and will delete all files 
+    and folders within the specified collection.
+    
+    Args:
+        collection_name: Name of the collection to delete
+        
+    Returns:
+        str: JSON string with operation result
+    """
+    logger.warning(f"Deleting collection: {collection_name}")
+    
+    try:
+        result = collection_manager.delete_collection(collection_name)
+        
+        if result["success"]:
+            logger.info(f"Successfully deleted collection '{collection_name}'")
+        else:
+            logger.error(f"Failed to delete collection: {result.get('error', 'Unknown error')}")
+            
+        return json.dumps(result)
+        
+    except Exception as e:
+        error_result = {
+            "success": False,
+            "error": str(e),
+            "message": f"Unexpected error deleting collection '{collection_name}'"
+        }
+        logger.error(f"Unexpected error deleting collection: {str(e)}")
+        return json.dumps(error_result)
+
+
+logger.info("Collection management tools registered successfully")
 
 
 if __name__ == "__main__":
