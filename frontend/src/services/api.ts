@@ -8,6 +8,16 @@ import type {
   Collection,
   DeleteResult,
   APIError,
+  FileCollection,
+  FileMetadata,
+  CreateCollectionRequest,
+  SaveFileRequest,
+  UpdateFileRequest,
+  CrawlToCollectionRequest,
+  FileCollectionResponse,
+  CrawlToCollectionResponse,
+  FileCollectionListResponse,
+  FileContentResponse,
 } from '../types/api';
 
 // Configure axios instance with base URL for backend API
@@ -33,8 +43,8 @@ api.interceptors.response.use(
 );
 
 /**
- * API Service for 7 MCP Tools Integration
- * 3 Basic Crawling Tools + 4 RAG Knowledge Base Tools
+ * API Service for Extended MCP Tools Integration
+ * 3 Basic Crawling Tools + 4 RAG Knowledge Base Tools + File Collection Management
  */
 export class APIService {
   // ===== BASIC CRAWLING TOOLS =====
@@ -53,7 +63,7 @@ export class APIService {
    * Perform deep domain crawling with advanced configuration
    */
   static async deepCrawlDomain(config: DeepCrawlConfig): Promise<CrawlResult[]> {
-    const response: AxiosResponse<{ results: { success: boolean; pages: CrawlResult[]; crawl_summary: any; streaming: boolean } }> = await api.post('/deep-crawl', config);
+    const response: AxiosResponse<{ results: { success: boolean; pages: CrawlResult[]; crawl_summary: unknown; streaming: boolean } }> = await api.post('/deep-crawl', config);
     return response.data.results.pages;
   }
 
@@ -96,7 +106,7 @@ export class APIService {
     n_results: number = 5,
     similarity_threshold?: number
   ): Promise<SearchResult[]> {
-    const params: any = {
+    const params: Record<string, unknown> = {
       query,
       collection_name,
       n_results,
@@ -151,6 +161,159 @@ export class APIService {
     rag_enabled: boolean;
   }> {
     const response = await api.get('/status');
+    return response.data;
+  }
+
+  // ===== FILE COLLECTION MANAGEMENT =====
+
+  /**
+   * Create a new file collection
+   */
+  static async createFileCollection(request: CreateCollectionRequest): Promise<FileCollection> {
+    const response: AxiosResponse<FileCollectionResponse<FileCollection>> = await api.post('/file-collections', request);
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to create collection');
+    }
+    
+    return response.data.data!;
+  }
+
+  /**
+   * List all file collections
+   */
+  static async listFileCollections(): Promise<FileCollection[]> {
+    const response: AxiosResponse<FileCollectionResponse<FileCollectionListResponse>> = await api.get('/file-collections');
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to list collections');
+    }
+    
+    return response.data.data?.collections || [];
+  }
+
+  /**
+   * Get detailed information about a specific file collection
+   */
+  static async getFileCollection(collectionId: string): Promise<FileCollection> {
+    const response: AxiosResponse<FileCollectionResponse<FileCollection>> = await api.get(`/file-collections/${collectionId}`);
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to get collection info');
+    }
+    
+    return response.data.data!;
+  }
+
+  /**
+   * Delete a file collection and all its files
+   */
+  static async deleteFileCollection(collectionId: string): Promise<void> {
+    const response: AxiosResponse<FileCollectionResponse<void>> = await api.delete(`/file-collections/${collectionId}`);
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to delete collection');
+    }
+  }
+
+  /**
+   * Save a file to a collection
+   */
+  static async saveFileToCollection(
+    collectionId: string, 
+    request: SaveFileRequest
+  ): Promise<FileMetadata> {
+    const response: AxiosResponse<FileCollectionResponse<FileMetadata>> = await api.post(
+      `/file-collections/${collectionId}/files`, 
+      request
+    );
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to save file');
+    }
+    
+    return response.data.data!;
+  }
+
+  /**
+   * Read a file from a collection
+   */
+  static async readFileFromCollection(
+    collectionId: string,
+    filename: string,
+    folder?: string
+  ): Promise<string> {
+    const params = folder ? { folder } : {};
+    const response: AxiosResponse<FileCollectionResponse<FileContentResponse>> = await api.get(
+      `/file-collections/${collectionId}/files/${encodeURIComponent(filename)}`,
+      { params }
+    );
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to read file');
+    }
+    
+    return response.data.data?.content || '';
+  }
+
+  /**
+   * Update a file in a collection
+   */
+  static async updateFileInCollection(
+    collectionId: string,
+    filename: string,
+    request: UpdateFileRequest,
+    folder?: string
+  ): Promise<FileMetadata> {
+    const params = folder ? { folder } : {};
+    const response: AxiosResponse<FileCollectionResponse<FileMetadata>> = await api.put(
+      `/file-collections/${collectionId}/files/${encodeURIComponent(filename)}`,
+      request,
+      { params }
+    );
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to update file');
+    }
+    
+    return response.data.data!;
+  }
+
+  /**
+   * Delete a file from a collection
+   */
+  static async deleteFileFromCollection(
+    collectionId: string,
+    filename: string,
+    folder?: string
+  ): Promise<void> {
+    const params = folder ? { folder } : {};
+    const response: AxiosResponse<FileCollectionResponse<void>> = await api.delete(
+      `/file-collections/${collectionId}/files/${encodeURIComponent(filename)}`,
+      { params }
+    );
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to delete file');
+    }
+  }
+
+  /**
+   * Crawl a single page and save to collection
+   */
+  static async crawlPageToCollection(
+    collectionId: string,
+    request: CrawlToCollectionRequest
+  ): Promise<CrawlToCollectionResponse> {
+    const response: AxiosResponse<CrawlToCollectionResponse> = await api.post(
+      `/crawl/single/${collectionId}`,
+      request
+    );
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to crawl page to collection');
+    }
+    
     return response.data;
   }
 }

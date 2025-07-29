@@ -11,6 +11,7 @@ import uvicorn
 # Import MCP tools directly
 from tools.web_extract import web_content_extract
 from tools.mcp_domain_tools import domain_deep_crawl, domain_link_preview
+from tools.collection_manager import CollectionFileManager
 
 # Try to import RAG tools
 try:
@@ -31,6 +32,9 @@ except ImportError:
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Initialize Collection File Manager
+collection_manager = CollectionFileManager()
 
 # FastAPI app
 app = FastAPI(title="Crawl4AI HTTP API", version="1.0.0")
@@ -71,6 +75,23 @@ class SearchRequest(BaseModel):
     collection_name: str = "default"
     n_results: int = 5
     similarity_threshold: Optional[float] = None
+
+# File collection management models
+class CreateCollectionRequest(BaseModel):
+    name: str
+    description: str = ""
+
+class SaveFileRequest(BaseModel):
+    filename: str
+    content: str
+    folder: str = ""
+
+class UpdateFileRequest(BaseModel):
+    content: str
+
+class CrawlToCollectionRequest(BaseModel):
+    url: str
+    folder: str = ""
 
 # Health check
 @app.get("/api/health")
@@ -127,6 +148,212 @@ async def link_preview(request: LinkPreviewRequest):
         return preview
     except Exception as e:
         logger.error(f"Link preview failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# File Collection Management Endpoints
+
+@app.post("/api/file-collections")
+async def create_file_collection(request: CreateCollectionRequest):
+    """Create a new file collection."""
+    try:
+        result = collection_manager.create_collection(request.name, request.description)
+        if isinstance(result, str):
+            result = json.loads(result)
+        return result
+    except Exception as e:
+        logger.error(f"Create file collection failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/file-collections")
+async def list_file_collections():
+    """List all file collections."""
+    try:
+        result = collection_manager.list_collections()
+        if isinstance(result, str):
+            result = json.loads(result)
+        return result
+    except Exception as e:
+        logger.error(f"List file collections failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/file-collections/{collection_id}")
+async def get_file_collection_info(collection_id: str):
+    """Get detailed information about a file collection."""
+    try:
+        result = collection_manager.get_collection_info(collection_id)
+        if isinstance(result, str):
+            result = json.loads(result)
+        if not result.get("success"):
+            if "not found" in result.get("error", "").lower():
+                raise HTTPException(status_code=404, detail=f"Collection '{collection_id}' not found")
+            raise HTTPException(status_code=500, detail=result.get("error", "Failed to get collection info"))
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get file collection info failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/file-collections/{collection_id}")
+async def delete_file_collection(collection_id: str):
+    """Delete a file collection and all its files."""
+    try:
+        result = collection_manager.delete_collection(collection_id)
+        if isinstance(result, str):
+            result = json.loads(result)
+        if not result.get("success"):
+            if "not found" in result.get("error", "").lower():
+                raise HTTPException(status_code=404, detail=f"Collection '{collection_id}' not found")
+            raise HTTPException(status_code=500, detail=result.get("error", "Failed to delete collection"))
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Delete file collection failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/file-collections/{collection_id}/files")
+async def save_file_to_collection(collection_id: str, request: SaveFileRequest):
+    """Save a file to a collection."""
+    try:
+        # Ensure collection exists
+        collection_info = collection_manager.get_collection_info(collection_id)
+        if isinstance(collection_info, str):
+            collection_info = json.loads(collection_info)
+        
+        if not collection_info.get("success"):
+            if "not found" in collection_info.get("error", "").lower():
+                # Auto-create collection if it doesn't exist
+                logger.info(f"Collection '{collection_id}' doesn't exist, creating it")
+                create_result = collection_manager.create_collection(collection_id)
+                if isinstance(create_result, str):
+                    create_result = json.loads(create_result)
+                if not create_result.get("success"):
+                    raise HTTPException(status_code=400, detail=f"Failed to create collection: {create_result.get('error')}")
+        
+        result = collection_manager.save_file(collection_id, request.filename, request.content, request.folder)
+        if isinstance(result, str):
+            result = json.loads(result)
+        
+        if not result.get("success"):
+            raise HTTPException(status_code=400, detail=result.get("error", "Failed to save file"))
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Save file to collection failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/file-collections/{collection_id}/files/{file_path:path}")
+async def read_file_from_collection(collection_id: str, file_path: str, folder: str = ""):
+    """Read a file from a collection."""
+    try:
+        result = collection_manager.read_file(collection_id, file_path, folder)
+        if isinstance(result, str):
+            result = json.loads(result)
+        
+        if not result.get("success"):
+            if "not found" in result.get("error", "").lower():
+                raise HTTPException(status_code=404, detail=f"File '{file_path}' not found in collection '{collection_id}'")
+            raise HTTPException(status_code=500, detail=result.get("error", "Failed to read file"))
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Read file from collection failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/file-collections/{collection_id}/files/{file_path:path}")
+async def update_file_in_collection(collection_id: str, file_path: str, request: UpdateFileRequest, folder: str = ""):
+    """Update a file in a collection."""
+    try:
+        result = collection_manager.save_file(collection_id, file_path, request.content, folder)
+        if isinstance(result, str):
+            result = json.loads(result)
+        
+        if not result.get("success"):
+            raise HTTPException(status_code=400, detail=result.get("error", "Failed to update file"))
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Update file in collection failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/file-collections/{collection_id}/files/{file_path:path}")
+async def delete_file_from_collection(collection_id: str, file_path: str, folder: str = ""):
+    """Delete a file from a collection."""
+    try:
+        # Build full file path
+        collection_path = collection_manager.base_dir / collection_id
+        if not collection_path.exists():
+            raise HTTPException(status_code=404, detail=f"Collection '{collection_id}' not found")
+        
+        if folder:
+            file_full_path = collection_path / folder / file_path
+        else:
+            file_full_path = collection_path / file_path
+            
+        if not file_full_path.exists():
+            raise HTTPException(status_code=404, detail=f"File '{file_path}' not found in collection '{collection_id}'")
+        
+        # Delete the file
+        file_full_path.unlink()
+        logger.info(f"Successfully deleted '{file_path}' from collection '{collection_id}'")
+        
+        return {
+            "success": True,
+            "message": f"File '{file_path}' deleted successfully",
+            "collection_name": collection_id,
+            "filename": file_path,
+            "folder": folder
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Delete file from collection failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/crawl/single/{collection_id}")
+async def crawl_single_page_to_collection(collection_id: str, request: CrawlToCollectionRequest):
+    """Crawl a single page and save to collection."""
+    try:
+        # Extract content from URL
+        from tools.web_extract import WebExtractParams
+        content = await web_content_extract(WebExtractParams(url=request.url))
+        content_str = str(content)
+        
+        if content_str.startswith("Error extracting content"):
+            raise HTTPException(status_code=400, detail=f"Failed to crawl URL: {content_str}")
+        
+        # Generate filename from URL
+        from urllib.parse import urlparse
+        parsed_url = urlparse(request.url)
+        domain = parsed_url.netloc.replace("www.", "")
+        path_parts = [p for p in parsed_url.path.split("/") if p]
+        if path_parts:
+            filename = f"{domain}_{path_parts[-1]}.md"
+        else:
+            filename = f"{domain}_index.md"
+        
+        # Save to collection
+        result = collection_manager.save_file(collection_id, filename, content_str, request.folder)
+        if isinstance(result, str):
+            result = json.loads(result)
+        
+        if not result.get("success"):
+            raise HTTPException(status_code=500, detail=result.get("error", "Failed to save crawled content"))
+        
+        # Add crawl metadata to result
+        result["url"] = request.url
+        result["content_length"] = len(content_str)
+        result["message"] = f"Page crawled and saved as '{filename}'"
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Crawl single page to collection failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # RAG endpoints (if available)

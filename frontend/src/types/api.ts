@@ -1,4 +1,4 @@
-// API Types for 7 MCP Tools Integration
+// API Types for 7 MCP Tools Integration + File Collection Management
 
 export interface CrawlResult {
   url: string;
@@ -53,7 +53,7 @@ export interface SearchResult {
 export interface Collection {
   name: string;
   count: number;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export interface DeleteResult {
@@ -66,7 +66,7 @@ export interface DeleteResult {
 export interface APIError {
   error: string;
   message: string;
-  details?: any;
+  details?: unknown;
 }
 
 // Loading States
@@ -76,4 +76,75 @@ export interface APIResponse<T> {
   data?: T;
   error?: string;
   loading: boolean;
+}
+
+// File Collection Management Types
+export interface FileCollection {
+  name: string;
+  description: string;
+  created_at: string;
+  file_count: number;
+  folders: string[];
+  metadata: CollectionMetadata;
+}
+
+export interface CollectionMetadata {
+  created_at: string;
+  description: string;
+  last_modified: string;
+  file_count: number;
+  total_size: number;
+}
+
+export interface FileMetadata {
+  filename: string;
+  folder_path: string;
+  created_at: string;
+  source_url?: string;
+  content_hash?: string;
+  size: number;
+}
+
+export interface CreateCollectionRequest {
+  name: string;
+  description?: string;
+}
+
+export interface SaveFileRequest {
+  filename: string;
+  content: string;
+  folder?: string;
+}
+
+export interface UpdateFileRequest {
+  content: string;
+}
+
+export interface CrawlToCollectionRequest {
+  url: string;
+  folder?: string;
+}
+
+export interface FileCollectionResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+export interface CrawlToCollectionResponse extends FileCollectionResponse {
+  url?: string;
+  content_length?: number;
+  filename?: string;
+  collection_name?: string;
+  folder?: string;
+}
+
+// Specific response types for type safety
+export interface FileCollectionListResponse {
+  collections: FileCollection[];
+}
+
+export interface FileContentResponse {
+  content: string;
 }

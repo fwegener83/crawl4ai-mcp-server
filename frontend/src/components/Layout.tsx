@@ -1,6 +1,6 @@
 import React from 'react';
 
-type Page = 'home' | 'simple-crawl' | 'deep-crawl' | 'collections';
+type Page = 'home' | 'simple-crawl' | 'deep-crawl' | 'collections' | 'file-collections';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -53,6 +53,16 @@ export function Layout({ children, currentPage = 'home', onNavigate }: LayoutPro
                 }`}
               >
                 Collections
+              </button>
+              <button 
+                onClick={() => onNavigate?.('file-collections')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  currentPage === 'file-collections'
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                File Manager
               </button>
             </nav>
           </div>

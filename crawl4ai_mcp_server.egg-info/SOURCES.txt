@@ -10,6 +10,8 @@ tests/__init__.py
 tests/factories.py
 tests/rag_factories.py
 tests/test_cicd_configuration.py
+tests/test_collection_manager.py
+tests/test_collection_security_e2e.py
 tests/test_domain_crawler_core.py
 tests/test_domain_crawler_factory.py
 tests/test_domain_crawler_parameters.py
@@ -19,6 +21,7 @@ tests/test_error_sanitization.py
 tests/test_framework_setup.py
 tests/test_knowledge_base.py
 tests/test_mcp_domain_integration.py
+tests/test_mcp_integration.py
 tests/test_mcp_protocol.py
 tests/test_mcp_protocol_regression.py
 tests/test_mock_factory.py
@@ -33,6 +36,7 @@ tests/test_strategy_factory.py
 tests/test_web_extract.py
 tests/test_web_extract_security.py
 tools/__init__.py
+tools/collection_manager.py
 tools/domain_crawler.py
 tools/domain_link_preview.py
 tools/error_sanitizer.py
