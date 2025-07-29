@@ -220,6 +220,17 @@ export function useCollectionOperations() {
     }
   }, [dispatch]);
 
+  // Add page to collection (wrapper for crawlPageToCollection)
+  const addPageToCollection = useCallback(async (collectionId: string, url: string, folder?: string) => {
+    return await crawlPageToCollection(collectionId, { url, folder });
+  }, [crawlPageToCollection]);
+
+  // Create new file
+  const createNewFile = useCallback(async (collectionId: string, filename: string, content: string, folder?: string) => {
+    const result = await saveFile(collectionId, { filename, content, folder });
+    return result;
+  }, [saveFile]);
+
   // Modal operations
   const openModal = useCallback((modalName: keyof typeof state.ui.modals) => {
     dispatch({ type: 'OPEN_MODAL', payload: modalName });
@@ -261,6 +272,8 @@ export function useCollectionOperations() {
     
     // Crawl operations
     crawlPageToCollection,
+    addPageToCollection,
+    createNewFile,
     
     // Modal operations
     openModal,

@@ -2,6 +2,8 @@ import { CollectionProvider } from '../contexts/CollectionContext';
 import CollectionSidebar from '../components/collection/CollectionSidebar';
 import MainContent from '../components/collection/MainContent';
 import NewCollectionModal from '../components/collection/modals/NewCollectionModal';
+import AddPageModal from '../components/collection/modals/AddPageModal';
+import NewFileModal from '../components/collection/modals/NewFileModal';
 import DeleteConfirmationModal from '../components/collection/modals/DeleteConfirmationModal';
 
 export function FileCollectionsPage() {
@@ -13,6 +15,8 @@ export function FileCollectionsPage() {
         
         {/* Modals */}
         <NewCollectionModal />
+        <AddPageModal />
+        <NewFileModal />
         <DeleteConfirmationModal />
       </div>
     </CollectionProvider>

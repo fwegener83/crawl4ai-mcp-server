@@ -123,11 +123,11 @@ export function CollectionsList({
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       {collection.count} items
                     </p>
-                    {collection.metadata?.created_at && (
+                    {collection.metadata?.created_at && typeof collection.metadata.created_at === 'string' ? (
                       <p className="text-xs text-gray-500 dark:text-gray-500">
-                        Created: {new Date(collection.metadata.created_at).toLocaleDateString()}
+                        Created: {new Date(collection.metadata.created_at as string).toLocaleDateString()}
                       </p>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </button>
