@@ -234,10 +234,12 @@ export function useCollectionOperations() {
   // Modal operations
   const openModal = useCallback((modalName: keyof typeof state.ui.modals) => {
     dispatch({ type: 'OPEN_MODAL', payload: modalName });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch]);
 
   const closeModal = useCallback((modalName: keyof typeof state.ui.modals) => {
     dispatch({ type: 'CLOSE_MODAL', payload: modalName });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch]);
 
   const openDeleteConfirmation = useCallback((type: 'collection' | 'file', target: string) => {

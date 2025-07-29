@@ -12,7 +12,7 @@ interface TreeNode {
   path: string;
   type: 'folder' | 'file';
   children?: TreeNode[];
-  metadata?: any;
+  metadata?: unknown;
   expanded?: boolean;
 }
 
