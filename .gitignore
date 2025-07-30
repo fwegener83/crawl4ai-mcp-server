@@ -33,5 +33,13 @@ htmlcov/
 .DS_Store
 
 # Logs
-*.log*.egg-info/
+*.log
+*.egg-info/
+
+# RAG Database
 rag_db/
+
+# Frontend specific
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
