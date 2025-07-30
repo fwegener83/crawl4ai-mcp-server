@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useCollectionOperations } from '../../hooks/useCollectionOperations';
 import LoadingSpinner from '../LoadingSpinner';
+import Icon from '../ui/Icon';
 
 interface CollectionSidebarProps {
   className?: string;
@@ -90,17 +91,18 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
               className="inline-flex items-center p-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded transition-colors disabled:opacity-50"
               title="Refresh collections"
             >
-              <svg className={`w-4 h-4 ${state.ui.loading.collections ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
+              <Icon 
+                name="refresh" 
+                size="sm" 
+                color="current"
+                animate={state.ui.loading.collections ? 'spin' : undefined}
+              />
             </button>
             <button
               onClick={() => openModal('newCollection')}
               className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             >
-              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
+              <Icon name="plus" size="sm" color="current" className="mr-1" />
               New
             </button>
           </div>
@@ -121,9 +123,7 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
           <div className="bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 rounded-md p-3">
             <div className="flex">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
+                <Icon name="xCircle" size="md" color="red" />
               </div>
               <div className="ml-3">
                 <p className="text-sm text-red-700 dark:text-red-200">{state.ui.error}</p>
@@ -134,9 +134,7 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
                   className="inline-flex text-red-400 hover:text-red-600 dark:hover:text-red-300"
                 >
                   <span className="sr-only">Dismiss</span>
-                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
+                  <Icon name="x" size="md" color="current" />
                 </button>
               </div>
             </div>
@@ -149,9 +147,7 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
         {state.collections.length === 0 ? (
           <div className="p-4 text-center">
             <div className="text-gray-400 dark:text-gray-500 mb-4">
-              <svg className="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
+              <Icon name="folder" size="xl" color="gray" className="mx-auto" />
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">No collections yet</p>
             <button
@@ -176,9 +172,7 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center">
-                      <svg className="flex-shrink-0 h-5 w-5 text-gray-400 dark:text-gray-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                      </svg>
+                      <Icon name="folder" size="sm" color="gray" className="mr-3" />
                       <h3 className={`text-sm font-medium truncate ${
                         state.selectedCollection === collection.name
                           ? 'text-blue-700 dark:text-blue-300'
@@ -194,16 +188,12 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
                     )}
                     <div className="mt-2 space-y-1">
                       <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
-                        <svg className="flex-shrink-0 mr-1.5 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
+                        <Icon name="document" size="xs" color="gray" className="mr-1.5" />
                         <span>{collection.file_count} files</span>
                         {collection.folders.length > 0 && (
                           <>
                             <span className="mx-1">•</span>
-                            <svg className="flex-shrink-0 mr-1.5 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                            </svg>
+                            <Icon name="folder" size="xs" color="gray" className="mr-1.5" />
                             <span>{collection.folders.length} folders</span>
                           </>
                         )}
@@ -212,17 +202,13 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
                       {/* Additional metadata */}
                       <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
                         <span title="Created">
-                          <svg className="inline h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
+                          <Icon name="info" size="xs" color="gray" className="mr-1" />
                           {formatDate(collection.created_at)}
                         </span>
                         
                         {collection.metadata.total_size > 0 && (
                           <span title="Total size">
-                            <svg className="inline h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" />
-                            </svg>
+                            <Icon name="folder" size="xs" color="gray" className="mr-1" />
                             {formatFileSize(collection.metadata.total_size)}
                           </span>
                         )}
@@ -236,9 +222,7 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
                     className="opacity-0 group-hover:opacity-100 ml-2 p-1 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-all"
                     title="Delete collection"
                   >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
+                    <Icon name="trash" size="sm" color="current" />
                   </button>
                 </div>
               </div>

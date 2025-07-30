@@ -231,7 +231,16 @@ class CollectionFileManager:
                             collections.append({
                                 "name": metadata.get("name", item.name),
                                 "description": metadata.get("description", ""),
+                                "created_at": metadata.get("created_at", datetime.utcnow().isoformat()),
                                 "file_count": metadata.get("file_count", 0),
+                                "folders": metadata.get("folders", []),
+                                "metadata": {
+                                    "created_at": metadata.get("created_at", datetime.utcnow().isoformat()),
+                                    "description": metadata.get("description", ""),
+                                    "last_modified": metadata.get("created_at", datetime.utcnow().isoformat()),
+                                    "file_count": metadata.get("file_count", 0),
+                                    "total_size": 0  # TODO: Calculate actual total size
+                                },
                                 "path": str(item)
                             })
                         except (json.JSONDecodeError, OSError):
@@ -333,9 +342,25 @@ class CollectionFileManager:
             metadata_text = metadata_path.read_text(encoding='utf-8')
             metadata = json.loads(metadata_text)
             
+            # Format to match Frontend FileCollection interface
+            collection_info = {
+                "name": metadata.get("name", collection_name),
+                "description": metadata.get("description", ""),
+                "created_at": metadata.get("created_at", datetime.utcnow().isoformat()),
+                "file_count": metadata.get("file_count", 0),
+                "folders": metadata.get("folders", []),
+                "metadata": {
+                    "created_at": metadata.get("created_at", datetime.utcnow().isoformat()),
+                    "description": metadata.get("description", ""),
+                    "last_modified": metadata.get("created_at", datetime.utcnow().isoformat()),
+                    "file_count": metadata.get("file_count", 0),
+                    "total_size": 0  # TODO: Calculate actual total size
+                }
+            }
+            
             return {
                 "success": True,
-                "collection": metadata,
+                "collection": collection_info,
                 "path": str(collection_path)
             }
             

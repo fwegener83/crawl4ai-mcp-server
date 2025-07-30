@@ -159,7 +159,32 @@ async def create_file_collection(request: CreateCollectionRequest):
         result = collection_manager.create_collection(request.name, request.description)
         if isinstance(result, str):
             result = json.loads(result)
-        return result
+            
+        if not result.get("success"):
+            raise HTTPException(status_code=400, detail=result.get("error", "Failed to create collection"))
+            
+        # Transform to match frontend expected format
+        from datetime import datetime
+        return {
+            "success": True,
+            "data": {
+                "name": request.name,
+                "description": request.description,
+                "created_at": datetime.utcnow().isoformat(),
+                "file_count": 0,
+                "folders": [],
+                "metadata": {
+                    "created_at": datetime.utcnow().isoformat(),
+                    "description": request.description,
+                    "last_modified": datetime.utcnow().isoformat(),
+                    "file_count": 0,
+                    "total_size": 0
+                },
+                "path": result.get("path")
+            }
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Create file collection failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -171,7 +196,19 @@ async def list_file_collections():
         result = collection_manager.list_collections()
         if isinstance(result, str):
             result = json.loads(result)
-        return result
+        
+        if not result.get("success"):
+            raise HTTPException(status_code=500, detail=result.get("error", "Failed to list collections"))
+            
+        # Transform to match frontend expected format
+        return {
+            "success": True,
+            "data": {
+                "collections": result.get("collections", [])
+            }
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"List file collections failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -187,7 +224,12 @@ async def get_file_collection_info(collection_id: str):
             if "not found" in result.get("error", "").lower():
                 raise HTTPException(status_code=404, detail=f"Collection '{collection_id}' not found")
             raise HTTPException(status_code=500, detail=result.get("error", "Failed to get collection info"))
-        return result
+        
+        # Transform to match frontend expected format
+        return {
+            "success": True,
+            "data": result.get("collection", {})
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -237,7 +279,16 @@ async def save_file_to_collection(collection_id: str, request: SaveFileRequest):
         
         if not result.get("success"):
             raise HTTPException(status_code=400, detail=result.get("error", "Failed to save file"))
-        return result
+        
+        # Transform to match frontend expected format
+        return {
+            "success": True,
+            "data": {
+                "filename": request.filename,
+                "folder_path": request.folder or "",
+                "path": result.get("path")
+            }
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -256,7 +307,14 @@ async def read_file_from_collection(collection_id: str, file_path: str, folder: 
             if "not found" in result.get("error", "").lower():
                 raise HTTPException(status_code=404, detail=f"File '{file_path}' not found in collection '{collection_id}'")
             raise HTTPException(status_code=500, detail=result.get("error", "Failed to read file"))
-        return result
+        
+        # Transform to match frontend expected format
+        return {
+            "success": True,
+            "data": {
+                "content": result.get("content", "")
+            }
+        }
     except HTTPException:
         raise
     except Exception as e:
