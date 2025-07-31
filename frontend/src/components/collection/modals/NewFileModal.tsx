@@ -22,7 +22,7 @@ export function NewFileModal() {
     try {
       await createNewFile(
         state.selectedCollection,
-        filename.trim(),
+        processedFilename,
         content.trim(),
         folder.trim() || undefined
       );
