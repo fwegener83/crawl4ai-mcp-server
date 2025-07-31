@@ -209,9 +209,10 @@ export function FileExplorer({ className = '' }: FileExplorerProps) {
             }`}>
               {node.name}
             </p>
-            {node.metadata && 'source_url' in node.metadata && node.metadata.source_url && (
+            {node.metadata && typeof node.metadata === 'object' && 'source_url' in node.metadata && 
+             typeof (node.metadata as any).source_url === 'string' && (node.metadata as any).source_url && (
               <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                from {new URL(node.metadata.source_url).hostname}
+                from {new URL((node.metadata as any).source_url).hostname}
               </p>
             )}
           </div>

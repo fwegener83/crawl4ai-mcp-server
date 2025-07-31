@@ -1,4 +1,3 @@
-import type { SVGProps } from 'react';
 
 // Icon paths - zentraler Ort für alle SVG-Pfade
 const iconPaths = {
