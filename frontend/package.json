@@ -13,8 +13,12 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:ci": "vitest run --reporter=verbose",
+    "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:all": "npm run test:run && npm run test:e2e",
+    "quality:check": "npm run lint && npm run typecheck && npm run test:run && npm run build",
     "start:all": "concurrently \"cd .. && python -m crawl4ai_mcp_server\" \"npm run dev\""
   },
   "dependencies": {
@@ -30,6 +34,7 @@
     "@tailwindcss/postcss": "^4.1.11",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^24.1.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",

@@ -4,10 +4,11 @@ import HomePage from './pages/HomePage';
 import SimpleCrawlPage from './pages/SimpleCrawlPage';
 import DeepCrawlPage from './pages/DeepCrawlPage';
 import CollectionsPage from './pages/CollectionsPage';
+import FileCollectionsPage from './pages/FileCollectionsPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/ToastContainer';
 
-type Page = 'home' | 'simple-crawl' | 'deep-crawl' | 'collections';
+type Page = 'home' | 'simple-crawl' | 'deep-crawl' | 'collections' | 'file-collections';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
@@ -20,6 +21,8 @@ function App() {
         return <DeepCrawlPage />;
       case 'collections':
         return <CollectionsPage />;
+      case 'file-collections':
+        return <FileCollectionsPage />;
       default:
         return <HomePage onNavigate={setCurrentPage} />;
     }
