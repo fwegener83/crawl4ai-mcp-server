@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { SearchResult } from '../types/api';
+import { Icon } from './ui/Icon';
 
 interface SearchResultsListProps {
   results: SearchResult[];
@@ -72,9 +73,7 @@ export function SearchResultsList({
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8">
         <div className="text-center">
-          <svg className="mx-auto h-8 w-8 text-gray-400" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+          <Icon name="search" size="xl" color="gray" className="mx-auto" />
           <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
             {query ? 'No results found' : 'No search performed'}
           </h3>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useCollectionOperations } from '../../hooks/useCollectionOperations';
 import MarkdownEditor from '../MarkdownEditor';
+import Icon from '../ui/Icon';
 
 interface EditorAreaProps {
   className?: string;
@@ -38,9 +39,7 @@ export function EditorArea({ className = '' }: EditorAreaProps) {
         <div className="h-full flex items-center justify-center">
           <div className="text-center">
             <div className="text-gray-400 dark:text-gray-500 mb-4">
-              <svg className="mx-auto h-8 w-8 text-gray-400 flex-shrink-0" width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
+              <Icon name="edit" size="xl" className="mx-auto" />
             </div>
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
               No File Selected

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type React from 'react';
 import { useCollectionOperations } from '../../../hooks/useCollectionOperations';
+import Icon from '../../ui/Icon';
 
 export function NewCollectionModal() {
   const { state, createCollection, closeModal } = useCollectionOperations();
@@ -38,8 +39,8 @@ export function NewCollectionModal() {
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-900 bg-opacity-75 overflow-y-auto h-full w-full z-[100]">
-      <div className="relative top-20 mx-auto p-5 border border-gray-300 dark:border-gray-600 w-96 shadow-2xl rounded-md bg-white dark:bg-gray-800 z-[101]">
+    <div className="fixed inset-0 !bg-gray-900 !bg-opacity-75 overflow-y-auto h-full w-full !z-[9999]" style={{ backgroundColor: 'rgba(31, 41, 55, 0.75)' }}>
+      <div className="relative top-20 mx-auto p-5 border border-gray-300 dark:border-gray-600 w-96 shadow-2xl rounded-md !bg-white dark:!bg-gray-800 !z-[10000]" style={{ backgroundColor: 'white' }}>
         <div className="mt-3">
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
             Create New Collection

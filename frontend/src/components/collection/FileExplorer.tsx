@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useCollectionOperations } from '../../hooks/useCollectionOperations';
 import LoadingSpinner from '../LoadingSpinner';
+import Icon from '../ui/Icon';
 
 interface FileExplorerProps {
   className?: string;
@@ -153,19 +154,14 @@ export function FileExplorer({ className = '' }: FileExplorerProps) {
             className="group flex items-center p-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
             style={{ paddingLeft }}
           >
-            <svg
-              className={`flex-shrink-0 h-4 w-4 text-gray-400 mr-2 transition-transform ${
+            <Icon 
+              name="chevronRight" 
+              size="sm" 
+              className={`mr-2 transition-transform ${
                 isExpanded ? 'rotate-90' : ''
               }`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            <svg className="flex-shrink-0 h-4 w-4 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-            </svg>
+            />
+            <Icon name="folder" size="sm" color="blue" className="mr-2" />
             <span className="text-sm text-gray-900 dark:text-white font-medium">
               {node.name}
             </span>
@@ -204,9 +200,7 @@ export function FileExplorer({ className = '' }: FileExplorerProps) {
         style={{ paddingLeft }}
       >
         <div className="flex items-center min-w-0 flex-1">
-          <svg className="flex-shrink-0 h-4 w-4 text-gray-400 dark:text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
+          <Icon name="document" size="sm" className="mr-2" />
           <div className="min-w-0 flex-1">
             <p className={`text-sm truncate ${
               isSelected
@@ -234,9 +228,7 @@ export function FileExplorer({ className = '' }: FileExplorerProps) {
           className="opacity-0 group-hover:opacity-100 ml-2 p-1 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-all"
           title="Delete file"
         >
-          <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
+          <Icon name="trash" size="xs" color="current" />
         </button>
       </div>
     );
@@ -266,9 +258,7 @@ export function FileExplorer({ className = '' }: FileExplorerProps) {
             className="inline-flex items-center p-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded transition-colors"
             title="New file"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
+            <Icon name="plus" size="sm" />
           </button>
         </div>
         
@@ -281,9 +271,7 @@ export function FileExplorer({ className = '' }: FileExplorerProps) {
             placeholder="Search files..."
             className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
           />
-          <svg className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+          <Icon name="search" size="sm" className="absolute left-2.5 top-2.5" />
         </div>
       </div>
 
@@ -294,9 +282,7 @@ export function FileExplorer({ className = '' }: FileExplorerProps) {
             {searchTerm ? (
               <div>
                 <div className="text-gray-400 dark:text-gray-500 mb-4">
-                  <svg className="mx-auto h-8 w-8 text-gray-400 flex-shrink-0" width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
+                  <Icon name="search" size="xl" className="mx-auto" />
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">No files match "{searchTerm}"</p>
                 <button
@@ -309,9 +295,7 @@ export function FileExplorer({ className = '' }: FileExplorerProps) {
             ) : (
               <div>
                 <div className="text-gray-400 dark:text-gray-500 mb-4">
-                  <svg className="mx-auto h-8 w-8 text-gray-400 flex-shrink-0" width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                  <Icon name="document" size="xl" className="mx-auto" />
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">No files in this collection</p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type React from 'react';
 import { useCollectionOperations } from '../../../hooks/useCollectionOperations';
+import Icon from '../../ui/Icon';
 
 export function NewFileModal() {
   const { state, createNewFile, closeModal } = useCollectionOperations();
@@ -62,14 +63,12 @@ export function NewFileModal() {
   const isFormValid = filename.trim() && isValidFilename(filename.trim());
 
   return (
-    <div className="fixed inset-0 bg-gray-900 bg-opacity-75 overflow-y-auto h-full w-full z-[100]">
-      <div className="relative top-12 mx-auto p-5 border border-gray-300 dark:border-gray-600 max-w-md shadow-2xl rounded-md bg-white dark:bg-gray-800 z-[101]">
+    <div className="fixed inset-0 !bg-gray-900 !bg-opacity-75 overflow-y-auto h-full w-full !z-[9999]" style={{ backgroundColor: 'rgba(31, 41, 55, 0.75)' }}>
+      <div className="relative top-12 mx-auto p-5 border border-gray-300 dark:border-gray-600 max-w-md shadow-2xl rounded-md !bg-white dark:!bg-gray-800 !z-[10000]" style={{ backgroundColor: 'white' }}>
         <div className="mt-3">
           <div className="flex items-center mb-4">
             <div className="flex-shrink-0">
-              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+              <Icon name="document" size="lg" color="blue" />
             </div>
             <div className="ml-3">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
@@ -155,13 +154,10 @@ Start writing your content here..."
                 disabled={!isFormValid || isSubmitting}
               >
                 {isSubmitting ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-3 w-3 text-white inline" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
+                  <div className="flex items-center">
+                    <Icon name="refresh" size="xs" color="white" animate="spin" className="mr-2" />
                     Creating...
-                  </>
+                  </div>
                 ) : (
                   'Create File'
                 )}
