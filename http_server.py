@@ -217,7 +217,10 @@ async def list_file_collections():
 async def get_file_collection_info(collection_id: str):
     """Get detailed information about a file collection."""
     try:
-        result = collection_manager.get_collection_info(collection_id)
+        # URL decode the collection_id to handle names with spaces
+        from urllib.parse import unquote
+        decoded_collection_id = unquote(collection_id)
+        result = collection_manager.get_collection_info(decoded_collection_id)
         if isinstance(result, str):
             result = json.loads(result)
         if not result.get("success"):
@@ -236,11 +239,46 @@ async def get_file_collection_info(collection_id: str):
         logger.error(f"Get file collection info failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/file-collections/{collection_id}/files")
+async def list_files_in_collection(collection_id: str):
+    """List all files and folders in a collection."""
+    try:
+        # URL decode the collection_id to handle names with spaces
+        from urllib.parse import unquote
+        decoded_collection_id = unquote(collection_id)
+        
+        result = collection_manager.list_files_in_collection(decoded_collection_id)
+        if isinstance(result, str):
+            result = json.loads(result)
+        
+        if not result.get("success"):
+            if "not found" in result.get("error", "").lower():
+                raise HTTPException(status_code=404, detail=f"Collection '{decoded_collection_id}' not found")
+            raise HTTPException(status_code=500, detail=result.get("error", "Failed to list files"))
+        
+        return {
+            "success": True,
+            "data": {
+                "files": result.get("files", []),
+                "folders": result.get("folders", []),
+                "total_files": result.get("total_files", 0),
+                "total_folders": result.get("total_folders", 0)
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"List files in collection failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.delete("/api/file-collections/{collection_id}")
 async def delete_file_collection(collection_id: str):
     """Delete a file collection and all its files."""
     try:
-        result = collection_manager.delete_collection(collection_id)
+        # URL decode the collection_id to handle names with spaces
+        from urllib.parse import unquote
+        decoded_collection_id = unquote(collection_id)
+        result = collection_manager.delete_collection(decoded_collection_id)
         if isinstance(result, str):
             result = json.loads(result)
         if not result.get("success"):
@@ -258,22 +296,26 @@ async def delete_file_collection(collection_id: str):
 async def save_file_to_collection(collection_id: str, request: SaveFileRequest):
     """Save a file to a collection."""
     try:
+        # URL decode the collection_id to handle names with spaces
+        from urllib.parse import unquote
+        decoded_collection_id = unquote(collection_id)
+        
         # Ensure collection exists
-        collection_info = collection_manager.get_collection_info(collection_id)
+        collection_info = collection_manager.get_collection_info(decoded_collection_id)
         if isinstance(collection_info, str):
             collection_info = json.loads(collection_info)
         
         if not collection_info.get("success"):
             if "not found" in collection_info.get("error", "").lower():
                 # Auto-create collection if it doesn't exist
-                logger.info(f"Collection '{collection_id}' doesn't exist, creating it")
-                create_result = collection_manager.create_collection(collection_id)
+                logger.info(f"Collection '{decoded_collection_id}' doesn't exist, creating it")
+                create_result = collection_manager.create_collection(decoded_collection_id)
                 if isinstance(create_result, str):
                     create_result = json.loads(create_result)
                 if not create_result.get("success"):
                     raise HTTPException(status_code=400, detail=f"Failed to create collection: {create_result.get('error')}")
         
-        result = collection_manager.save_file(collection_id, request.filename, request.content, request.folder)
+        result = collection_manager.save_file(decoded_collection_id, request.filename, request.content, request.folder)
         if isinstance(result, str):
             result = json.loads(result)
         
@@ -299,13 +341,16 @@ async def save_file_to_collection(collection_id: str, request: SaveFileRequest):
 async def read_file_from_collection(collection_id: str, file_path: str, folder: str = ""):
     """Read a file from a collection."""
     try:
-        result = collection_manager.read_file(collection_id, file_path, folder)
+        # URL decode the collection_id to handle names with spaces
+        from urllib.parse import unquote
+        decoded_collection_id = unquote(collection_id)
+        result = collection_manager.read_file(decoded_collection_id, file_path, folder)
         if isinstance(result, str):
             result = json.loads(result)
         
         if not result.get("success"):
             if "not found" in result.get("error", "").lower():
-                raise HTTPException(status_code=404, detail=f"File '{file_path}' not found in collection '{collection_id}'")
+                raise HTTPException(status_code=404, detail=f"File '{file_path}' not found in collection '{decoded_collection_id}'")
             raise HTTPException(status_code=500, detail=result.get("error", "Failed to read file"))
         
         # Transform to match frontend expected format
@@ -325,7 +370,10 @@ async def read_file_from_collection(collection_id: str, file_path: str, folder: 
 async def update_file_in_collection(collection_id: str, file_path: str, request: UpdateFileRequest, folder: str = ""):
     """Update a file in a collection."""
     try:
-        result = collection_manager.save_file(collection_id, file_path, request.content, folder)
+        # URL decode the collection_id to handle names with spaces
+        from urllib.parse import unquote
+        decoded_collection_id = unquote(collection_id)
+        result = collection_manager.save_file(decoded_collection_id, file_path, request.content, folder)
         if isinstance(result, str):
             result = json.loads(result)
         
@@ -342,10 +390,14 @@ async def update_file_in_collection(collection_id: str, file_path: str, request:
 async def delete_file_from_collection(collection_id: str, file_path: str, folder: str = ""):
     """Delete a file from a collection."""
     try:
+        # URL decode the collection_id to handle names with spaces
+        from urllib.parse import unquote
+        decoded_collection_id = unquote(collection_id)
+        
         # Build full file path
-        collection_path = collection_manager.base_dir / collection_id
+        collection_path = collection_manager.base_dir / decoded_collection_id
         if not collection_path.exists():
-            raise HTTPException(status_code=404, detail=f"Collection '{collection_id}' not found")
+            raise HTTPException(status_code=404, detail=f"Collection '{decoded_collection_id}' not found")
         
         if folder:
             file_full_path = collection_path / folder / file_path
@@ -353,16 +405,16 @@ async def delete_file_from_collection(collection_id: str, file_path: str, folder
             file_full_path = collection_path / file_path
             
         if not file_full_path.exists():
-            raise HTTPException(status_code=404, detail=f"File '{file_path}' not found in collection '{collection_id}'")
+            raise HTTPException(status_code=404, detail=f"File '{file_path}' not found in collection '{decoded_collection_id}'")
         
         # Delete the file
         file_full_path.unlink()
-        logger.info(f"Successfully deleted '{file_path}' from collection '{collection_id}'")
+        logger.info(f"Successfully deleted '{file_path}' from collection '{decoded_collection_id}'")
         
         return {
             "success": True,
             "message": f"File '{file_path}' deleted successfully",
-            "collection_name": collection_id,
+            "collection_name": decoded_collection_id,
             "filename": file_path,
             "folder": folder
         }
@@ -376,6 +428,10 @@ async def delete_file_from_collection(collection_id: str, file_path: str, folder
 async def crawl_single_page_to_collection(collection_id: str, request: CrawlToCollectionRequest):
     """Crawl a single page and save to collection."""
     try:
+        # URL decode the collection_id to handle names with spaces
+        from urllib.parse import unquote
+        decoded_collection_id = unquote(collection_id)
+        
         # Extract content from URL
         from tools.web_extract import WebExtractParams
         content = await web_content_extract(WebExtractParams(url=request.url))
@@ -394,8 +450,8 @@ async def crawl_single_page_to_collection(collection_id: str, request: CrawlToCo
         else:
             filename = f"{domain}_index.md"
         
-        # Save to collection
-        result = collection_manager.save_file(collection_id, filename, content_str, request.folder)
+        # Save to collection using the decoded collection ID
+        result = collection_manager.save_file(decoded_collection_id, filename, content_str, request.folder)
         if isinstance(result, str):
             result = json.loads(result)
         

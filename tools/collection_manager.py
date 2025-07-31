@@ -342,19 +342,29 @@ class CollectionFileManager:
             metadata_text = metadata_path.read_text(encoding='utf-8')
             metadata = json.loads(metadata_text)
             
+            # Get actual file listing
+            file_listing = self.list_files_in_collection(collection_name)
+            
+            # Calculate actual file count and total size
+            actual_file_count = len(file_listing.get("files", [])) if file_listing.get("success") else 0
+            actual_folder_count = len(file_listing.get("folders", [])) if file_listing.get("success") else 0
+            total_size = sum(f.get("size", 0) for f in file_listing.get("files", [])) if file_listing.get("success") else 0
+            
             # Format to match Frontend FileCollection interface
             collection_info = {
                 "name": metadata.get("name", collection_name),
                 "description": metadata.get("description", ""),
                 "created_at": metadata.get("created_at", datetime.utcnow().isoformat()),
-                "file_count": metadata.get("file_count", 0),
-                "folders": metadata.get("folders", []),
+                "file_count": actual_file_count,  # Use actual count instead of metadata
+                "folders": [f["name"] for f in file_listing.get("folders", [])] if file_listing.get("success") else [],
+                "files": file_listing.get("files", []) if file_listing.get("success") else [],
                 "metadata": {
                     "created_at": metadata.get("created_at", datetime.utcnow().isoformat()),
                     "description": metadata.get("description", ""),
                     "last_modified": metadata.get("created_at", datetime.utcnow().isoformat()),
-                    "file_count": metadata.get("file_count", 0),
-                    "total_size": 0  # TODO: Calculate actual total size
+                    "file_count": actual_file_count,
+                    "folder_count": actual_folder_count,
+                    "total_size": total_size
                 }
             }
             
@@ -369,4 +379,71 @@ class CollectionFileManager:
                 "success": False,
                 "error": str(e),
                 "message": f"Failed to get collection info for '{collection_name}'"
+            }
+    
+    def list_files_in_collection(self, collection_name: str) -> Dict[str, Any]:
+        """List all files and folders in a collection."""
+        try:
+            collection_path = self._validate_path_security(collection_name)
+            
+            if not collection_path.exists():
+                return {
+                    "success": False,
+                    "error": f"Collection '{collection_name}' not found"
+                }
+            
+            files = []
+            folders = []
+            
+            # Recursively scan the collection directory
+            def scan_directory(path: Path, relative_path: str = "") -> None:
+                try:
+                    for item in path.iterdir():
+                        # Skip metadata files and hidden files
+                        if item.name.startswith('.'):
+                            continue
+                        
+                        item_relative_path = f"{relative_path}/{item.name}" if relative_path else item.name
+                        
+                        if item.is_file():
+                            # Get file stats
+                            stat = item.stat()
+                            files.append({
+                                "name": item.name,
+                                "path": item_relative_path,
+                                "type": "file",
+                                "size": stat.st_size,
+                                "created_at": datetime.fromtimestamp(stat.st_ctime).isoformat(),
+                                "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                                "extension": item.suffix.lower(),
+                                "folder": relative_path
+                            })
+                        elif item.is_dir():
+                            folders.append({
+                                "name": item.name,
+                                "path": item_relative_path,
+                                "type": "folder",
+                                "folder": relative_path
+                            })
+                            # Recursively scan subdirectories
+                            scan_directory(item, item_relative_path)
+                except PermissionError:
+                    # Skip directories we can't read
+                    pass
+            
+            scan_directory(collection_path)
+            
+            return {
+                "success": True,
+                "files": files,
+                "folders": folders,
+                "total_files": len(files),
+                "total_folders": len(folders)
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "message": f"Failed to list files in collection '{collection_name}'"
             }

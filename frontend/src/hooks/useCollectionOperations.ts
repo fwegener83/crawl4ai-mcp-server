@@ -65,19 +65,33 @@ export function useCollectionOperations() {
       dispatch({ type: 'SET_LOADING', payload: { key: 'files', value: true } });
       
       try {
-        const collection = await APIService.getFileCollection(collectionId);
+        const [collection, fileList] = await Promise.all([
+          APIService.getFileCollection(collectionId),
+          APIService.listFilesInCollection(collectionId)
+        ]);
         
-        // Convert collection data to file/folder structure
-        // This is a simplified version - would need more complex logic for real folder structures
-        const files: FileNode[] = [];
-        const folders: FolderNode[] = [];
+        // Convert file listing to FileNode and FolderNode structures
+        const files: FileNode[] = fileList.files.map(file => ({
+          name: file.name,
+          path: file.path,
+          type: 'file' as const,
+          metadata: {
+            filename: file.name,
+            folder_path: file.folder || '',
+            created_at: file.created_at,
+            size: file.size,
+            source_url: undefined
+          }
+        }));
         
-        // For now, we'll create mock file nodes based on collection metadata
-        // In a real implementation, this would parse the actual file structure
-        if (collection.file_count > 0) {
-          // This would be replaced with actual file parsing logic
-          dispatch({ type: 'SET_FILES', payload: { files, folders } });
-        }
+        const folders: FolderNode[] = fileList.folders.map(folder => ({
+          name: folder.name,
+          path: folder.path,
+          type: 'folder' as const,
+          children: []
+        }));
+        
+        dispatch({ type: 'SET_FILES', payload: { files, folders } });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to load collection files';
         dispatch({ type: 'SET_ERROR', payload: errorMessage });

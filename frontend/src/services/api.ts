@@ -299,6 +299,21 @@ export class APIService {
   }
 
   /**
+   * List files and folders in a collection
+   */
+  static async listFilesInCollection(collectionId: string): Promise<{files: any[], folders: any[], total_files: number, total_folders: number}> {
+    const response: AxiosResponse<FileCollectionResponse<{files: any[], folders: any[], total_files: number, total_folders: number}>> = await api.get(
+      `/file-collections/${collectionId}/files`
+    );
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to list files in collection');
+    }
+    
+    return response.data.data!;
+  }
+
+  /**
    * Crawl a single page and save to collection
    */
   static async crawlPageToCollection(
