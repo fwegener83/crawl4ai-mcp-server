@@ -290,8 +290,8 @@ describe('FileExplorer', () => {
       </CollectionProvider>
     );
 
-    const selectedFile = screen.getByText('readme.md').closest('div');
-    expect(selectedFile).toHaveClass('bg-blue-50');
+    const selectedFileRow = screen.getByText('readme.md').closest('.group');
+    expect(selectedFileRow).toHaveClass('bg-blue-50');
   });
 
   it('should call openDeleteConfirmation when clicking delete button', async () => {

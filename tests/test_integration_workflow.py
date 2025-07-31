@@ -4,6 +4,7 @@ import json
 import time
 import sys
 import os
+import pytest
 
 # Add the project root to the path so we can import modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -16,8 +17,7 @@ def test_complete_workflow():
     try:
         import requests
     except ImportError:
-        print("⚠ requests module not available for integration test")
-        return False
+        pytest.skip("requests module not available for integration test")
     
     base_url = "http://localhost:8000"
     
@@ -148,14 +148,14 @@ def test_complete_workflow():
         else:
             print(f"⚠ Could not delete test collection: {response.status_code}")
         
-        return True
+        # Test passed successfully
         
     except requests.exceptions.RequestException as e:
         print(f"❌ Network error: {e}")
-        return False
+        pytest.fail(f"Network error during integration test: {e}")
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
-        return False
+        pytest.fail(f"Unexpected error during integration test: {e}")
 
 
 def main():

@@ -289,7 +289,11 @@ class TestFileListingFunctionality:
 
 def test_api_integration():
     """Integration test to verify API endpoint works."""
-    import requests
+    try:
+        import requests
+    except ImportError:
+        pytest.skip("requests library not available for API integration test")
+    
     import time
     
     # Wait a moment for server to be ready

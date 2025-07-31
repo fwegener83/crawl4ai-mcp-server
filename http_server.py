@@ -164,19 +164,19 @@ async def create_file_collection(request: CreateCollectionRequest):
             raise HTTPException(status_code=400, detail=result.get("error", "Failed to create collection"))
             
         # Transform to match frontend expected format
-        from datetime import datetime
+        from datetime import datetime, timezone
         return {
             "success": True,
             "data": {
                 "name": request.name,
                 "description": request.description,
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
                 "file_count": 0,
                 "folders": [],
                 "metadata": {
-                    "created_at": datetime.utcnow().isoformat(),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
                     "description": request.description,
-                    "last_modified": datetime.utcnow().isoformat(),
+                    "last_modified": datetime.now(timezone.utc).isoformat(),
                     "file_count": 0,
                     "total_size": 0
                 },

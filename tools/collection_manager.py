@@ -5,7 +5,7 @@ Provides file-first architecture for organizing crawled content in hierarchical 
 import json
 import hashlib
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field, field_validator
 
@@ -14,7 +14,7 @@ class CollectionMetadata(BaseModel):
     """Collection metadata structure."""
     name: str = Field(..., description="Collection name")
     description: str = Field(default="", description="Collection description") 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     crawl_sources: List[Dict[str, Any]] = Field(default_factory=list)
     file_count: int = Field(default=0)
     folders: List[str] = Field(default_factory=list)
@@ -41,7 +41,7 @@ class FileMetadata(BaseModel):
     """Individual file metadata."""
     filename: str
     folder_path: str = ""
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     source_url: Optional[str] = None
     content_hash: Optional[str] = None
 
@@ -231,13 +231,13 @@ class CollectionFileManager:
                             collections.append({
                                 "name": metadata.get("name", item.name),
                                 "description": metadata.get("description", ""),
-                                "created_at": metadata.get("created_at", datetime.utcnow().isoformat()),
+                                "created_at": metadata.get("created_at", datetime.now(timezone.utc).isoformat()),
                                 "file_count": metadata.get("file_count", 0),
                                 "folders": metadata.get("folders", []),
                                 "metadata": {
-                                    "created_at": metadata.get("created_at", datetime.utcnow().isoformat()),
+                                    "created_at": metadata.get("created_at", datetime.now(timezone.utc).isoformat()),
                                     "description": metadata.get("description", ""),
-                                    "last_modified": metadata.get("created_at", datetime.utcnow().isoformat()),
+                                    "last_modified": metadata.get("created_at", datetime.now(timezone.utc).isoformat()),
                                     "file_count": metadata.get("file_count", 0),
                                     "total_size": 0  # TODO: Calculate actual total size
                                 },
@@ -354,14 +354,14 @@ class CollectionFileManager:
             collection_info = {
                 "name": metadata.get("name", collection_name),
                 "description": metadata.get("description", ""),
-                "created_at": metadata.get("created_at", datetime.utcnow().isoformat()),
+                "created_at": metadata.get("created_at", datetime.now(timezone.utc).isoformat()),
                 "file_count": actual_file_count,  # Use actual count instead of metadata
                 "folders": [f["name"] for f in file_listing.get("folders", [])] if file_listing.get("success") else [],
                 "files": file_listing.get("files", []) if file_listing.get("success") else [],
                 "metadata": {
-                    "created_at": metadata.get("created_at", datetime.utcnow().isoformat()),
+                    "created_at": metadata.get("created_at", datetime.now(timezone.utc).isoformat()),
                     "description": metadata.get("description", ""),
-                    "last_modified": metadata.get("created_at", datetime.utcnow().isoformat()),
+                    "last_modified": metadata.get("created_at", datetime.now(timezone.utc).isoformat()),
                     "file_count": actual_file_count,
                     "folder_count": actual_folder_count,
                     "total_size": total_size
