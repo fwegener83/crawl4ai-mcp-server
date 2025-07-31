@@ -188,8 +188,8 @@ describe('FileExplorer', () => {
     expect(screen.getByText('config')).toBeInTheDocument();
     expect(screen.getByText('docs')).toBeInTheDocument();
     
-    // Should show file count in folders
-    expect(screen.getByText('1 files')).toBeInTheDocument();
+    // Should show file count in folders (both folders have 1 file each)
+    expect(screen.getAllByText('1 files')).toHaveLength(2);
   });
 
   it('should expand and collapse folders', async () => {
