@@ -165,8 +165,8 @@ describe('FileExplorer', () => {
     );
 
     expect(screen.getByText('readme.md')).toBeInTheDocument();
-    expect(screen.getByText('config.json')).toBeInTheDocument();
-    expect(screen.getByText('api.md')).toBeInTheDocument();
+    expect(screen.getByText('config')).toBeInTheDocument(); // Folder name, not the file directly
+    expect(screen.getByText('docs')).toBeInTheDocument(); // Folder name, not the file directly
   });
 
   it('should display folder structure correctly', () => {
