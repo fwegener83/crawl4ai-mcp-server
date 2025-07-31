@@ -7,6 +7,7 @@ import CollectionsPage from './pages/CollectionsPage';
 import FileCollectionsPage from './pages/FileCollectionsPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/ToastContainer';
+import { AppThemeProvider } from './contexts/ThemeContext';
 
 type Page = 'home' | 'simple-crawl' | 'deep-crawl' | 'collections' | 'file-collections';
 
@@ -29,13 +30,15 @@ function App() {
   };
 
   return (
-    <ErrorBoundary>
-      <ToastProvider>
-        <Layout currentPage={currentPage} onNavigate={setCurrentPage}>
-          {renderCurrentPage()}
-        </Layout>
-      </ToastProvider>
-    </ErrorBoundary>
+    <AppThemeProvider>
+      <ErrorBoundary>
+        <ToastProvider>
+          <Layout currentPage={currentPage} onNavigate={setCurrentPage}>
+            {renderCurrentPage()}
+          </Layout>
+        </ToastProvider>
+      </ErrorBoundary>
+    </AppThemeProvider>
   );
 }
 
