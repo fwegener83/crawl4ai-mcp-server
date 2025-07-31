@@ -65,7 +65,7 @@ export function useCollectionOperations() {
       dispatch({ type: 'SET_LOADING', payload: { key: 'files', value: true } });
       
       try {
-        const [collection, fileList] = await Promise.all([
+        const [, fileList] = await Promise.all([
           APIService.getFileCollection(collectionId),
           APIService.listFilesInCollection(collectionId)
         ]);

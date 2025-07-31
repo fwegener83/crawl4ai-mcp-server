@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type React from 'react';
 import { useCollectionOperations } from '../../../hooks/useCollectionOperations';
-import Icon from '../../ui/Icon';
 
 export function NewCollectionModal() {
   const { state, createCollection, closeModal } = useCollectionOperations();

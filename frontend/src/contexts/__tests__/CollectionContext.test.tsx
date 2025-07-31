@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
-import { CollectionProvider, useCollection, type CollectionState } from '../CollectionContext';
+import { CollectionProvider, useCollection } from '../CollectionContext';
 import { type FileCollection, type FileMetadata } from '../../types/api';
 
 // Test component to access the context
@@ -73,13 +73,6 @@ const mockCollection: FileCollection = {
   }
 };
 
-const mockFileMetadata: FileMetadata = {
-  filename: 'test.md',
-  folder_path: '',
-  created_at: '2024-01-01T00:00:00Z',
-  source_url: 'https://example.com',
-  size: 512
-};
 
 describe('CollectionContext', () => {
   beforeEach(() => {
