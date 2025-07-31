@@ -1,4 +1,4 @@
-import React from 'react';
+import { SVGProps } from 'react';
 
 // Icon paths - zentraler Ort für alle SVG-Pfade
 const iconPaths = {
@@ -94,8 +94,8 @@ export function Icon({
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
       onClick={onClick}
-      title={title}
     >
+      {title && <title>{title}</title>}
       <path
         strokeLinecap="round"
         strokeLinejoin="round"

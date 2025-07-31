@@ -80,7 +80,7 @@ export function useCollectionOperations() {
             folder_path: file.folder || '',
             created_at: file.created_at,
             size: file.size,
-            source_url: undefined
+            source_url: file.source_url || undefined
           }
         }));
         
