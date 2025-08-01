@@ -38,6 +38,13 @@ export type { RadioProps, RadioGroupProps, RadioOptionProps } from './Radio';
 export { Slider } from './Slider';
 export type { SliderProps } from './Slider';
 
+// Complex UI Components
+export { DataTable } from './DataTable';
+export type { DataTableProps, Column } from './DataTable';
+
+export { NotificationProvider, useNotification } from './NotificationProvider';
+export type { NotificationProviderProps, NotificationOptions } from './NotificationProvider';
+
 // Re-export commonly used MUI components
 export {
   Card,
