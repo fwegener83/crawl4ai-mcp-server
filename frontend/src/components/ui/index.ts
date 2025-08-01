@@ -74,4 +74,10 @@ export {
   Grid,
   Container,
   Stack,
+  Breadcrumbs,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Tabs,
+  Tab,
 } from '@mui/material';
