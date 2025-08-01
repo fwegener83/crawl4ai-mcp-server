@@ -1,5 +1,6 @@
 import React from 'react';
-import { Typography as MuiTypography, TypographyProps as MuiTypographyProps } from '@mui/material';
+import { Typography as MuiTypography } from '@mui/material';
+import type { TypographyProps as MuiTypographyProps } from '@mui/material';
 
 export interface TypographyProps extends MuiTypographyProps {
   // Additional custom props can be added here

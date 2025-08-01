@@ -75,3 +75,6 @@ export * from '@testing-library/react';
 
 // Override render method
 export { customRender as render };
+
+// Also export as renderWithTheme for compatibility
+export { customRender as renderWithTheme };
