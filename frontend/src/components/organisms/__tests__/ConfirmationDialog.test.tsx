@@ -1,17 +1,17 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
-import { ThemeProvider } from '../../../contexts/ThemeContext';
+import { AppThemeProvider } from '../../../contexts/ThemeContext';
 import { NotificationProvider } from '../../ui/NotificationProvider';
 import { ConfirmationDialog } from '../ConfirmationDialog';
 import type { ConfirmationDialogProps } from '../ConfirmationDialog';
 
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <ThemeProvider>
+  <AppThemeProvider>
     <NotificationProvider>
       {children}
     </NotificationProvider>
-  </ThemeProvider>
+  </AppThemeProvider>
 );
 
 const defaultProps: ConfirmationDialogProps = {

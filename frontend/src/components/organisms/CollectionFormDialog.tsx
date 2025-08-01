@@ -1,5 +1,5 @@
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, FormProvider } from 'react-hook-form';
 import {
   Dialog,
   DialogTitle,
@@ -9,7 +9,6 @@ import {
   Box
 } from '../ui';
 import {
-  FormContainer,
   TextFieldElement,
   SubmitButton,
   ActionButton
@@ -107,66 +106,68 @@ export const CollectionFormDialog: React.FC<CollectionFormDialogProps> = ({
         </Box>
       </DialogTitle>
       
-      <DialogContent sx={{ pt: 2 }}>
-        <FormContainer formContext={form as any} onSuccess={handleSubmit as any}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <TextFieldElement
-              name="name"
-              label="Collection Name"
-              helperText="A unique name for your collection (letters, numbers, hyphens, and underscores only)"
-              fullWidth
-              required
-              rules={{
-                required: 'Collection name is required',
-                pattern: {
-                  value: /^[a-zA-Z0-9_-]+$/,
-                  message: 'Only letters, numbers, hyphens, and underscores are allowed'
-                },
-                minLength: {
-                  value: 1,
-                  message: 'Collection name must not be empty'
-                },
-                maxLength: {
-                  value: 50,
-                  message: 'Collection name must be 50 characters or less'
-                }
-              }}
-              autoFocus
-            />
-            
-            <TextFieldElement
-              name="description"
-              label="Description"
-              helperText="Optional description of what this collection contains"
-              fullWidth
-              multiline
-              rows={3}
-              rules={{
-                maxLength: {
-                  value: 500,
-                  message: 'Description must be 500 characters or less'
-                }
-              }}
-            />
-          </Box>
-        </FormContainer>
-      </DialogContent>
-      
-      <DialogActions sx={{ p: 3, gap: 1 }}>
-        <ActionButton
-          variant="outlined"
-          onClick={handleClose}
-          disabled={loading}
-        >
-          Cancel
-        </ActionButton>
-        <SubmitButton
-          loading={loading}
-          submitText={submitText}
-          loadingText="Processing..."
-          onClick={() => form.handleSubmit(handleSubmit)()}
-        />
-      </DialogActions>
+      <FormProvider {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)}>
+          <DialogContent sx={{ pt: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <TextFieldElement
+                name="name"
+                label="Collection Name"
+                helperText="A unique name for your collection (letters, numbers, hyphens, and underscores only)"
+                fullWidth
+                required
+                rules={{
+                  required: 'Collection name is required',
+                  pattern: {
+                    value: /^[a-zA-Z0-9_-]+$/,
+                    message: 'Only letters, numbers, hyphens, and underscores are allowed'
+                  },
+                  minLength: {
+                    value: 1,
+                    message: 'Collection name must not be empty'
+                  },
+                  maxLength: {
+                    value: 50,
+                    message: 'Collection name must be 50 characters or less'
+                  }
+                }}
+                autoFocus
+              />
+              
+              <TextFieldElement
+                name="description"
+                label="Description"
+                helperText="Optional description of what this collection contains"
+                fullWidth
+                multiline
+                rows={3}
+                rules={{
+                  maxLength: {
+                    value: 500,
+                    message: 'Description must be 500 characters or less'
+                  }
+                }}
+              />
+            </Box>
+          </DialogContent>
+          
+          <DialogActions sx={{ p: 3, gap: 1 }}>
+            <ActionButton
+              variant="outlined"
+              onClick={handleClose}
+              disabled={loading}
+              type="button"
+            >
+              Cancel
+            </ActionButton>
+            <SubmitButton
+              loading={loading}
+            >
+              {loading ? 'Processing...' : submitText}
+            </SubmitButton>
+          </DialogActions>
+        </form>
+      </FormProvider>
     </Dialog>
   );
 };

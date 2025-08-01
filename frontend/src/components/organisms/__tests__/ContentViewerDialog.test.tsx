@@ -1,17 +1,17 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { vi } from 'vitest';
-import { ThemeProvider } from '../../../contexts/ThemeContext';
+import { AppThemeProvider } from '../../../contexts/ThemeContext';
 import { NotificationProvider } from '../../ui/NotificationProvider';
 import { ContentViewerDialog } from '../ContentViewerDialog';
 import type { ContentViewerDialogProps, ContentItem } from '../ContentViewerDialog';
 
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <ThemeProvider>
+  <AppThemeProvider>
     <NotificationProvider>
       {children}
     </NotificationProvider>
-  </ThemeProvider>
+  </AppThemeProvider>
 );
 
 const mockContent: ContentItem = {
@@ -90,7 +90,7 @@ describe('ContentViewerDialog', () => {
   it('formats file size correctly', () => {
     const largeContent = {
       ...mockContent,
-      size: 2048576, // 2MB
+      size: 2097152, // Exactly 2MB (2 * 1024 * 1024)
     };
 
     render(
@@ -99,6 +99,7 @@ describe('ContentViewerDialog', () => {
       </TestWrapper>
     );
 
+    // Look for the chip containing the file size
     expect(screen.getByText('2 MB')).toBeInTheDocument();
   });
 
