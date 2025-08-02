@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Setup CI mocks for crawl4ai to avoid heavy dependencies."""
+# CI configuration for comprehensive frontend redesign PR
 
 import os
 import sys
