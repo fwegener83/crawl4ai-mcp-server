@@ -2,7 +2,6 @@ import { useCollectionOperations } from '../../hooks/useCollectionOperations';
 import FileExplorer from './FileExplorer';
 import EditorArea from './EditorArea';
 import { Box, Typography, Button, Paper } from '../ui';
-import AddIcon from '@mui/icons-material/Add';
 import DescriptionIcon from '@mui/icons-material/Description';
 import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
 import WebIcon from '@mui/icons-material/Web';

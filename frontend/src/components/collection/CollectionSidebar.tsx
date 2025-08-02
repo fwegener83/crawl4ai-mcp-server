@@ -12,7 +12,6 @@ import {
   CircularProgress,
   Chip,
   Tooltip,
-  Paper,
   Divider
 } from '../ui';
 import { useCollectionOperations } from '../../hooks/useCollectionOperations';
@@ -21,7 +20,6 @@ import AddIcon from '@mui/icons-material/Add';
 import FolderIcon from '@mui/icons-material/Folder';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DescriptionIcon from '@mui/icons-material/Description';
-import InfoIcon from '@mui/icons-material/Info';
 import CloseIcon from '@mui/icons-material/Close';
 import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
 import WebIcon from '@mui/icons-material/Web';
@@ -183,7 +181,6 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
         <Box sx={{ p: 2 }}>
           <Alert 
             severity="error" 
-            size="small"
             action={
               <IconButton 
                 aria-label="close" 

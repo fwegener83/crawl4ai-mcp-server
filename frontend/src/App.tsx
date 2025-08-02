@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Box, Container } from './components/ui';
-import { NavigationSidebar } from './components/organisms';
+import TopNavigation from './components/navigation/TopNavigation';
 import { NotificationProvider } from './components/ui/NotificationProvider';
+import { CollectionProvider } from './contexts/CollectionContext';
 import HomePage from './pages/HomePage';
 import SimpleCrawlPage from './pages/SimpleCrawlPage';
 import DeepCrawlPage from './pages/DeepCrawlPage';
@@ -14,7 +15,7 @@ import { AppThemeProvider } from './contexts/ThemeContext';
 type Page = 'home' | 'simple-crawl' | 'deep-crawl' | 'collections' | 'file-collections' | 'settings';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<Page>('home');
+  const [currentPage, setCurrentPage] = useState<Page>('file-collections');
 
   const renderCurrentPage = () => {
     switch (currentPage) {
@@ -37,28 +38,38 @@ function App() {
     <AppThemeProvider>
       <ErrorBoundary>
         <NotificationProvider>
-          <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-            <NavigationSidebar
-              currentPath={`/${currentPage}`}
-              onNavigate={(path: string) => {
-                const page = path.slice(1) as Page;
-                setCurrentPage(page || 'home');
-              }}
-            />
-            <Box component="main" sx={{ flexGrow: 1, overflow: 'hidden' }}>
-              <Container
-                maxWidth={false}
-                sx={{
-                  height: '100vh',
-                  py: 3,
-                  display: 'flex',
-                  flexDirection: 'column',
+          <CollectionProvider>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              minHeight: '100vh',
+              bgcolor: 'background.default'
+            }}>
+              {/* Top Navigation Bar */}
+              <TopNavigation
+                currentPage={currentPage}
+                onNavigate={(page: string) => {
+                  setCurrentPage(page as Page);
                 }}
-              >
-                {renderCurrentPage()}
-              </Container>
+                onSettingsClick={() => setCurrentPage('settings')}
+              />
+              
+              {/* Main Content Area */}
+              <Box component="main" sx={{ flex: 1, overflow: 'hidden' }}>
+                <Container
+                  maxWidth={false}
+                  sx={{
+                    height: 'calc(100vh - 64px)',
+                    py: 3,
+                    display: 'flex',
+                    flexDirection: 'column',
+                  }}
+                >
+                  {renderCurrentPage()}
+                </Container>
+              </Box>
             </Box>
-          </Box>
+          </CollectionProvider>
         </NotificationProvider>
       </ErrorBoundary>
     </AppThemeProvider>

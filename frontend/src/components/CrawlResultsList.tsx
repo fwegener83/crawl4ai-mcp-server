@@ -125,9 +125,20 @@ export function CrawlResultsList({
   }
 
   return (
-    <Paper elevation={1} sx={{ width: '100%' }}>
+    <Paper elevation={1} sx={{ 
+      width: '100%', 
+      display: 'flex', 
+      flexDirection: 'column',
+      maxHeight: 'calc(100vh - 200px)', // Overall container height limit
+      overflow: 'hidden'
+    }}>
       {/* Header */}
-      <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
+      <Box sx={{ 
+        p: 3, 
+        borderBottom: 1, 
+        borderColor: 'divider',
+        flexShrink: 0 // Don't shrink the header
+      }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="h6">
             Crawl Results ({results.length})
@@ -155,11 +166,11 @@ export function CrawlResultsList({
         </Box>
       </Box>
 
-      {/* Results List - Limited Height with Scroll */}
+      {/* Results List - Flexible Height with Scroll */}
       <Box sx={{ 
-        maxHeight: 'calc(100vh - 350px)', 
+        flex: 1, // Take all available space
         overflow: 'auto',
-        minHeight: '200px'
+        minHeight: '200px' // Minimum height to ensure visibility
       }}>
         <List disablePadding>
         {results.map((result, index) => (
@@ -305,7 +316,8 @@ export function CrawlResultsList({
         p: 2, 
         bgcolor: 'action.selected', 
         borderTop: 1, 
-        borderColor: 'divider'
+        borderColor: 'divider',
+        flexShrink: 0 // Don't shrink the footer
       }}>
         <Box sx={{ 
           display: 'flex', 

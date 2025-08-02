@@ -86,4 +86,5 @@ export {
   InputAdornment,
   ToggleButtonGroup,
   ToggleButton,
+  Menu,
 } from '@mui/material';

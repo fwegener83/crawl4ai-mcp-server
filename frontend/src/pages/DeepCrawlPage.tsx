@@ -81,14 +81,27 @@ export function DeepCrawlPage() {
       {crawlResults.length > 0 && (
         <Card sx={{ 
           position: 'sticky', 
-          top: 0, 
-          zIndex: 100,
+          top: '24px', // Account for container padding
+          zIndex: 1000,
           backgroundColor: 'background.paper',
-          boxShadow: 2
+          boxShadow: 3,
+          mb: 2 // Add margin to separate from content below
         }}>
           <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: { xs: 'wrap', md: 'nowrap' }, gap: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between', 
+              flexDirection: { xs: 'column', sm: 'row' },
+              gap: 2 
+            }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: { xs: 2, sm: 4 }, 
+                flexWrap: 'wrap',
+                justifyContent: { xs: 'center', sm: 'flex-start' }
+              }}>
                 <Typography variant="body2" color="text.secondary">
                   <Typography component="span" fontWeight="medium" color="success.main">
                     {successfulResults.length}
@@ -109,8 +122,14 @@ export function DeepCrawlPage() {
                 </Typography>
               </Box>
               
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Typography variant="body2" color="text.secondary">
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 2,
+                flexDirection: { xs: 'column', sm: 'row' },
+                minWidth: 'max-content' // Ensure button doesn't shrink
+              }}>
+                <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
                   {selectedIndices.length} selected
                 </Typography>
                 <Button
@@ -119,6 +138,10 @@ export function DeepCrawlPage() {
                   startIcon={<SaveIcon />}
                   onClick={handleBulkSaveClick}
                   disabled={selectedIndices.length === 0}
+                  sx={{ 
+                    minWidth: 'max-content', // Prevent button from shrinking
+                    whiteSpace: 'nowrap'
+                  }}
                 >
                   Bulk Save to Collection
                 </Button>

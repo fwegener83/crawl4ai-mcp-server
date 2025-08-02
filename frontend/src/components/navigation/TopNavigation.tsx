@@ -9,7 +9,9 @@ import {
   Menu,
   MenuItem,
   Divider,
-  Chip
+  Chip,
+  Tabs,
+  Tab
 } from '../ui';
 import { useTheme } from '../../contexts/ThemeContext';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -18,19 +20,37 @@ import LightModeIcon from '@mui/icons-material/LightMode';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import WebIcon from '@mui/icons-material/Web';
+import HomeIcon from '@mui/icons-material/Home';
+import LanguageIcon from '@mui/icons-material/Language';
+import TravelExploreIcon from '@mui/icons-material/TravelExplore';
+import StorageIcon from '@mui/icons-material/Storage';
+import FolderIcon from '@mui/icons-material/Folder';
 
 export interface TopNavigationProps {
   title?: string;
+  currentPage?: string;
+  onNavigate?: (page: string) => void;
   onSettingsClick?: () => void;
 }
 
 export const TopNavigation: React.FC<TopNavigationProps> = ({
   title = 'Crawl4AI File Manager',
+  currentPage = 'file-collections',
+  onNavigate,
   onSettingsClick
 }) => {
   const { mode, toggleTheme } = useTheme();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [settingsAnchorEl, setSettingsAnchorEl] = React.useState<null | HTMLElement>(null);
+
+  const navigationTabs = [
+    { id: 'home', label: 'Home', icon: <HomeIcon fontSize="small" /> },
+    { id: 'simple-crawl', label: 'Simple Crawl', icon: <LanguageIcon fontSize="small" /> },
+    { id: 'deep-crawl', label: 'Deep Crawl', icon: <TravelExploreIcon fontSize="small" /> },
+    { id: 'collections', label: 'Collections', icon: <StorageIcon fontSize="small" /> },
+    { id: 'file-collections', label: 'File Collections', icon: <FolderIcon fontSize="small" /> },
+    { id: 'settings', label: 'Settings', icon: <SettingsIcon fontSize="small" /> }
+  ];
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -55,6 +75,12 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
     }
   };
 
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
+    if (onNavigate) {
+      onNavigate(newValue);
+    }
+  };
+
   return (
     <AppBar 
       position="static" 
@@ -67,14 +93,15 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
     >
       <Toolbar sx={{ minHeight: '64px !important' }}>
         {/* Left side - Title and Brand */}
-        <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mr: 3 }}>
           <WebIcon sx={{ color: 'primary.main', mr: 1.5 }} />
           <Typography 
             variant="h6" 
             component="div" 
             sx={{ 
               fontWeight: 'bold',
-              color: 'text.primary'
+              color: 'text.primary',
+              whiteSpace: 'nowrap'
             }}
           >
             {title}
@@ -86,6 +113,43 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
             variant="outlined"
             sx={{ ml: 1.5, height: 20 }}
           />
+        </Box>
+
+        {/* Center - Navigation Tabs */}
+        <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+          <Tabs
+            value={currentPage}
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+              '& .MuiTab-root': {
+                minHeight: 48,
+                textTransform: 'none',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                color: 'text.secondary',
+                '&.Mui-selected': {
+                  color: 'primary.main',
+                  fontWeight: 600
+                }
+              }
+            }}
+          >
+            {navigationTabs.map((tab) => (
+              <Tab
+                key={tab.id}
+                value={tab.id}
+                label={tab.label}
+                icon={tab.icon}
+                iconPosition="start"
+                sx={{ 
+                  minWidth: 'auto',
+                  px: 2
+                }}
+              />
+            ))}
+          </Tabs>
         </Box>
 
         {/* Right side - Actions */}
