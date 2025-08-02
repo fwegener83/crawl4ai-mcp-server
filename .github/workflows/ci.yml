@@ -43,7 +43,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pytest pytest-asyncio pytest-timeout pytest-cov psutil
-        pip install fastmcp python-dotenv pydantic PyYAML tomli
+        pip install fastmcp python-dotenv pydantic PyYAML tomli httpx
         python setup_ci_mocks.py
         
     - name: Run complete test suite (mocked - fast & reliable)

@@ -1,21 +1,4 @@
-#!/usr/bin/env python3
-"""Setup CI mocks for crawl4ai to avoid heavy dependencies."""
-# CI configuration for comprehensive frontend redesign PR
-
-import os
-import sys
-
-# Only create mocks in CI environment
-if not os.getenv('CI'):
-    print("⚠️  Not in CI environment - skipping mock setup")
-    sys.exit(0)
-
-# Create crawl4ai mock package
-crawl4ai_dir = "crawl4ai"
-os.makedirs(crawl4ai_dir, exist_ok=True)
-
-# Create minimal __init__.py with mocked classes
-init_content = '''"""Minimal crawl4ai mock for CI."""
+"""Minimal crawl4ai mock for CI."""
 
 class AsyncWebCrawler:
     """Mock AsyncWebCrawler for CI testing."""
@@ -77,51 +60,3 @@ class MockConnection:
     
     def fetchall(self):
         return []
-'''
-
-with open(f"{crawl4ai_dir}/__init__.py", "w") as f:
-    f.write(init_content)
-
-# Create deep_crawling module mock
-deep_crawling_content = '''"""Mock deep_crawling module for CI."""
-
-class BFSDeepCrawlStrategy:
-    """Mock BFS strategy for CI testing."""
-    def __init__(self, *args, **kwargs):
-        pass
-
-class DFSDeepCrawlStrategy:
-    """Mock DFS strategy for CI testing."""
-    def __init__(self, *args, **kwargs):
-        pass
-
-class BestFirstCrawlingStrategy:
-    """Mock BestFirst strategy for CI testing."""
-    def __init__(self, *args, **kwargs):
-        pass
-
-class FilterChain:
-    """Mock FilterChain for CI testing."""
-    def __init__(self, *args, **kwargs):
-        pass
-
-class DomainFilter:
-    """Mock DomainFilter for CI testing."""
-    def __init__(self, *args, **kwargs):
-        pass
-
-class URLPatternFilter:
-    """Mock URLPatternFilter for CI testing."""
-    def __init__(self, *args, **kwargs):
-        pass
-
-class KeywordRelevanceScorer:
-    """Mock KeywordRelevanceScorer for CI testing."""
-    def __init__(self, *args, **kwargs):
-        pass
-'''
-
-with open(f"{crawl4ai_dir}/deep_crawling.py", "w") as f:
-    f.write(deep_crawling_content)
-
-print("✅ CI mocks created successfully")
