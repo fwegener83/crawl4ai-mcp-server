@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { Box } from './ui';
 import Toast, { type ToastProps } from './Toast';
 
 interface ToastContextType {
@@ -69,16 +70,36 @@ export function ToastProvider({ children }: ToastProviderProps) {
       {children}
       
       {/* Toast Container */}
-      <div
+      <Box
         aria-live="assertive"
-        className="fixed inset-0 flex items-end justify-center px-4 py-6 pointer-events-none sm:p-6 sm:items-start sm:justify-end z-50"
+        sx={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0,
+          display: 'flex',
+          alignItems: { xs: 'flex-end', sm: 'flex-start' },
+          justifyContent: { xs: 'center', sm: 'flex-end' },
+          p: { xs: 2, sm: 3 },
+          pointerEvents: 'none',
+          zIndex: 1400
+        }}
       >
-        <div className="w-full flex flex-col items-center space-y-4 sm:items-end">
+        <Box 
+          sx={{
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: { xs: 'center', sm: 'flex-end' },
+            gap: 2
+          }}
+        >
           {toasts.map((toast) => (
             <Toast key={toast.id} {...toast} />
           ))}
-        </div>
-      </div>
+        </Box>
+      </Box>
     </ToastContext.Provider>
   );
 }

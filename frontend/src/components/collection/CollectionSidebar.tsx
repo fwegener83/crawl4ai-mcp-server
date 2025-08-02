@@ -1,7 +1,28 @@
 import React, { useEffect, useState } from 'react';
+import {
+  Box,
+  Typography,
+  Button,
+  IconButton,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Alert,
+  CircularProgress,
+  Chip,
+  Tooltip,
+  Divider
+} from '../ui';
 import { useCollectionOperations } from '../../hooks/useCollectionOperations';
-import LoadingSpinner from '../LoadingSpinner';
-import Icon from '../ui/Icon';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import AddIcon from '@mui/icons-material/Add';
+import FolderIcon from '@mui/icons-material/Folder';
+import DeleteIcon from '@mui/icons-material/Delete';
+import DescriptionIcon from '@mui/icons-material/Description';
+import CloseIcon from '@mui/icons-material/Close';
+import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
+import WebIcon from '@mui/icons-material/Web';
 
 interface CollectionSidebarProps {
   className?: string;
@@ -67,170 +88,260 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
 
   if (state.ui.loading.collections) {
     return (
-      <div className={`bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 ${className}`}>
-        <div className="p-4">
-          <div className="flex items-center justify-center">
-            <LoadingSpinner size="sm" />
-            <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">Loading collections...</span>
-          </div>
-        </div>
-      </div>
+      <Box 
+        sx={{ 
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: 'background.paper'
+        }} 
+        className={className}
+      >
+        <Box sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+          <CircularProgress size={20} />
+          <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+            Loading collections...
+          </Typography>
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <div className={`bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 ${className}`}>
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Collections</h2>
-          <div className="flex items-center space-x-2">
-            <button
+    <Box 
+      sx={{ 
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        bgcolor: 'background.paper'
+      }} 
+      className={className}
+    >
+      {/* Sidebar Header */}
+      <Box sx={{ p: 2.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <WebIcon sx={{ color: 'primary.main', mr: 1.5 }} />
+          <Typography variant="h6" fontWeight="bold" color="primary.main">
+            Collections
+          </Typography>
+        </Box>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Button
+            onClick={() => openModal('newCollection')}
+            size="medium"
+            variant="contained"
+            startIcon={<AddIcon />}
+            fullWidth
+            sx={{ mr: 1 }}
+          >
+            New Collection
+          </Button>
+          <Tooltip title="Refresh collections">
+            <IconButton
               onClick={handleRefresh}
               disabled={state.ui.loading.collections}
-              className="inline-flex items-center p-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded transition-colors disabled:opacity-50"
-              title="Refresh collections"
+              size="medium"
+              color="primary"
             >
-              <Icon 
-                name="refresh" 
-                size="sm" 
-                color="current"
-                animate={state.ui.loading.collections ? 'spin' : undefined}
+              <RefreshIcon 
+                fontSize="medium"
+                sx={{
+                  animation: state.ui.loading.collections ? 'spin 1s linear infinite' : 'none',
+                  '@keyframes spin': {
+                    '0%': { transform: 'rotate(0deg)' },
+                    '100%': { transform: 'rotate(360deg)' }
+                  }
+                }}
               />
-            </button>
-            <button
-              onClick={() => openModal('newCollection')}
-              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-            >
-              <Icon name="plus" size="sm" color="current" className="mr-1" />
-              New
-            </button>
-          </div>
-        </div>
+            </IconButton>
+          </Tooltip>
+        </Box>
         
         {/* Collection Stats */}
         {state.collections.length > 0 && (
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            {state.collections.length} collection{state.collections.length !== 1 ? 's' : ''} • 
-            {' '}{state.collections.reduce((sum, c) => sum + c.file_count, 0)} total files
-          </div>
+          <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+            <Typography variant="body2" fontWeight="medium" sx={{ mb: 0.5 }}>
+              Collection Summary
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+              {state.collections.length} collection{state.collections.length !== 1 ? 's' : ''}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {state.collections.reduce((sum, c) => sum + c.file_count, 0)} total files
+            </Typography>
+          </Box>
         )}
-      </div>
+      </Box>
+
+      <Divider />
 
       {/* Error Display */}
       {state.ui.error && (
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 rounded-md p-3">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <Icon name="xCircle" size="md" color="red" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-red-700 dark:text-red-200">{state.ui.error}</p>
-              </div>
-              <div className="ml-auto pl-3">
-                <button
-                  onClick={clearError}
-                  className="inline-flex text-red-400 hover:text-red-600 dark:hover:text-red-300"
-                >
-                  <span className="sr-only">Dismiss</span>
-                  <Icon name="x" size="md" color="current" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Box sx={{ p: 2 }}>
+          <Alert 
+            severity="error" 
+            action={
+              <IconButton 
+                aria-label="close" 
+                color="inherit" 
+                size="small" 
+                onClick={clearError}
+              >
+                <CloseIcon fontSize="inherit" />
+              </IconButton>
+            }
+          >
+            {state.ui.error}
+          </Alert>
+        </Box>
       )}
 
       {/* Collections List */}
-      <div className="flex-1 overflow-y-auto">
+      <Box sx={{ flex: 1, overflow: 'auto', px: 1, pb: 1 }}>
         {state.collections.length === 0 ? (
-          <div className="p-4 text-center">
-            <div className="text-gray-400 dark:text-gray-500 mb-4">
-              <Icon name="folder" size="xl" color="gray" className="mx-auto" />
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">No collections yet</p>
-            <button
+          <Box sx={{ p: 3, textAlign: 'center' }}>
+            <CreateNewFolderIcon 
+              sx={{ 
+                fontSize: 64, 
+                color: 'text.secondary',
+                mb: 2,
+                display: 'block',
+                mx: 'auto'
+              }} 
+            />
+            <Typography variant="h6" fontWeight="medium" sx={{ mb: 1 }}>
+              No Collections Yet
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Create your first collection to start organizing your web content
+            </Typography>
+            <Button
               onClick={() => openModal('newCollection')}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              variant="contained"
+              startIcon={<AddIcon />}
+              size="large"
             >
-              Create your first collection
-            </button>
-          </div>
+              Create Collection
+            </Button>
+          </Box>
         ) : (
-          <div className="p-2">
+          <List sx={{ p: 0 }}>
             {state.collections.map((collection) => (
-              <div
+              <ListItem
                 key={collection.name}
                 onClick={() => handleSelectCollection(collection.name)}
-                className={`group relative p-3 rounded-md cursor-pointer transition-colors ${
-                  state.selectedCollection === collection.name
-                    ? 'bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-800'
-                    : 'hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
+                sx={{
+                  cursor: 'pointer',
+                  borderRadius: 2,
+                  mb: 1,
+                  p: 2,
+                  position: 'relative',
+                  border: 1,
+                  borderColor: 'transparent',
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    bgcolor: 'action.hover',
+                    borderColor: 'primary.200',
+                    transform: 'translateX(4px)',
+                  },
+                  '&:hover .delete-button': {
+                    opacity: 1
+                  },
+                  ...(state.selectedCollection === collection.name && {
+                    bgcolor: 'primary.50',
+                    borderColor: 'primary.main',
+                    '& .MuiListItemIcon-root': {
+                      color: 'primary.main'
+                    }
+                  })
+                }}
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center">
-                      <Icon name="folder" size="sm" color="gray" className="mr-3" />
-                      <h3 className={`text-sm font-medium truncate ${
-                        state.selectedCollection === collection.name
-                          ? 'text-blue-700 dark:text-blue-300'
-                          : 'text-gray-900 dark:text-white'
-                      }`}>
-                        {collection.name}
-                      </h3>
-                    </div>
-                    {collection.description && (
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {collection.description}
-                      </p>
-                    )}
-                    <div className="mt-2 space-y-1">
-                      <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
-                        <Icon name="document" size="xs" color="gray" className="mr-1.5" />
-                        <span>{collection.file_count} files</span>
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  <FolderIcon />
+                </ListItemIcon>
+                <ListItemText
+                  primary={
+                    <Typography 
+                      variant="body1" 
+                      fontWeight="semibold"
+                      color={state.selectedCollection === collection.name ? 'primary.main' : 'text.primary'}
+                      noWrap
+                      sx={{ mb: 0.5 }}
+                    >
+                      {collection.name}
+                    </Typography>
+                  }
+                  secondary={
+                    <Box>
+                      {collection.description && (
+                        <Typography variant="body2" color="text.secondary" noWrap sx={{ mb: 1 }}>
+                          {collection.description}
+                        </Typography>
+                      )}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                        <Chip 
+                          icon={<DescriptionIcon />} 
+                          label={`${collection.file_count} files`}
+                          size="small"
+                          variant="outlined"
+                          color={state.selectedCollection === collection.name ? 'primary' : 'default'}
+                        />
                         {collection.folders.length > 0 && (
-                          <>
-                            <span className="mx-1">•</span>
-                            <Icon name="folder" size="xs" color="gray" className="mr-1.5" />
-                            <span>{collection.folders.length} folders</span>
-                          </>
+                          <Chip 
+                            icon={<FolderIcon />} 
+                            label={`${collection.folders.length} folders`}
+                            size="small"
+                            variant="outlined"
+                            color={state.selectedCollection === collection.name ? 'primary' : 'default'}
+                          />
                         )}
-                      </div>
-                      
-                      {/* Additional metadata */}
-                      <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
-                        <span title="Created">
-                          <Icon name="info" size="xs" color="gray" className="mr-1" />
-                          {formatDate(collection.created_at)}
-                        </span>
-                        
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Typography variant="caption" color="text.disabled">
+                          Created {formatDate(collection.created_at)}
+                        </Typography>
                         {collection.metadata.total_size > 0 && (
-                          <span title="Total size">
-                            <Icon name="folder" size="xs" color="gray" className="mr-1" />
+                          <Typography variant="caption" color="text.disabled">
                             {formatFileSize(collection.metadata.total_size)}
-                          </span>
+                          </Typography>
                         )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Delete button */}
-                  <button
-                    onClick={(e) => handleDeleteCollection(collection.name, e)}
-                    className="opacity-0 group-hover:opacity-100 ml-2 p-1 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-all"
-                    title="Delete collection"
-                  >
-                    <Icon name="trash" size="sm" color="current" />
-                  </button>
-                </div>
-              </div>
+                      </Box>
+                    </Box>
+                  }
+                />
+                <Box
+                  className="delete-button"
+                  sx={{
+                    position: 'absolute',
+                    right: 12,
+                    top: 12,
+                    opacity: 0,
+                    transition: 'opacity 0.2s ease-in-out',
+                  }}
+                >
+                  <Tooltip title="Delete collection">
+                    <IconButton
+                      onClick={(e) => handleDeleteCollection(collection.name, e)}
+                      size="small"
+                      color="error"
+                      sx={{
+                        bgcolor: 'error.50',
+                        '&:hover': {
+                          bgcolor: 'error.100'
+                        }
+                      }}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </ListItem>
             ))}
-          </div>
+          </List>
         )}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }
 

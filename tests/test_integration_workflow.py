@@ -14,6 +14,10 @@ def test_complete_workflow():
     """Test the complete workflow: create collection, crawl URL, list files."""
     print("Testing complete file listing workflow...")
     
+    # Skip integration test in CI environment where no server is running
+    if os.getenv('CI'):
+        pytest.skip("Integration test skipped in CI environment - requires running server")
+    
     try:
         import requests
     except ImportError:

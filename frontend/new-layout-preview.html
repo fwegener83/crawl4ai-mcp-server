@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crawl4AI File Manager - New Layout Preview</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@mui/material@5.14.20/umd/material-ui.development.js"></script>
+    <script src="https://unpkg.com/@mui/icons-material@5.14.19/umd/material-ui-icons.development.js"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Roboto', sans-serif;
+        }
+        * {
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+        const { 
+            ThemeProvider, 
+            createTheme, 
+            CssBaseline,
+            AppBar, 
+            Toolbar, 
+            Typography, 
+            Box, 
+            IconButton, 
+            Tooltip,
+            Menu,
+            MenuItem,
+            Divider,
+            Chip,
+            Button,
+            List,
+            ListItem,
+            ListItemText,
+            ListItemIcon,
+            Paper
+        } = MaterialUI;
+        
+        const {
+            Settings: SettingsIcon,
+            DarkMode: DarkModeIcon,
+            LightMode: LightModeIcon,
+            InfoOutlined: InfoOutlinedIcon,
+            Web: WebIcon,
+            Folder: FolderIcon,
+            Description: DescriptionIcon,
+            CreateNewFolder: CreateNewFolderIcon,
+            Add: AddIcon,
+            Refresh: RefreshIcon,
+            Delete: DeleteIcon
+        } = MaterialUIIcons;
+
+        // Mock data
+        const mockCollections = [
+            {
+                name: "Documentation Hub",
+                description: "Python documentation and tutorials",
+                file_count: 12,
+                folders: ["Tutorial", "Reference"],
+                created_at: "2025-01-15T10:00:00Z",
+                metadata: { total_size: 2560000 }
+            },
+            {
+                name: "FastAPI Guide",
+                description: "Complete FastAPI documentation",
+                file_count: 8,
+                folders: ["Basics", "Advanced"],
+                created_at: "2025-01-20T14:30:00Z",
+                metadata: { total_size: 1890000 }
+            },
+            {
+                name: "AI Research Papers",
+                description: "Collection of ML/AI research papers",
+                file_count: 5,
+                folders: [],
+                created_at: "2025-01-25T09:15:00Z",
+                metadata: { total_size: 5120000 }
+            }
+        ];
+
+        // Theme
+        const theme = createTheme({
+            palette: {
+                mode: 'light',
+                primary: {
+                    main: '#667eea',
+                    light: '#a5b4fc',
+                    dark: '#4338ca'
+                },
+                background: {
+                    default: '#f8fafc',
+                    paper: '#ffffff'
+                }
+            },
+            typography: {
+                fontFamily: 'Roboto, sans-serif',
+                h4: {
+                    fontWeight: 700
+                },
+                h5: {
+                    fontWeight: 600
+                },
+                h6: {
+                    fontWeight: 600
+                }
+            }
+        });
+
+        // Top Navigation Component
+        function TopNavigation() {
+            const [anchorEl, setAnchorEl] = useState(null);
+            const [settingsAnchorEl, setSettingsAnchorEl] = useState(null);
+
+            return (
+                <AppBar 
+                    position="static" 
+                    elevation={1}
+                    sx={{ 
+                        bgcolor: 'background.paper',
+                        borderBottom: 1,
+                        borderColor: 'divider'
+                    }}
+                >
+                    <Toolbar sx={{ minHeight: '64px !important' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                            <WebIcon sx={{ color: 'primary.main', mr: 1.5 }} />
+                            <Typography 
+                                variant="h6" 
+                                component="div" 
+                                sx={{ 
+                                    fontWeight: 'bold',
+                                    color: 'text.primary'
+                                }}
+                            >
+                                Crawl4AI File Manager
+                            </Typography>
+                            <Chip 
+                                label="Beta" 
+                                size="small" 
+                                color="primary" 
+                                variant="outlined"
+                                sx={{ ml: 1.5, height: 20 }}
+                            />
+                        </Box>
+
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Tooltip title="Switch to dark mode">
+                                <IconButton 
+                                    size="medium"
+                                    sx={{ color: 'text.primary' }}
+                                >
+                                    <DarkModeIcon />
+                                </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="Information">
+                                <IconButton 
+                                    onClick={(e) => setAnchorEl(e.currentTarget)}
+                                    size="medium"
+                                    sx={{ color: 'text.primary' }}
+                                >
+                                    <InfoOutlinedIcon />
+                                </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="Settings">
+                                <IconButton 
+                                    onClick={(e) => setSettingsAnchorEl(e.currentTarget)}
+                                    size="medium"
+                                    sx={{ color: 'text.primary' }}
+                                >
+                                    <SettingsIcon />
+                                </IconButton>
+                            </Tooltip>
+                        </Box>
+
+                        <Menu
+                            anchorEl={anchorEl}
+                            open={Boolean(anchorEl)}
+                            onClose={() => setAnchorEl(null)}
+                        >
+                            <MenuItem disabled>
+                                <Typography variant="body2" fontWeight="medium">
+                                    Crawl4AI File Manager v2.0.0-beta
+                                </Typography>
+                            </MenuItem>
+                        </Menu>
+
+                        <Menu
+                            anchorEl={settingsAnchorEl}
+                            open={Boolean(settingsAnchorEl)}
+                            onClose={() => setSettingsAnchorEl(null)}
+                        >
+                            <MenuItem>
+                                <SettingsIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                                Settings
+                            </MenuItem>
+                            <MenuItem>
+                                <LightModeIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                                Light Mode
+                            </MenuItem>
+                        </Menu>
+                    </Toolbar>
+                </AppBar>
+            );
+        }
+
+        // Collection Sidebar Component  
+        function CollectionSidebar({ selectedCollection, onSelectCollection }) {
+            const formatFileSize = (bytes) => {
+                if (bytes === 0) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+            };
+
+            const formatDate = (dateString) => {
+                return new Date(dateString).toLocaleDateString();
+            };
+
+            return (
+                <Box sx={{ 
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    bgcolor: 'background.paper'
+                }}>
+                    <Box sx={{ p: 2.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                            <WebIcon sx={{ color: 'primary.main', mr: 1.5 }} />
+                            <Typography variant="h6" fontWeight="bold" color="primary.main">
+                                Collections
+                            </Typography>
+                        </Box>
+                        
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                            <Button
+                                size="medium"
+                                variant="contained"
+                                startIcon={<AddIcon />}
+                                fullWidth
+                                sx={{ mr: 1 }}
+                            >
+                                New Collection
+                            </Button>
+                            <Tooltip title="Refresh collections">
+                                <IconButton size="medium" color="primary">
+                                    <RefreshIcon fontSize="medium" />
+                                </IconButton>
+                            </Tooltip>
+                        </Box>
+                        
+                        <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                            <Typography variant="body2" fontWeight="medium" sx={{ mb: 0.5 }}>
+                                Collection Summary
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                {mockCollections.length} collections
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                {mockCollections.reduce((sum, c) => sum + c.file_count, 0)} total files
+                            </Typography>
+                        </Box>
+                    </Box>
+
+                    <Divider />
+
+                    <Box sx={{ flex: 1, overflow: 'auto', px: 1, pb: 1 }}>
+                        <List sx={{ p: 0 }}>
+                            {mockCollections.map((collection) => (
+                                <ListItem
+                                    key={collection.name}
+                                    onClick={() => onSelectCollection(collection.name)}
+                                    sx={{
+                                        cursor: 'pointer',
+                                        borderRadius: 2,
+                                        mb: 1,
+                                        p: 2,
+                                        position: 'relative',
+                                        border: 1,
+                                        borderColor: 'transparent',
+                                        transition: 'all 0.2s ease-in-out',
+                                        '&:hover': {
+                                            bgcolor: 'action.hover',
+                                            borderColor: 'primary.200',
+                                            transform: 'translateX(4px)',
+                                        },
+                                        '&:hover .delete-button': {
+                                            opacity: 1
+                                        },
+                                        ...(selectedCollection === collection.name && {
+                                            bgcolor: 'primary.50',
+                                            borderColor: 'primary.main',
+                                            '& .MuiListItemIcon-root': {
+                                                color: 'primary.main'
+                                            }
+                                        })
+                                    }}
+                                >
+                                    <ListItemIcon sx={{ minWidth: 40 }}>
+                                        <FolderIcon />
+                                    </ListItemIcon>
+                                    <ListItemText
+                                        primary={
+                                            <Typography 
+                                                variant="body1" 
+                                                fontWeight="semibold"
+                                                color={selectedCollection === collection.name ? 'primary.main' : 'text.primary'}
+                                                noWrap
+                                                sx={{ mb: 0.5 }}
+                                            >
+                                                {collection.name}
+                                            </Typography>
+                                        }
+                                        secondary={
+                                            <Box>
+                                                {collection.description && (
+                                                    <Typography variant="body2" color="text.secondary" noWrap sx={{ mb: 1 }}>
+                                                        {collection.description}
+                                                    </Typography>
+                                                )}
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                                    <Chip 
+                                                        icon={<DescriptionIcon />} 
+                                                        label={`${collection.file_count} files`}
+                                                        size="small"
+                                                        variant="outlined"
+                                                        color={selectedCollection === collection.name ? 'primary' : 'default'}
+                                                    />
+                                                    {collection.folders.length > 0 && (
+                                                        <Chip 
+                                                            icon={<FolderIcon />} 
+                                                            label={`${collection.folders.length} folders`}
+                                                            size="small"
+                                                            variant="outlined"
+                                                            color={selectedCollection === collection.name ? 'primary' : 'default'}
+                                                        />
+                                                    )}
+                                                </Box>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                    <Typography variant="caption" color="text.disabled">
+                                                        Created {formatDate(collection.created_at)}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.disabled">
+                                                        {formatFileSize(collection.metadata.total_size)}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+                                        }
+                                    />
+                                    <Box
+                                        className="delete-button"
+                                        sx={{
+                                            position: 'absolute',
+                                            right: 12,
+                                            top: 12,
+                                            opacity: 0,
+                                            transition: 'opacity 0.2s ease-in-out',
+                                        }}
+                                    >
+                                        <Tooltip title="Delete collection">
+                                            <IconButton
+                                                size="small"
+                                                color="error"
+                                                sx={{
+                                                    bgcolor: 'error.50',
+                                                    '&:hover': {
+                                                        bgcolor: 'error.100'
+                                                    }
+                                                }}
+                                            >
+                                                <DeleteIcon fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
+                                    </Box>
+                                </ListItem>
+                            ))}
+                        </List>
+                    </Box>
+                </Box>
+            );
+        }
+
+        // Main Content Component
+        function MainContent({ selectedCollection }) {
+            if (!selectedCollection) {
+                return (
+                    <Box sx={{ 
+                        flex: 1, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        bgcolor: 'background.default',
+                        p: 4
+                    }}>
+                        <Box sx={{ textAlign: 'center', maxWidth: 500 }}>
+                            <WebIcon sx={{ 
+                                fontSize: 80, 
+                                color: 'primary.main', 
+                                mb: 3,
+                                display: 'block',
+                                mx: 'auto'
+                            }} />
+                            <Typography variant="h4" fontWeight="bold" sx={{ mb: 2, color: 'primary.main' }}>
+                                Welcome to Crawl4AI File Manager
+                            </Typography>
+                            <Typography variant="body1" color="text.secondary" sx={{ mb: 4, lineHeight: 1.6 }}>
+                                Organize your web content in collections. Create a collection to start crawling and managing your documents, or select an existing collection from the sidebar.
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+                                <Button
+                                    variant="contained"
+                                    startIcon={<CreateNewFolderIcon />}
+                                    size="large"
+                                >
+                                    Create New Collection
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    size="large"
+                                    disabled
+                                >
+                                    Import Collection (Coming Soon)
+                                </Button>
+                            </Box>
+                        </Box>
+                    </Box>
+                );
+            }
+
+            const collection = mockCollections.find(c => c.name === selectedCollection);
+
+            return (
+                <Box sx={{ 
+                    flex: 1, 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    bgcolor: 'background.default'
+                }}>
+                    {/* Collection Header */}
+                    <Paper elevation={0} sx={{ 
+                        borderBottom: 1, 
+                        borderColor: 'divider',
+                        borderRadius: 0,
+                        bgcolor: 'background.paper'
+                    }}>
+                        <Box sx={{ px: 3, py: 2.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                    <CreateNewFolderIcon sx={{ color: 'primary.main', mr: 1.5 }} />
+                                    <Box>
+                                        <Typography variant="h5" fontWeight="bold" color="primary.main">
+                                            {collection?.name || selectedCollection}
+                                        </Typography>
+                                        {collection?.description && (
+                                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                                                {collection.description}
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                </Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                    <Button
+                                        variant="contained"
+                                        color="success"
+                                        size="medium"
+                                        startIcon={<WebIcon />}
+                                    >
+                                        Add Page
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        size="medium"
+                                        startIcon={<DescriptionIcon />}
+                                    >
+                                        New File
+                                    </Button>
+                                </Box>
+                            </Box>
+                        </Box>
+                    </Paper>
+
+                    {/* File Explorer and Editor Area */}
+                    <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+                        {/* File Explorer */}
+                        <Box sx={{ 
+                            width: 320, 
+                            flexShrink: 0,
+                            borderRight: 1,
+                            borderColor: 'divider',
+                            bgcolor: 'background.paper',
+                            p: 2
+                        }}>
+                            <Typography variant="h6" sx={{ mb: 2 }}>Files & Folders</Typography>
+                            <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1, textAlign: 'center' }}>
+                                <DescriptionIcon sx={{ fontSize: 40, color: 'text.secondary', mb: 1 }} />
+                                <Typography variant="body2" color="text.secondary">
+                                    Select files to edit
+                                </Typography>
+                            </Box>
+                        </Box>
+                        
+                        {/* Editor Area */}
+                        <Box sx={{ flex: 1, bgcolor: 'background.default', p: 3 }}>
+                            <Paper sx={{ height: '100%', p: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Box sx={{ textAlign: 'center' }}>
+                                    <DescriptionIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
+                                    <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                                        Markdown Editor
+                                    </Typography>
+                                    <Typography variant="body2" color="text.disabled">
+                                        Select a file to start editing
+                                    </Typography>
+                                </Box>
+                            </Paper>
+                        </Box>
+                    </Box>
+                </Box>
+            );
+        }
+
+        // Main App Component
+        function App() {
+            const [selectedCollection, setSelectedCollection] = useState('Documentation Hub');
+
+            return (
+                <ThemeProvider theme={theme}>
+                    <CssBaseline />
+                    <Box sx={{ 
+                        display: 'flex', 
+                        flexDirection: 'column',
+                        minHeight: '100vh',
+                        bgcolor: 'background.default'
+                    }}>
+                        <TopNavigation />
+                        
+                        <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+                            <Box sx={{ 
+                                width: 320, 
+                                flexShrink: 0,
+                                borderRight: 1,
+                                borderColor: 'divider'
+                            }}>
+                                <CollectionSidebar 
+                                    selectedCollection={selectedCollection}
+                                    onSelectCollection={setSelectedCollection}
+                                />
+                            </Box>
+                            
+                            <MainContent selectedCollection={selectedCollection} />
+                        </Box>
+                    </Box>
+                </ThemeProvider>
+            );
+        }
+
+        // Render the app
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</body>
+</html>

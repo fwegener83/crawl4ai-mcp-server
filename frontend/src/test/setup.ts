@@ -1,6 +1,15 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
+// Mock localStorage for theme persistence
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  clear: vi.fn(),
+  removeItem: vi.fn(),
+};
+global.localStorage = localStorageMock;
+
 // Mock IntersectionObserver for components that use it
 global.IntersectionObserver = vi.fn(() => ({
   disconnect: vi.fn(),

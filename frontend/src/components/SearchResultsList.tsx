@@ -1,6 +1,20 @@
 import { useState } from 'react';
 import type { SearchResult } from '../types/api';
-import { Icon } from './ui/Icon';
+import { 
+  Paper, 
+  Box, 
+  Typography, 
+  Chip, 
+  IconButton, 
+  List,
+  ListItem,
+  Divider
+} from './ui';
+import { Collapse, Link } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import LaunchIcon from '@mui/icons-material/Launch';
 
 interface SearchResultsListProps {
   results: SearchResult[];
@@ -25,29 +39,37 @@ export function SearchResultsList({
   const getScoreBadge = (score: number | undefined) => {
     if (score === undefined || score === null) {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-          No Score
-        </span>
+        <Chip 
+          label="No Score" 
+          size="small" 
+          color="default" 
+        />
       );
     }
     
     if (score >= 0.8) {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-          Excellent ({score.toFixed(3)})
-        </span>
+        <Chip 
+          label={`Excellent (${score.toFixed(3)})`} 
+          size="small" 
+          color="success" 
+        />
       );
     } else if (score >= 0.6) {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-          Good ({score.toFixed(3)})
-        </span>
+        <Chip 
+          label={`Good (${score.toFixed(3)})`} 
+          size="small" 
+          color="warning" 
+        />
       );
     } else {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-          Fair ({score.toFixed(3)})
-        </span>
+        <Chip 
+          label={`Fair (${score.toFixed(3)})`} 
+          size="small" 
+          color="default" 
+        />
       );
     }
   };
@@ -60,9 +82,18 @@ export function SearchResultsList({
     
     return parts.map((part, index) => 
       regex.test(part) ? (
-        <mark key={index} className="bg-yellow-200 dark:bg-yellow-900 px-1 rounded">
+        <Box 
+          key={index} 
+          component="mark" 
+          sx={{ 
+            bgcolor: 'warning.light',
+            color: 'warning.contrastText',
+            px: 0.5,
+            borderRadius: 0.5
+          }}
+        >
           {part}
-        </mark>
+        </Box>
       ) : (
         part
       )
@@ -71,146 +102,193 @@ export function SearchResultsList({
 
   if (results.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8">
-        <div className="text-center">
-          <Icon name="search" size="xl" color="gray" className="mx-auto" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
+      <Paper sx={{ p: 4 }}>
+        <Box sx={{ textAlign: 'center' }}>
+          <SearchIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+          <Typography variant="h6" gutterBottom>
             {query ? 'No results found' : 'No search performed'}
-          </h3>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
             {query 
               ? `No content found matching "${query}". Try a different search term.`
               : 'Enter a search query above to find relevant content.'
             }
-          </p>
-        </div>
-      </div>
+          </Typography>
+        </Box>
+      </Paper>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+    <Paper>
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+      <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="h6">
             Search Results ({results.length})
-          </h3>
-          <div className="text-sm text-gray-500 dark:text-gray-400">
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
             Query: "{query}"
-          </div>
-        </div>
-      </div>
+          </Typography>
+        </Box>
+      </Box>
 
       {/* Results List */}
-      <div className="divide-y divide-gray-200 dark:divide-gray-700">
+      <List disablePadding>
         {results.map((result, index) => (
-          <div key={index} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
-            <div className="flex items-start justify-between">
-              <button
-                onClick={() => handleResultClick(result, index)}
-                className="text-left flex-1 focus:outline-none"
-              >
-                <div className="flex items-center space-x-3 mb-2">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-1">
-                      {result.metadata.source_url && (
-                        <p className="text-sm text-blue-600 dark:text-blue-400 truncate hover:underline">
-                          {result.metadata.source_url}
-                        </p>
-                      )}
-                      {getScoreBadge(result.metadata.score)}
-                    </div>
-                    
-                    <div className="text-sm text-gray-600 dark:text-gray-300">
-                      <span className="font-medium">Chunk {result.metadata.chunk_index + 1}</span>
-                      {' '} • Distance: {result.distance ? result.distance.toFixed(4) : 'N/A'}
-                    </div>
-                  </div>
-                </div>
+          <Box key={index}>
+            <ListItem 
+              sx={{ 
+                flexDirection: 'column',
+                alignItems: 'stretch',
+                '&:hover': { bgcolor: 'action.hover' }
+              }}
+            >
+              <Box sx={{ display: 'flex', width: '100%', alignItems: 'flex-start' }}>
+                <Box sx={{ flex: 1, cursor: 'pointer' }} onClick={() => handleResultClick(result, index)}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                    <Box sx={{ flex: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                        {result.metadata.source_url && (
+                          <Link 
+                            href={result.metadata.source_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            variant="body2"
+                            sx={{ 
+                              maxWidth: 300,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {result.metadata.source_url}
+                          </Link>
+                        )}
+                        {getScoreBadge(result.metadata.score)}
+                      </Box>
+                      
+                      <Typography variant="body2" color="text.secondary">
+                        <Box component="span" fontWeight="medium">
+                          Chunk {result.metadata.chunk_index + 1}
+                        </Box>
+                        {' '} • Distance: {result.distance ? result.distance.toFixed(4) : 'N/A'}
+                      </Typography>
+                    </Box>
+                  </Box>
 
-                {/* Content Preview */}
-                <div className="text-sm text-gray-700 dark:text-gray-300">
-                  <div className="line-clamp-3">
+                  {/* Content Preview */}
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      display: '-webkit-box',
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden'
+                    }}
+                  >
                     {highlightText(
                       result.content.length > 200 
                         ? `${result.content.substring(0, 200)}...`
                         : result.content,
                       query
                     )}
-                  </div>
-                </div>
-              </button>
+                  </Typography>
+                </Box>
 
-              {/* Expand Button */}
-              <button
-                onClick={() => handleResultClick(result, index)}
-                className="ml-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0"
-              >
-                <svg 
-                  className={`h-5 w-5 transform transition-transform ${expandedIndex === index ? 'rotate-180' : ''}`}
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
+                {/* Expand Button */}
+                <IconButton
+                  onClick={() => handleResultClick(result, index)}
+                  size="small"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-            </div>
+                  {expandedIndex === index ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                </IconButton>
+              </Box>
 
-            {/* Expanded Content */}
-            {expandedIndex === index && (
-              <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-md">
-                <div className="space-y-3">
-                  {/* Metadata */}
-                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-600 pb-2">
-                    <div className="flex items-center space-x-4">
-                      <span>Chunk: {result.metadata.chunk_index + 1}</span>
-                      <span>Score: {result.metadata.score ? result.metadata.score.toFixed(4) : 'N/A'}</span>
-                      <span>Distance: {result.distance ? result.distance.toFixed(4) : 'N/A'}</span>
-                    </div>
-                    {result.metadata.source_url && (
-                      <a 
-                        href={result.metadata.source_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 dark:text-blue-400 hover:underline"
-                      >
-                        View Source
-                      </a>
-                    )}
-                  </div>
+              {/* Expanded Content */}
+              <Collapse in={expandedIndex === index} timeout="auto" unmountOnExit>
+                <Box sx={{ mt: 2, p: 2, bgcolor: 'action.selected', borderRadius: 1 }}>
+                  <Box sx={{ mb: 2 }}>
+                    {/* Metadata */}
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      pb: 1,
+                      borderBottom: 1,
+                      borderColor: 'divider'
+                    }}>
+                      <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Chunk: {result.metadata.chunk_index + 1}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Score: {result.metadata.score ? result.metadata.score.toFixed(4) : 'N/A'}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Distance: {result.distance ? result.distance.toFixed(4) : 'N/A'}
+                        </Typography>
+                      </Box>
+                      {result.metadata.source_url && (
+                        <Link 
+                          href={result.metadata.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          variant="caption"
+                          sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+                        >
+                          View Source
+                          <LaunchIcon sx={{ fontSize: 12 }} />
+                        </Link>
+                      )}
+                    </Box>
 
-                  {/* Full Content */}
-                  <div className="text-sm text-gray-700 dark:text-gray-300 max-h-64 overflow-y-auto">
-                    <div className="whitespace-pre-wrap">
-                      {highlightText(result.content, query)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+                    {/* Full Content */}
+                    <Box sx={{ 
+                      mt: 2,
+                      maxHeight: 256,
+                      overflow: 'auto',
+                      whiteSpace: 'pre-wrap'
+                    }}>
+                      <Typography variant="body2">
+                        {highlightText(result.content, query)}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              </Collapse>
+            </ListItem>
+            {index < results.length - 1 && <Divider />}
+          </Box>
         ))}
-      </div>
+      </List>
 
       {/* Summary Footer */}
-      <div className="px-6 py-3 bg-gray-50 dark:bg-gray-750 border-t border-gray-200 dark:border-gray-700 rounded-b-lg">
-        <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
-          <div className="flex items-center space-x-4">
-            <span>
+      <Box sx={{ 
+        p: 2, 
+        bgcolor: 'action.selected', 
+        borderTop: 1, 
+        borderColor: 'divider' 
+      }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between' 
+        }}>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Typography variant="body2" color="text.secondary">
               Avg Score: {(results.reduce((sum, r) => sum + (r.metadata.score || 0), 0) / results.length).toFixed(3)}
-            </span>
-            <span>
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
               Total Characters: {results.reduce((sum, r) => sum + r.content.length, 0).toLocaleString()}
-            </span>
-          </div>
-          <div>
+            </Typography>
+          </Box>
+          <Typography variant="body2" color="text.secondary">
             Click to expand • Highlighted matches
-          </div>
-        </div>
-      </div>
-    </div>
+          </Typography>
+        </Box>
+      </Box>
+    </Paper>
   );
 }
 

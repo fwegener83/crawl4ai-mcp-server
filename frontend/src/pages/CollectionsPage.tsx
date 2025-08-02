@@ -1,8 +1,16 @@
 import { useState, useEffect } from 'react';
+import { Box, Typography, Card, CardContent, Alert, CircularProgress } from '../components/ui';
+// Grid has typing issues, using Box with flexbox instead
+import { Button } from '../components/ui/Button';
 import { useCollections } from '../hooks/useApi';
 import CollectionsList from '../components/CollectionsList';
 import SemanticSearch from '../components/SemanticSearch';
 import SearchResultsList from '../components/SearchResultsList';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorIcon from '@mui/icons-material/Error';
+import FolderIcon from '@mui/icons-material/Folder';
+import SearchIcon from '@mui/icons-material/Search';
+import WebIcon from '@mui/icons-material/Web';
 import type { SearchResult } from '../types/api';
 
 export function CollectionsPage() {
@@ -70,171 +78,183 @@ export function CollectionsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}>
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+      <Box>
+        <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
           Collection Management
-        </h1>
-        <p className="text-gray-600 dark:text-gray-300">
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
           Manage your saved content collections and search with RAG-powered semantic search.
-        </p>
-      </div>
+        </Typography>
+      </Box>
 
       {/* Success Message */}
       {deleteSuccess && (
-        <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md" data-testid="delete-success-message">
-          <div className="flex">
-            <svg className="flex-shrink-0 h-5 w-5 text-green-400" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                {deleteSuccess}
-              </p>
-            </div>
-          </div>
-        </div>
+        <Alert 
+          severity="success" 
+          icon={<CheckCircleIcon />}
+          data-testid="delete-success-message"
+        >
+          {deleteSuccess}
+        </Alert>
       )}
 
       {/* Loading State */}
       {listLoading && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8">
-          <div className="flex items-center justify-center">
-            <svg className="animate-spin h-8 w-8 text-gray-400" width="32" height="32" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span className="ml-3 text-gray-600 dark:text-gray-300">Loading collections...</span>
-          </div>
-        </div>
+        <Card>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 4 }}>
+              <CircularProgress size={32} />
+              <Typography variant="body1" color="text.secondary" sx={{ ml: 2 }}>
+                Loading collections...
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
       )}
 
       {/* Error State */}
       {listError && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
-          <div className="flex">
-            <svg className="flex-shrink-0 h-5 w-5 text-red-400" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-            </svg>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
-                Failed to load collections
-              </h3>
-              <div className="mt-1 text-sm text-red-700 dark:text-red-300">
-                {listError}
-              </div>
-              <div className="mt-2">
-                <button
-                  onClick={refreshCollections}
-                  className="text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300"
-                >
-                  Try again
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Alert 
+          severity="error" 
+          icon={<ErrorIcon />}
+          action={
+            <Button 
+              color="error" 
+              variant="text" 
+              size="small" 
+              onClick={refreshCollections}
+            >
+              Try again
+            </Button>
+          }
+        >
+          <Typography variant="subtitle2" gutterBottom>
+            Failed to load collections
+          </Typography>
+          <Typography variant="body2">
+            {listError}
+          </Typography>
+        </Alert>
       )}
 
       {/* Main Content */}
       {!listLoading && !listError && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Box sx={{ flex: 1, display: 'flex', gap: 3, flexDirection: { xs: 'column', lg: 'row' } }}>
           {/* Left Column: Collections Management */}
-          <div className="space-y-6">
-            <CollectionsList
-              collections={collections}
-              selectedCollection={selectedCollection}
-              onSelectCollection={handleCollectionSelect}
-              onDeleteCollection={handleDeleteCollection}
-              isDeleting={deleteLoading}
-              deleteError={deleteError}
-            />
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <CollectionsList
+                collections={collections}
+                selectedCollection={selectedCollection}
+                onSelectCollection={handleCollectionSelect}
+                onDeleteCollection={handleDeleteCollection}
+                isDeleting={deleteLoading}
+                deleteError={deleteError}
+              />
 
             {/* Collection Statistics */}
             {collections.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Statistics
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                      {collections.length}
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">Collections</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {collections.reduce((sum, c) => sum + c.count, 0)}
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">Total Items</div>
-                  </div>
-                </div>
-                
-                {/* Selected Collection Info */}
-                {selectedCollection && (
-                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <div className="text-sm text-gray-600 dark:text-gray-300">
-                      <span className="font-medium">Selected:</span> {selectedCollection}
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">
-                      <span className="font-medium">Items:</span>{' '}
-                      {collections.find(c => c.name === selectedCollection)?.count || 0}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom fontWeight="semibold">
+                    Statistics
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Box sx={{ flex: 1, textAlign: 'center' }}>
+                      <Typography variant="h4" color="primary" fontWeight="bold">
+                        {collections.length}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Collections
+                      </Typography>
+                    </Box>
+                    <Box sx={{ flex: 1, textAlign: 'center' }}>
+                      <Typography variant="h4" color="success.main" fontWeight="bold">
+                        {collections.reduce((sum, c) => sum + c.count, 0)}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Total Items
+                      </Typography>
+                    </Box>
+                  </Box>
+                  
+                  {/* Selected Collection Info */}
+                  {selectedCollection && (
+                    <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        <Typography component="span" fontWeight="medium">Selected:</Typography> {selectedCollection}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        <Typography component="span" fontWeight="medium">Items:</Typography>{' '}
+                        {collections.find(c => c.name === selectedCollection)?.count || 0}
+                      </Typography>
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
             )}
-          </div>
+          </Box>
 
           {/* Right Column: Search Interface */}
-          <div className="space-y-6">
-            <SemanticSearch
-              selectedCollection={selectedCollection}
-              onSearchResults={handleSearchResults}
-            />
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <SemanticSearch
+                selectedCollection={selectedCollection}
+                onSearchResults={handleSearchResults}
+              />
 
-            {/* Search Results */}
-            <SearchResultsList
-              results={searchResults}
-              query={lastQuery}
-              onSelectResult={handleSearchResultSelect}
-            />
-          </div>
-        </div>
+              {/* Search Results */}
+              <SearchResultsList
+                results={searchResults}
+                query={lastQuery}
+                onSelectResult={handleSearchResultSelect}
+              />
+          </Box>
+        </Box>
       )}
 
       {/* Empty State */}
       {!listLoading && !listError && collections.length === 0 && (
-        <div className="text-center py-12">
-          <svg className="mx-auto h-8 w-8 text-gray-400" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-          </svg>
-          <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">
-            No collections found
-          </h3>
-          <p className="mt-2 text-gray-600 dark:text-gray-300 max-w-md mx-auto">
-            Start by crawling some websites and saving the content to collections. 
-            Then you can search and manage your saved content here.
-          </p>
-          <div className="mt-6 flex justify-center space-x-4">
-            <button
-              onClick={() => window.location.hash = 'simple-crawl'}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md transition-colors"
-            >
-              Start Simple Crawl
-            </button>
-            <button
-              onClick={() => window.location.hash = 'deep-crawl'}
-              className="bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-md transition-colors"
-            >
-              Start Deep Crawl
-            </button>
-          </div>
-        </div>
+        <Card sx={{ flex: 1 }}>
+          <CardContent>
+            <Box sx={{ textAlign: 'center', py: 8 }}>
+              <FolderIcon 
+                sx={{ 
+                  fontSize: 64, 
+                  color: 'text.secondary',
+                  mb: 2
+                }} 
+              />
+              <Typography variant="h5" gutterBottom fontWeight="medium">
+                No collections found
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 'md', mx: 'auto', mb: 4 }}>
+                Start by crawling some websites and saving the content to collections. 
+                Then you can search and manage your saved content here.
+              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<SearchIcon />}
+                  onClick={() => window.location.hash = 'simple-crawl'}
+                >
+                  Start Simple Crawl
+                </Button>
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<WebIcon />}
+                  onClick={() => window.location.hash = 'deep-crawl'}
+                >
+                  Start Deep Crawl
+                </Button>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
       )}
-    </div>
+    </Box>
   );
 }
 

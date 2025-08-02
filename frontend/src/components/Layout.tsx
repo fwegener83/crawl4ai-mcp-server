@@ -1,4 +1,5 @@
 import React from 'react';
+import { AppBar, Toolbar, Typography, Button, Container, Box } from './ui';
 
 type Page = 'home' | 'simple-crawl' | 'deep-crawl' | 'collections' | 'file-collections';
 
@@ -10,79 +11,97 @@ interface LayoutProps {
 
 export function Layout({ children, currentPage = 'home', onNavigate }: LayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <button 
-                onClick={() => onNavigate?.('home')}
-                className="text-xl font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-              >
-                Crawl4AI Web Interface
-              </button>
-            </div>
-            <nav className="flex space-x-8">
-              <button 
+      <AppBar position="static" elevation={1} sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Container maxWidth="xl">
+          <Toolbar sx={{ justifyContent: 'space-between' }}>
+            <Button 
+              onClick={() => onNavigate?.('home')}
+              sx={{ 
+                fontSize: '1.25rem',
+                fontWeight: 600,
+                textTransform: 'none',
+                color: 'inherit',
+                '&:hover': {
+                  color: 'primary.main'
+                }
+              }}
+            >
+              Crawl4AI Web Interface
+            </Button>
+            
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button 
                 onClick={() => onNavigate?.('simple-crawl')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  currentPage === 'simple-crawl'
-                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                }`}
+                variant={currentPage === 'simple-crawl' ? 'contained' : 'text'}
+                color={currentPage === 'simple-crawl' ? 'primary' : 'inherit'}
+                sx={{ textTransform: 'none' }}
               >
                 Simple Crawl
-              </button>
-              <button 
+              </Button>
+              <Button 
                 onClick={() => onNavigate?.('deep-crawl')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  currentPage === 'deep-crawl'
-                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                }`}
+                variant={currentPage === 'deep-crawl' ? 'contained' : 'text'}
+                color={currentPage === 'deep-crawl' ? 'primary' : 'inherit'}
+                sx={{ textTransform: 'none' }}
               >
                 Deep Crawl
-              </button>
-              <button 
+              </Button>
+              <Button 
                 onClick={() => onNavigate?.('collections')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  currentPage === 'collections'
-                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                }`}
+                variant={currentPage === 'collections' ? 'contained' : 'text'}
+                color={currentPage === 'collections' ? 'primary' : 'inherit'}
+                sx={{ textTransform: 'none' }}
               >
                 Collections
-              </button>
-              <button 
+              </Button>
+              <Button 
                 onClick={() => onNavigate?.('file-collections')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  currentPage === 'file-collections'
-                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                }`}
+                variant={currentPage === 'file-collections' ? 'contained' : 'text'}
+                color={currentPage === 'file-collections' ? 'primary' : 'inherit'}
+                sx={{ textTransform: 'none' }}
               >
                 File Manager
-              </button>
-            </nav>
-          </div>
-        </div>
-      </header>
+              </Button>
+            </Box>
+          </Toolbar>
+        </Container>
+      </AppBar>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <Container 
+        component="main" 
+        maxWidth="xl" 
+        sx={{ 
+          flex: 1,
+          py: 3,
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
         {children}
-      </main>
+      </Container>
 
       {/* Footer */}
-      <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-auto">
-        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-            Powered by Crawl4AI MCP Server
-          </p>
-        </div>
-      </footer>
-    </div>
+      <Box 
+        component="footer" 
+        sx={{ 
+          bgcolor: 'background.paper',
+          borderTop: 1,
+          borderColor: 'divider',
+          mt: 'auto'
+        }}
+      >
+        <Container maxWidth="xl">
+          <Box sx={{ py: 2, textAlign: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              Powered by Crawl4AI MCP Server
+            </Typography>
+          </Box>
+        </Container>
+      </Box>
+    </Box>
   );
 }
 

@@ -1,20 +1,24 @@
 import { useState } from 'react';
+import { Box, Typography, Card, CardContent, Badge } from '../components/ui';
+import { Button } from '../components/ui/Button';
+import { useNotification } from '../components/ui/NotificationProvider';
 import SimpleCrawlForm from '../components/SimpleCrawlForm';
 import MarkdownEditor from '../components/MarkdownEditor';
 import SaveToCollectionModal from '../components/SaveToCollectionModal';
-import { useToast } from '../components/ToastContainer';
+import SaveIcon from '@mui/icons-material/Save';
+import DescriptionIcon from '@mui/icons-material/Description';
 
 export function SimpleCrawlPage() {
   const [crawledContent, setCrawledContent] = useState('');
   const [editedContent, setEditedContent] = useState('');
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const { showSuccess } = useToast();
+  const { showSuccess } = useNotification();
 
   const handleCrawlComplete = (content: string) => {
     setCrawledContent(content);
     setEditedContent(content);
-    showSuccess('Content Extracted', 'Website content has been successfully crawled and is ready for editing.');
+    showSuccess('Website content has been successfully crawled and is ready for editing.');
   };
 
   const handleContentChange = (content: string) => {
@@ -30,68 +34,92 @@ export function SimpleCrawlPage() {
 
   const handleSaveComplete = (collectionName: string) => {
     setHasUnsavedChanges(false);
-    showSuccess('Content Saved', `Successfully saved to collection: ${collectionName}`);
+    showSuccess(`Successfully saved to collection: ${collectionName}`);
   };
 
   return (
-    <div className="space-y-6">
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}>
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+      <Box>
+        <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
           Simple Website Crawling
-        </h1>
-        <p className="text-gray-600 dark:text-gray-300">
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
           Extract clean content from any webpage and edit it with our markdown editor.
-        </p>
-      </div>
-
+        </Typography>
+      </Box>
 
       {/* Crawl Form */}
-      <SimpleCrawlForm onCrawlComplete={handleCrawlComplete} />
+      <Card>
+        <CardContent>
+          <SimpleCrawlForm onCrawlComplete={handleCrawlComplete} />
+        </CardContent>
+      </Card>
 
       {/* Content Editor */}
       {crawledContent && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="h6" component="h2">
               Extracted Content
-            </h2>
-            <button
+            </Typography>
+            <Button
+              variant="contained"
+              color="success"
+              startIcon={<SaveIcon />}
               onClick={handleSaveClick}
               disabled={!editedContent.trim()}
-              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium px-4 py-2 rounded-md transition-colors"
               data-testid="save-to-collection-button"
+              sx={{ position: 'relative' }}
             >
               Save to Collection
               {hasUnsavedChanges && (
-                <span className="ml-2 text-xs bg-orange-500 px-1.5 py-0.5 rounded-full">
-                  •
-                </span>
+                <Badge
+                  color="warning"
+                  variant="dot"
+                  sx={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                  }}
+                />
               )}
-            </button>
-          </div>
+            </Button>
+          </Box>
           
-          <MarkdownEditor
-            content={crawledContent}
-            onChange={handleContentChange}
-            onSave={handleSaveClick}
-          />
-        </div>
+          <Card sx={{ flex: 1 }}>
+            <CardContent sx={{ height: '100%' }}>
+              <MarkdownEditor
+                content={crawledContent}
+                onChange={handleContentChange}
+                onSave={handleSaveClick}
+              />
+            </CardContent>
+          </Card>
+        </Box>
       )}
 
       {/* Empty State */}
       {!crawledContent && (
-        <div className="text-center py-12">
-          <svg className="mx-auto h-8 w-8 text-gray-400" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-            No content yet
-          </h3>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Enter a URL above to start crawling and see the extracted content here.
-          </p>
-        </div>
+        <Card sx={{ flex: 1 }}>
+          <CardContent>
+            <Box sx={{ textAlign: 'center', py: 8 }}>
+              <DescriptionIcon 
+                sx={{ 
+                  fontSize: 64, 
+                  color: 'text.secondary',
+                  mb: 2
+                }} 
+              />
+              <Typography variant="h6" gutterBottom>
+                No content yet
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Enter a URL above to start crawling and see the extracted content here.
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
       )}
 
       {/* Save Modal */}
@@ -101,7 +129,7 @@ export function SimpleCrawlPage() {
         content={editedContent}
         onSaveComplete={handleSaveComplete}
       />
-    </div>
+    </Box>
   );
 }
 

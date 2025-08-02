@@ -1,7 +1,19 @@
 import { useState } from 'react';
 import type React from 'react';
 import { useCollectionOperations } from '../../../hooks/useCollectionOperations';
-import Icon from '../../ui/Icon';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
+  Box,
+  Typography
+} from '../../ui';
+import { LoadingButton } from '../../ui/LoadingButton';
+import DescriptionIcon from '@mui/icons-material/Description';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 export function NewFileModal() {
   const { state, createNewFile, closeModal } = useCollectionOperations();
@@ -63,110 +75,91 @@ export function NewFileModal() {
   const isFormValid = filename.trim() && isValidFilename(filename.trim());
 
   return (
-    <div className="fixed inset-0 !bg-gray-900 !bg-opacity-75 overflow-y-auto h-full w-full !z-[9999]" style={{ backgroundColor: 'rgba(31, 41, 55, 0.75)' }}>
-      <div className="relative top-12 mx-auto p-5 border border-gray-300 dark:border-gray-600 max-w-md shadow-2xl rounded-md !bg-white dark:!bg-gray-800 !z-[10000]" style={{ backgroundColor: 'white' }}>
-        <div className="mt-3">
-          <div className="flex items-center mb-4">
-            <div className="flex-shrink-0">
-              <Icon name="document" size="lg" color="blue" />
-            </div>
-            <div className="ml-3">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Create New File
-              </h3>
-            </div>
-          </div>
-          
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Filename <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={filename}
-                onChange={(e) => setFilename(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                placeholder="my-document"
-                required
-                disabled={isSubmitting}
-              />
-              {filename.trim() && (
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Will be saved as: <span className="font-mono">{processedFilename}</span>
-                </p>
-              )}
-              {filename.trim() && !isValidFilename(filename.trim()) && (
-                <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-                  Invalid filename. Avoid special characters: &lt; &gt; : " / \ | ? *
-                </p>
-              )}
-            </div>
+    <Dialog
+      open={state.ui.modals.newFile}
+      onClose={handleClose}
+      maxWidth="md"
+      fullWidth
+    >
+      <form onSubmit={handleSubmit}>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <DescriptionIcon color="primary" fontSize="large" />
+          Create New File
+        </DialogTitle>
+        
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>
+            <TextField
+              label={
+                <span>
+                  Filename <Typography component="span" color="error">*</Typography>
+                </span>
+              }
+              value={filename}
+              onChange={(e) => setFilename(e.target.value)}
+              placeholder="my-document"
+              required
+              disabled={isSubmitting}
+              autoFocus
+              fullWidth
+              error={filename.trim() !== '' && !isValidFilename(filename.trim())}
+              helperText={
+                filename.trim() ? (
+                  !isValidFilename(filename.trim()) ? (
+                    'Invalid filename. Avoid special characters: < > : " / \\ | ? *'
+                  ) : (
+                    <>Will be saved as: <Typography component="span" fontFamily="monospace">{processedFilename}</Typography></>
+                  )
+                ) : ''
+              }
+            />
             
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Folder (optional)
-              </label>
-              <input
-                type="text"
-                value={folder}
-                onChange={(e) => setFolder(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                placeholder="e.g., drafts/ideas"
-                disabled={isSubmitting}
-              />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Leave empty to save in root directory. Use / to separate nested folders.
-              </p>
-            </div>
+            <TextField
+              label="Folder (optional)"
+              value={folder}
+              onChange={(e) => setFolder(e.target.value)}
+              placeholder="e.g., drafts/ideas"
+              disabled={isSubmitting}
+              fullWidth
+              helperText="Leave empty to save in root directory. Use / to separate nested folders."
+            />
 
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Initial Content (optional)
-              </label>
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white resize-vertical"
-                placeholder="# My New Document
+            <TextField
+              label="Initial Content (optional)"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder={`# My New Document
 
-Start writing your content here..."
-                rows={6}
-                disabled={isSubmitting}
-              />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Markdown formatting supported
-              </p>
-            </div>
-            
-            <div className="flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={handleClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 rounded-md transition-colors disabled:opacity-50"
-                disabled={isSubmitting}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!isFormValid || isSubmitting}
-              >
-                {isSubmitting ? (
-                  <div className="flex items-center">
-                    <Icon name="refresh" size="xs" color="white" animate="spin" className="mr-2" />
-                    Creating...
-                  </div>
-                ) : (
-                  'Create File'
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+Start writing your content here...`}
+              multiline
+              rows={6}
+              disabled={isSubmitting}
+              fullWidth
+              helperText="Markdown formatting supported"
+            />
+          </Box>
+        </DialogContent>
+        
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={handleClose}
+            disabled={isSubmitting}
+            variant="outlined"
+          >
+            Cancel
+          </Button>
+          <LoadingButton
+            type="submit"
+            loading={isSubmitting}
+            disabled={!isFormValid}
+            variant="contained"
+            startIcon={isSubmitting ? <RefreshIcon /> : undefined}
+          >
+            {isSubmitting ? 'Creating...' : 'Create File'}
+          </LoadingButton>
+        </DialogActions>
+      </form>
+    </Dialog>
   );
 }
 

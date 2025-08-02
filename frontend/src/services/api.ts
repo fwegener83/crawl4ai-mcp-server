@@ -63,8 +63,16 @@ export class APIService {
    * Perform deep domain crawling with advanced configuration
    */
   static async deepCrawlDomain(config: DeepCrawlConfig): Promise<CrawlResult[]> {
-    const response: AxiosResponse<{ results: { success: boolean; pages: CrawlResult[]; crawl_summary: unknown; streaming: boolean } }> = await api.post('/deep-crawl', config);
-    return response.data.results.pages;
+    const response: AxiosResponse<{ results: { success: boolean; pages: CrawlResult[]; crawl_summary: unknown; streaming: boolean; error?: string } }> = await api.post('/deep-crawl', config);
+    
+    // Check if the backend returned an error
+    if (!response.data.results.success) {
+      const errorMsg = response.data.results.error || 'Deep crawl failed';
+      console.error('Backend deep crawl error:', errorMsg);
+      throw new Error(`Deep crawl failed: ${errorMsg}`);
+    }
+    
+    return response.data.results.pages || [];
   }
 
   /**
