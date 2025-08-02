@@ -1,3 +1,4 @@
+import { Box } from '../components/ui';
 import { CollectionProvider } from '../contexts/CollectionContext';
 import CollectionSidebar from '../components/collection/CollectionSidebar';
 import MainContent from '../components/collection/MainContent';
@@ -9,8 +10,16 @@ import DeleteConfirmationModal from '../components/collection/modals/DeleteConfi
 export function FileCollectionsPage() {
   return (
     <CollectionProvider>
-      <div className="h-full flex bg-gray-50 dark:bg-gray-900">
-        <CollectionSidebar className="w-80 flex-shrink-0" />
+      <Box 
+        sx={{ 
+          height: '100%', 
+          display: 'flex', 
+          bgcolor: 'background.default'
+        }}
+      >
+        <Box sx={{ width: 320, flexShrink: 0 }}>
+          <CollectionSidebar />
+        </Box>
         <MainContent />
         
         {/* Modals */}
@@ -18,7 +27,7 @@ export function FileCollectionsPage() {
         <AddPageModal />
         <NewFileModal />
         <DeleteConfirmationModal />
-      </div>
+      </Box>
     </CollectionProvider>
   );
 }

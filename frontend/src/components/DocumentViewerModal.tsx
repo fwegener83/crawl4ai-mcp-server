@@ -1,9 +1,20 @@
 import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import MarkdownEditor from './MarkdownEditor';
 import SaveToCollectionModal from './SaveToCollectionModal';
-import { useToast } from './ToastContainer';
+import { useNotification } from './ui/NotificationProvider';
 import type { CrawlResult } from '../types/api';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Box,
+  Typography,
+  IconButton,
+  Button,
+  Chip
+} from './ui';
+import CloseIcon from '@mui/icons-material/Close';
+import SaveIcon from '@mui/icons-material/Save';
 
 interface DocumentViewerModalProps {
   isOpen: boolean;
@@ -19,7 +30,7 @@ export function DocumentViewerModal({
   const [editedContent, setEditedContent] = useState('');
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const { showSuccess } = useToast();
+  const { showSuccess } = useNotification();
 
   useEffect(() => {
     if (result && isOpen) {
@@ -53,7 +64,7 @@ ${result.content}`;
 
   const handleSaveComplete = (collectionName: string) => {
     setHasUnsavedChanges(false);
-    showSuccess('Document Saved', `Successfully saved to collection: ${collectionName}`);
+    showSuccess(`Successfully saved to collection: ${collectionName}`);
   };
 
   const handleClose = () => {
@@ -66,103 +77,104 @@ ${result.content}`;
     }
   };
 
-  if (!isOpen || !result) return null;
+  if (!result) return null;
 
-  const modalContent = (
-    <div 
-      className="fixed inset-0 flex items-center justify-center" 
-      style={{ 
-        zIndex: 999999,
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
-        display: 'flex !important',
-        visibility: 'visible' as any,
-        opacity: '1 !important',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0
-      }}
-    >
-      <div 
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full h-full max-w-6xl max-h-[90vh] mx-4 my-4 flex flex-col"
-        style={{
-          visibility: 'visible',
-          opacity: 1,
-          display: 'flex',
-          backgroundColor: 'white',
-          border: '1px solid #e5e7eb'
+  return (
+    <>
+      <Dialog 
+        open={isOpen} 
+        onClose={handleClose} 
+        maxWidth="lg" 
+        fullWidth
+        PaperProps={{
+          sx: { height: '90vh', display: 'flex', flexDirection: 'column' }
         }}
       >
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
-              Document Viewer & Editor
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Typography variant="h6" noWrap>
+                Document Viewer & Editor
+              </Typography>
+              {hasUnsavedChanges && (
+                <Chip 
+                  label="Unsaved changes" 
+                  size="small" 
+                  color="warning" 
+                  variant="outlined"
+                />
+              )}
+            </Box>
+            <Typography variant="body2" color="text.secondary" noWrap>
               {result.title || 'Untitled Page'}
-            </p>
-          </div>
+            </Typography>
+          </Box>
           
-          <div className="flex items-center space-x-3 ml-4">
-            <button
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
+            <Button
               onClick={handleSaveClick}
               disabled={!editedContent.trim()}
-              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium px-4 py-2 rounded-md transition-colors"
+              variant="contained"
+              color="success"
+              size="small"
+              startIcon={<SaveIcon />}
               data-testid="document-save-button"
             >
               Save to Collection
-              {hasUnsavedChanges && (
-                <span className="ml-2 text-xs bg-orange-500 px-1.5 py-0.5 rounded-full">
-                  •
-                </span>
-              )}
-            </button>
+            </Button>
             
-            <button
+            <IconButton
               onClick={handleClose}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              size="small"
+              title="Close"
             >
-              <svg className="h-6 w-6" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
 
         {/* Document Info */}
-        <div className="px-6 py-3 bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center space-x-6 text-xs text-gray-600 dark:text-gray-400">
-            <span><strong>URL:</strong> {result.url}</span>
-            <span><strong>Depth:</strong> {result.depth}</span>
+        <Box sx={{ 
+          px: 3, 
+          py: 1.5, 
+          bgcolor: 'action.selected', 
+          borderBottom: 1, 
+          borderColor: 'divider' 
+        }}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 3, 
+            flexWrap: 'wrap' 
+          }}>
+            <Typography variant="caption" color="text.secondary">
+              <Box component="span" fontWeight="medium">URL:</Box> {result.url}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              <Box component="span" fontWeight="medium">Depth:</Box> {result.depth}
+            </Typography>
             {result.metadata.score > 0 && (
-              <span><strong>Score:</strong> {result.metadata.score.toFixed(1)}</span>
+              <Typography variant="caption" color="text.secondary">
+                <Box component="span" fontWeight="medium">Score:</Box> {result.metadata.score.toFixed(1)}
+              </Typography>
             )}
-            <span><strong>Size:</strong> {result.content.length.toLocaleString()} chars</span>
-            <span><strong>Crawled:</strong> {new Date(result.metadata.crawl_time).toLocaleString()}</span>
-          </div>
-        </div>
+            <Typography variant="caption" color="text.secondary">
+              <Box component="span" fontWeight="medium">Size:</Box> {result.content.length.toLocaleString()} chars
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              <Box component="span" fontWeight="medium">Crawled:</Box> {new Date(result.metadata.crawl_time).toLocaleString()}
+            </Typography>
+          </Box>
+        </Box>
 
-        {/* Editor Content */}
-        <div className="flex-1 overflow-hidden">
+        <DialogContent sx={{ flex: 1, overflow: 'hidden', p: 0 }}>
           <MarkdownEditor
             content={editedContent}
             onChange={handleContentChange}
             onSave={handleSaveClick}
           />
-        </div>
-      </div>
-    </div>
-  );
-
-  // Use portal for proper modal rendering
-  const portalRoot = typeof document !== 'undefined' ? document.body : null;
-  if (!portalRoot) return null;
-  
-  return (
-    <>
-      {createPortal(modalContent, portalRoot)}
+        </DialogContent>
+      </Dialog>
       
       {/* Save Modal */}
       <SaveToCollectionModal

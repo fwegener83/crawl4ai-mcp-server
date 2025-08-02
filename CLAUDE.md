@@ -113,6 +113,13 @@ File collections are the primary focus for the frontend interface, providing a f
 - Separate fast and slow tests with pytest markers
 - E2E tests focus on critical user workflows
 
+### Testing Requirements (CRITICAL)
+- **ALL TESTS MUST PASS** - No exceptions for "minor edge cases"
+- Tests are not optional - they are part of the code quality contract
+- If tests become obsolete, discuss removal explicitly before deletion
+- 100% test success rate is required before any commit
+- Test failures indicate real problems that must be fixed, not ignored
+
 ## Important Configuration
 
 ### Environment Variables

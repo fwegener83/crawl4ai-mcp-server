@@ -1,7 +1,24 @@
 import React, { useState, useMemo } from 'react';
 import { useCollectionOperations } from '../../hooks/useCollectionOperations';
-import LoadingSpinner from '../LoadingSpinner';
-import Icon from '../ui/Icon';
+import { 
+  Box, 
+  Typography, 
+  TextField, 
+  Button, 
+  IconButton, 
+  Paper, 
+  CircularProgress,
+  Tooltip
+} from '../ui';
+import { InputAdornment } from '@mui/material';
+import FolderIcon from '@mui/icons-material/Folder';
+import DescriptionIcon from '@mui/icons-material/Description';
+import AddIcon from '@mui/icons-material/Add';
+import SearchIcon from '@mui/icons-material/Search';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
+import WebIcon from '@mui/icons-material/Web';
 
 interface FileExplorerProps {
   className?: string;
@@ -148,43 +165,57 @@ export function FileExplorer({ className = '' }: FileExplorerProps) {
 
     if (node.type === 'folder') {
       return (
-        <div key={node.path}>
-          <div
+        <Box key={node.path}>
+          <Box
             onClick={() => toggleFolder(node.path)}
-            className="group flex items-center p-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-            style={{ paddingLeft }}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              p: 1,
+              pl: `${paddingLeft}px`,
+              cursor: 'pointer',
+              '&:hover': {
+                bgcolor: 'action.hover'
+              },
+              transition: 'background-color 0.2s'
+            }}
           >
-            <Icon 
-              name="chevronRight" 
-              size="sm" 
-              className={`mr-2 transition-transform ${
-                isExpanded ? 'rotate-90' : ''
-              }`}
+            <ChevronRightIcon 
+              fontSize="small"
+              sx={{ 
+                mr: 1, 
+                transition: 'transform 0.2s',
+                transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'
+              }}
             />
-            <Icon name="folder" size="sm" color="blue" className="mr-2" />
-            <span className="text-sm text-gray-900 dark:text-white font-medium">
+            <FolderIcon 
+              fontSize="small" 
+              color="primary" 
+              sx={{ mr: 1 }} 
+            />
+            <Typography variant="body2" fontWeight="medium" sx={{ flex: 1 }}>
               {node.name}
-            </span>
+            </Typography>
             {node.children && (
-              <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">
+              <Typography variant="caption" color="text.secondary">
                 {node.children.filter(child => child.type === 'file').length} files
-              </span>
+              </Typography>
             )}
-          </div>
+          </Box>
           
           {isExpanded && node.children && (
-            <div>
+            <Box>
               {node.children.map(child => renderTreeNode(child, depth + 1))}
-            </div>
+            </Box>
           )}
-        </div>
+        </Box>
       );
     }
 
     // File node
     const isSelected = state.editor.filePath === node.path;
     return (
-      <div
+      <Box
         key={node.path}
         onClick={() => {
           const pathParts = node.path.split('/');
@@ -192,140 +223,228 @@ export function FileExplorer({ className = '' }: FileExplorerProps) {
           const folder = pathParts.length > 0 ? pathParts.join('/') : undefined;
           handleFileClick(filename, folder);
         }}
-        className={`group flex items-center justify-between p-2 cursor-pointer transition-colors ${
-          isSelected
-            ? 'bg-blue-50 dark:bg-blue-900/50 border-r-2 border-blue-500'
-            : 'hover:bg-gray-50 dark:hover:bg-gray-700'
-        }`}
-        style={{ paddingLeft }}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          p: 1,
+          pl: `${paddingLeft}px`,
+          cursor: 'pointer',
+          borderRight: isSelected ? 2 : 0,
+          borderColor: isSelected ? 'primary.main' : 'transparent',
+          bgcolor: isSelected ? 'primary.50' : 'transparent',
+          '&:hover': {
+            bgcolor: isSelected ? 'primary.100' : 'action.hover',
+            '& .delete-button': {
+              opacity: 1
+            }
+          },
+          transition: 'all 0.2s'
+        }}
       >
-        <div className="flex items-center min-w-0 flex-1">
-          <Icon name="document" size="sm" className="mr-2" />
-          <div className="min-w-0 flex-1">
-            <p className={`text-sm truncate ${
-              isSelected
-                ? 'text-blue-700 dark:text-blue-300 font-medium'
-                : 'text-gray-900 dark:text-white'
-            }`}>
+        <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0, flex: 1 }}>
+          <DescriptionIcon 
+            fontSize="small" 
+            sx={{ mr: 1, color: isSelected ? 'primary.main' : 'action.active' }} 
+          />
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Typography 
+              variant="body2" 
+              sx={{
+                fontWeight: isSelected ? 'medium' : 'normal',
+                color: isSelected ? 'primary.main' : 'text.primary',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
               {node.name}
-            </p>
+            </Typography>
             {node.metadata && typeof node.metadata === 'object' && 'source_url' in node.metadata && 
              typeof (node.metadata as any).source_url === 'string' && (node.metadata as any).source_url && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+              <Typography 
+                variant="caption" 
+                color="text.secondary"
+                sx={{
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  display: 'block'
+                }}
+              >
                 from {new URL((node.metadata as any).source_url).hostname}
-              </p>
+              </Typography>
             )}
-          </div>
-        </div>
+          </Box>
+        </Box>
         
         {/* Delete button */}
-        <button
-          onClick={(e) => {
-            const pathParts = node.path.split('/');
-            const filename = pathParts.pop()!;
-            const folder = pathParts.length > 0 ? pathParts.join('/') : undefined;
-            handleFileDelete(filename, e, folder);
-          }}
-          className="opacity-0 group-hover:opacity-100 ml-2 p-1 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-all"
-          title="Delete file"
-        >
-          <Icon name="trash" size="xs" color="current" />
-        </button>
-      </div>
+        <Tooltip title="Delete file">
+          <IconButton
+            className="delete-button"
+            onClick={(e) => {
+              const pathParts = node.path.split('/');
+              const filename = pathParts.pop()!;
+              const folder = pathParts.length > 0 ? pathParts.join('/') : undefined;
+              handleFileDelete(filename, e, folder);
+            }}
+            size="small"
+            color="error"
+            sx={{ 
+              opacity: 0, 
+              transition: 'opacity 0.2s',
+              ml: 1
+            }}
+          >
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
     );
   };
 
   if (state.ui.loading.files) {
     return (
-      <div className={`bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 ${className}`}>
-        <div className="p-4">
-          <div className="flex items-center justify-center">
-            <LoadingSpinner size="sm" />
-            <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">Loading files...</span>
-          </div>
-        </div>
-      </div>
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          borderRight: 1, 
+          borderColor: 'divider',
+          borderRadius: 0
+        }} 
+        className={className}
+      >
+        <Box sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <CircularProgress size={20} />
+          <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+            Loading files...
+          </Typography>
+        </Box>
+      </Paper>
     );
   }
 
   return (
-    <div className={`bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 ${className}`}>
+    <Paper 
+      elevation={0} 
+      sx={{ 
+        borderRight: 1, 
+        borderColor: 'divider',
+        borderRadius: 0,
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column'
+      }} 
+      className={className}
+    >
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Files & Folders</h3>
-          <button
-            onClick={() => openModal('newFile')}
-            className="inline-flex items-center p-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded transition-colors"
-            title="New file"
-          >
-            <Icon name="plus" size="sm" />
-          </button>
-        </div>
+      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Typography variant="subtitle2" fontWeight="semibold">
+            Files & Folders
+          </Typography>
+          <Tooltip title="New file">
+            <IconButton
+              onClick={() => openModal('newFile')}
+              size="small"
+              color="primary"
+            >
+              <AddIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
         
         {/* Search */}
-        <div className="relative">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search files..."
-            className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-          />
-          <Icon name="search" size="sm" className="absolute left-2.5 top-2.5" />
-        </div>
-      </div>
+        <TextField
+          size="small"
+          fullWidth
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search files..."
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" />
+              </InputAdornment>
+            ),
+          }}
+        />
+      </Box>
 
       {/* File Tree */}
-      <div className="flex-1 overflow-y-auto">
+      <Box sx={{ flex: 1, overflow: 'auto' }}>
         {filteredTree.length === 0 ? (
-          <div className="p-4 text-center">
+          <Box sx={{ p: 3, textAlign: 'center' }}>
             {searchTerm ? (
-              <div>
-                <div className="text-gray-400 dark:text-gray-500 mb-4">
-                  <Icon name="search" size="xl" className="mx-auto" />
-                </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">No files match "{searchTerm}"</p>
-                <button
+              <Box>
+                <SearchIcon 
+                  sx={{ 
+                    fontSize: 48, 
+                    color: 'text.secondary',
+                    mb: 2,
+                    display: 'block',
+                    mx: 'auto'
+                  }} 
+                />
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  No files match "{searchTerm}"
+                </Typography>
+                <Button
                   onClick={() => setSearchTerm('')}
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                  size="small"
+                  variant="text"
                 >
                   Clear search
-                </button>
-              </div>
+                </Button>
+              </Box>
             ) : (
-              <div>
-                <div className="text-gray-400 dark:text-gray-500 mb-4">
-                  <Icon name="document" size="xl" className="mx-auto" />
-                </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">No files in this collection</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
+              <Box>
+                <CreateNewFolderIcon 
+                  sx={{ 
+                    fontSize: 48, 
+                    color: 'text.secondary',
+                    mb: 2,
+                    display: 'block',
+                    mx: 'auto'
+                  }} 
+                />
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  No files in this collection
+                </Typography>
+                <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mb: 3 }}>
                   Add pages by crawling URLs or create new files manually
-                </p>
-                <div className="space-y-2">
-                  <button
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Button
                     onClick={() => openModal('addPage')}
-                    className="block w-full px-3 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors"
+                    variant="contained"
+                    color="success"
+                    size="small"
+                    startIcon={<WebIcon />}
+                    fullWidth
                   >
                     Add Page from URL
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={() => openModal('newFile')}
-                    className="block w-full px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 rounded-md transition-colors"
+                    variant="outlined"
+                    size="small"
+                    startIcon={<DescriptionIcon />}
+                    fullWidth
                   >
                     Create New File
-                  </button>
-                </div>
-              </div>
+                  </Button>
+                </Box>
+              </Box>
             )}
-          </div>
+          </Box>
         ) : (
-          <div className="py-2">
+          <Box sx={{ py: 1 }}>
             {filteredTree.map(node => renderTreeNode(node))}
-          </div>
+          </Box>
         )}
-      </div>
-    </div>
+      </Box>
+    </Paper>
   );
 }
 

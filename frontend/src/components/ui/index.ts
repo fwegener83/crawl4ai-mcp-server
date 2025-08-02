@@ -80,4 +80,10 @@ export {
   AccordionDetails,
   Tabs,
   Tab,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  InputAdornment,
+  ToggleButtonGroup,
+  ToggleButton,
 } from '@mui/material';

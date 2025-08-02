@@ -1,5 +1,16 @@
 import { useCollectionOperations } from '../../../hooks/useCollectionOperations';
-import Icon from '../../ui/Icon';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Alert,
+  Typography
+} from '../../ui';
+import FolderIcon from '@mui/icons-material/Folder';
+import DescriptionIcon from '@mui/icons-material/Description';
+import WarningIcon from '@mui/icons-material/Warning';
 
 export function DeleteConfirmationModal() {
   const { state, deleteCollection, deleteFile, closeDeleteConfirmation } = useCollectionOperations();
@@ -45,49 +56,51 @@ export function DeleteConfirmationModal() {
 
   const getIcon = () => {
     if (type === 'collection') {
-      return <Icon name="folder" size="lg" color="red" />;
+      return <FolderIcon color="error" fontSize="large" />;
     }
-    return <Icon name="document" size="lg" color="red" />;
+    return <DescriptionIcon color="error" fontSize="large" />;
   };
 
   return (
-    <div className="fixed inset-0 !bg-gray-900 !bg-opacity-75 overflow-y-auto h-full w-full !z-[9999]" style={{ backgroundColor: 'rgba(31, 41, 55, 0.75)' }}>
-      <div className="relative top-20 mx-auto p-5 border border-gray-300 dark:border-gray-600 w-96 shadow-2xl rounded-md !bg-white dark:!bg-gray-800 !z-[10000]" style={{ backgroundColor: 'white' }}>
-        <div className="mt-3">
-          <div className="flex items-center mb-4">
-            <div className="flex-shrink-0">
-              {getIcon()}
-            </div>
-            <div className="ml-3">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                {getTitle()}
-              </h3>
-            </div>
-          </div>
-          
-          <div className="mb-6">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {getMessage()}
-            </p>
-          </div>
-          
-          <div className="flex justify-end space-x-3">
-            <button
-              onClick={closeDeleteConfirmation}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 rounded-md transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleConfirm}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
-            >
-              Delete {type === 'collection' ? 'Collection' : 'File'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <Dialog
+      open={state.ui.modals.deleteConfirmation.open}
+      onClose={closeDeleteConfirmation}
+      maxWidth="sm"
+      fullWidth
+    >
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        {getIcon()}
+        {getTitle()}
+      </DialogTitle>
+      
+      <DialogContent>
+        <Alert 
+          severity="warning" 
+          icon={<WarningIcon />}
+          sx={{ mb: 2 }}
+        >
+          <Typography variant="body2">
+            {getMessage()}
+          </Typography>
+        </Alert>
+      </DialogContent>
+      
+      <DialogActions sx={{ px: 3, pb: 3 }}>
+        <Button
+          onClick={closeDeleteConfirmation}
+          variant="outlined"
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleConfirm}
+          variant="contained"
+          color="error"
+        >
+          Delete {type === 'collection' ? 'Collection' : 'File'}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }
 

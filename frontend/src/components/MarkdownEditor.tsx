@@ -1,6 +1,18 @@
 import { useState, useRef } from 'react';
 import Editor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
+import {
+  Paper,
+  Box,
+  Typography,
+  Button,
+  ToggleButtonGroup,
+  ToggleButton,
+  Chip
+} from './ui';
+import EditIcon from '@mui/icons-material/Edit';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import SaveIcon from '@mui/icons-material/Save';
 
 interface MarkdownEditorProps {
   content: string;
@@ -49,65 +61,74 @@ export function MarkdownEditor({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+    <Paper>
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center space-x-4">
-          <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        p: 2, 
+        borderBottom: 1, 
+        borderColor: 'divider' 
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="body2" fontWeight="medium">
             Content Editor
-          </h3>
+          </Typography>
           {isDirty && (
-            <span className="text-xs text-orange-600 dark:text-orange-400">
-              • Unsaved changes
-            </span>
+            <Chip 
+              label="Unsaved changes" 
+              size="small" 
+              color="warning" 
+              variant="outlined"
+            />
           )}
-        </div>
+        </Box>
         
-        <div className="flex items-center space-x-2">
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           {/* View Toggle */}
-          <div className="flex bg-gray-100 dark:bg-gray-700 rounded-md p-1">
-            <button
-              onClick={() => setIsPreview(false)}
-              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                !isPreview
-                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
-            >
+          <ToggleButtonGroup
+            value={isPreview ? 'preview' : 'edit'}
+            exclusive
+            onChange={(_, newValue: string | null) => {
+              if (newValue !== null) {
+                setIsPreview(newValue === 'preview');
+              }
+            }}
+            size="small"
+          >
+            <ToggleButton value="edit" aria-label="edit mode">
+              <EditIcon fontSize="small" sx={{ mr: 0.5 }} />
               Edit
-            </button>
-            <button
-              onClick={() => setIsPreview(true)}
-              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                isPreview
-                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
-            >
+            </ToggleButton>
+            <ToggleButton value="preview" aria-label="preview mode">
+              <VisibilityIcon fontSize="small" sx={{ mr: 0.5 }} />
               Preview
-            </button>
-          </div>
+            </ToggleButton>
+          </ToggleButtonGroup>
 
           {/* Save Button */}
           {!readonly && onSave && (
-            <button
+            <Button
               onClick={handleSave}
               disabled={!isDirty}
               data-testid="save-button"
-              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-xs font-medium px-3 py-1 rounded transition-colors"
+              variant="contained"
+              color="success"
+              size="small"
+              startIcon={<SaveIcon />}
             >
               Save
-            </button>
+            </Button>
           )}
-        </div>
-      </div>
+        </Box>
+      </Box>
 
       {/* Content Area */}
-      <div 
-        className="h-96" 
-        style={{ 
-          height: '400px',
-          minHeight: '400px'
+      <Box 
+        sx={{ 
+          height: 400,
+          minHeight: 400
         }}
         onKeyDown={handleKeyDown}
       >
@@ -131,32 +152,79 @@ export function MarkdownEditor({
             data-testid="markdown-editor"
           />
         ) : (
-          <div 
-            className="overflow-auto p-4 prose prose-sm max-w-none dark:prose-invert"
-            style={{
-              height: '400px',
-              minHeight: '400px'
+          <Box 
+            sx={{
+              height: 400,
+              minHeight: 400,
+              overflow: 'auto',
+              p: 3,
+              '& .markdown-body': {
+                fontFamily: 'inherit',
+                fontSize: '0.875rem',
+                lineHeight: 1.6,
+                color: 'text.primary',
+                maxWidth: 'none'
+              },
+              '& h1, & h2, & h3, & h4, & h5, & h6': {
+                color: 'text.primary',
+                marginTop: 2,
+                marginBottom: 1
+              },
+              '& p': {
+                marginBottom: 1
+              },
+              '& code': {
+                backgroundColor: 'action.selected',
+                padding: '2px 4px',
+                borderRadius: 1,
+                fontSize: '0.8125rem'
+              },
+              '& pre': {
+                backgroundColor: 'action.selected',
+                padding: 2,
+                borderRadius: 1,
+                overflow: 'auto'
+              }
             }}
           >
-            <ReactMarkdown>{currentContent}</ReactMarkdown>
-          </div>
+            <div className="markdown-body">
+              <ReactMarkdown>{currentContent}</ReactMarkdown>
+            </div>
+          </Box>
         )}
-      </div>
+      </Box>
 
       {/* Status Bar */}
-      <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750 rounded-b-lg">
-        <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
-          <div className="flex items-center space-x-4">
-            <span>{currentContent.length} characters</span>
-            <span>{currentContent.split('\n').length} lines</span>
-            {isDirty && <span>• Modified</span>}
-          </div>
-          <div>
+      <Box sx={{ 
+        p: 1.5, 
+        borderTop: 1, 
+        borderColor: 'divider',
+        bgcolor: 'action.selected'
+      }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between' 
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography variant="caption" color="text.secondary">
+              {currentContent.length} characters
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {currentContent.split('\n').length} lines
+            </Typography>
+            {isDirty && (
+              <Typography variant="caption" color="warning.main">
+                • Modified
+              </Typography>
+            )}
+          </Box>
+          <Typography variant="caption" color="text.secondary">
             {!readonly && 'Ctrl+S to save • '}Markdown supported
-          </div>
-        </div>
-      </div>
-    </div>
+          </Typography>
+        </Box>
+      </Box>
+    </Paper>
   );
 }
 

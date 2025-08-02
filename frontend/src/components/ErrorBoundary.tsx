@@ -1,4 +1,14 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import {
+  Box,
+  Paper,
+  Typography,
+  Button,
+  Alert
+} from './ui';
+import ErrorIcon from '@mui/icons-material/Error';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 interface Props {
   children: ReactNode;
@@ -33,72 +43,97 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
-          <div className="max-w-md w-full">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-              <div className="flex items-center mb-4">
-                <div className="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                </div>
-                <h1 className="ml-3 text-lg font-semibold text-gray-900 dark:text-white">
-                  Something went wrong
-                </h1>
-              </div>
+        <Box 
+          sx={{ 
+            minHeight: '100vh', 
+            bgcolor: 'background.default',
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            p: 2 
+          }}
+        >
+          <Paper 
+            sx={{ 
+              maxWidth: 'md', 
+              width: '100%', 
+              p: 4,
+              textAlign: 'center'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, justifyContent: 'center' }}>
+              <Box 
+                sx={{ 
+                  width: 40, 
+                  height: 40, 
+                  bgcolor: 'error.light', 
+                  borderRadius: 2, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  mr: 2
+                }}
+              >
+                <ErrorIcon sx={{ color: 'error.main' }} />
+              </Box>
+              <Typography variant="h5" fontWeight="medium">
+                Something went wrong
+              </Typography>
+            </Box>
 
-              <div className="space-y-4">
-                <p className="text-gray-600 dark:text-gray-300">
-                  An unexpected error occurred while rendering this page. This might be a temporary issue.
-                </p>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Typography variant="body1" color="text.secondary">
+                An unexpected error occurred while rendering this page. This might be a temporary issue.
+              </Typography>
 
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-md p-3">
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                    Error Details:
-                  </h3>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 font-mono">
-                    {this.state.error?.message || 'Unknown error'}
-                  </p>
-                </div>
+              <Alert severity="error" sx={{ textAlign: 'left' }}>
+                <Typography variant="body2" fontWeight="medium" gutterBottom>
+                  Error Details:
+                </Typography>
+                <Typography variant="body2" fontFamily="monospace" sx={{ wordBreak: 'break-word' }}>
+                  {this.state.error?.message || 'Unknown error'}
+                </Typography>
+              </Alert>
 
-                <div className="flex space-x-3">
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
-                  >
-                    Reload Page
-                  </button>
-                  <button
-                    onClick={() => this.setState({ hasError: false, error: undefined, errorInfo: undefined })}
-                    className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
-                  >
-                    Try Again
-                  </button>
-                </div>
+              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+                <Button
+                  onClick={() => window.location.reload()}
+                  variant="contained"
+                  startIcon={<RefreshIcon />}
+                >
+                  Reload Page
+                </Button>
+                <Button
+                  onClick={() => this.setState({ hasError: false, error: undefined, errorInfo: undefined })}
+                  variant="outlined"
+                >
+                  Try Again
+                </Button>
+              </Box>
 
-                <div className="text-center">
-                  <button
-                    onClick={() => {
-                      const errorReport = {
-                        error: this.state.error?.message,
-                        stack: this.state.error?.stack,
-                        componentStack: this.state.errorInfo?.componentStack,
-                        timestamp: new Date().toISOString(),
-                        userAgent: navigator.userAgent,
-                        url: window.location.href,
-                      };
-                      console.error('Error Report:', errorReport);
-                      navigator.clipboard?.writeText(JSON.stringify(errorReport, null, 2));
-                    }}
-                    className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 underline"
-                  >
-                    Copy error details to clipboard
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+              <Button
+                onClick={() => {
+                  const errorReport = {
+                    error: this.state.error?.message,
+                    stack: this.state.error?.stack,
+                    componentStack: this.state.errorInfo?.componentStack,
+                    timestamp: new Date().toISOString(),
+                    userAgent: navigator.userAgent,
+                    url: window.location.href,
+                  };
+                  console.error('Error Report:', errorReport);
+                  navigator.clipboard?.writeText(JSON.stringify(errorReport, null, 2));
+                }}
+                variant="text"
+                size="small"
+                startIcon={<ContentCopyIcon />}
+                color="inherit"
+              >
+                Copy error details to clipboard
+              </Button>
+            </Box>
+          </Paper>
+        </Box>
       );
     }
 

@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crawl4AI File Manager - New Layout Preview</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f8fafc;
+            color: #1a202c;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Top Navigation */
+        .top-navigation {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 0 24px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-icon {
+            color: #667eea;
+            margin-right: 12px;
+            font-size: 24px;
+        }
+
+        .nav-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #1a202c;
+            margin-right: 12px;
+        }
+
+        .nav-badge {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-button {
+            background: none;
+            border: none;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #6b7280;
+            transition: all 0.2s;
+        }
+
+        .nav-button:hover {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Collection Sidebar */
+        .collection-sidebar {
+            width: 320px;
+            background: white;
+            border-right: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .sidebar-title-area {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .new-collection-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 16px;
+            transition: all 0.2s;
+        }
+
+        .new-collection-button:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+
+        .collection-stats {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .stats-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .stats-text {
+            color: #6b7280;
+            font-size: 12px;
+        }
+
+        /* Collections List */
+        .collections-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .collection-item {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .collection-item:hover {
+            border-color: #667eea;
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+
+        .collection-item.active {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .collection-name {
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 4px;
+        }
+
+        .collection-item.active .collection-name {
+            color: #667eea;
+        }
+
+        .collection-description {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .collection-badges {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .collection-badge {
+            background: #f3f4f6;
+            color: #374151;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .collection-item.active .collection-badge {
+            background: #667eea;
+            color: white;
+        }
+
+        .collection-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #9ca3af;
+        }
+
+        .delete-button {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #fee2e2;
+            color: #dc2626;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .collection-item:hover .delete-button {
+            opacity: 1;
+        }
+
+        .delete-button:hover {
+            background: #fecaca;
+        }
+
+        /* File Manager Area */
+        .file-manager-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f8fafc;
+        }
+
+        /* Welcome State */
+        .welcome-state {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .welcome-content {
+            text-align: center;
+            max-width: 500px;
+        }
+
+        .welcome-icon {
+            font-size: 80px;
+            color: #667eea;
+            margin-bottom: 24px;
+        }
+
+        .welcome-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 16px;
+        }
+
+        .welcome-description {
+            color: #6b7280;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+
+        .welcome-actions {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+        }
+
+        .welcome-button {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .welcome-button.primary {
+            background: #667eea;
+            color: white;
+            border: none;
+        }
+
+        .welcome-button.primary:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+
+        .welcome-button.secondary {
+            background: transparent;
+            color: #6b7280;
+            border: 1px solid #d1d5db;
+        }
+
+        .welcome-button.secondary:hover {
+            border-color: #9ca3af;
+            color: #374151;
+        }
+
+        /* Collection Header */
+        .collection-header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .header-icon {
+            color: #667eea;
+            margin-right: 12px;
+            font-size: 24px;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .header-description {
+            color: #6b7280;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .header-button {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .header-button.success {
+            background: #10b981;
+            color: white;
+            border: none;
+        }
+
+        .header-button.success:hover {
+            background: #059669;
+        }
+
+        .header-button.outline {
+            background: transparent;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+
+        .header-button.outline:hover {
+            border-color: #9ca3af;
+            background: #f9fafb;
+        }
+
+        /* Content Area */
+        .content-area {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .file-explorer {
+            width: 320px;
+            background: white;
+            border-right: 1px solid #e5e7eb;
+            padding: 20px;
+        }
+
+        .file-explorer-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .file-placeholder {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .file-placeholder-icon {
+            font-size: 40px;
+            color: #9ca3af;
+            margin-bottom: 8px;
+        }
+
+        .file-placeholder-text {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .editor-area {
+            flex: 1;
+            background: #f8fafc;
+            padding: 24px;
+        }
+
+        .editor-container {
+            background: white;
+            border-radius: 12px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e5e7eb;
+        }
+
+        .editor-placeholder {
+            text-align: center;
+        }
+
+        .editor-placeholder-icon {
+            font-size: 60px;
+            color: #d1d5db;
+            margin-bottom: 16px;
+        }
+
+        .editor-placeholder-title {
+            font-size: 18px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+
+        .editor-placeholder-text {
+            color: #9ca3af;
+            font-size: 14px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .collection-sidebar {
+                width: 280px;
+            }
+            
+            .file-explorer {
+                width: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Navigation -->
+        <div class="top-navigation">
+            <div class="nav-left">
+                <span class="material-icons nav-icon">web</span>
+                <span class="nav-title">Crawl4AI File Manager</span>
+                <span class="nav-badge">Beta</span>
+            </div>
+            <div class="nav-right">
+                <button class="nav-button" title="Switch to dark mode">
+                    <span class="material-icons">dark_mode</span>
+                </button>
+                <button class="nav-button" title="Information">
+                    <span class="material-icons">info</span>
+                </button>
+                <button class="nav-button" title="Settings">
+                    <span class="material-icons">settings</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Collection Sidebar -->
+            <div class="collection-sidebar">
+                <div class="sidebar-header">
+                    <div class="sidebar-title-area">
+                        <span class="material-icons nav-icon">web</span>
+                        <span class="sidebar-title">Collections</span>
+                    </div>
+                    
+                    <button class="new-collection-button">
+                        <span class="material-icons" style="vertical-align: middle; margin-right: 8px; font-size: 18px;">add</span>
+                        New Collection
+                    </button>
+                    
+                    <div class="collection-stats">
+                        <div class="stats-title">Collection Summary</div>
+                        <div class="stats-text">3 collections</div>
+                        <div class="stats-text">25 total files</div>
+                    </div>
+                </div>
+
+                <div class="collections-list">
+                    <div class="collection-item active" onclick="selectCollection(this, 'Documentation Hub')">
+                        <div class="collection-name">Documentation Hub</div>
+                        <div class="collection-description">Python documentation and tutorials</div>
+                        <div class="collection-badges">
+                            <span class="collection-badge">12 files</span>
+                            <span class="collection-badge">2 folders</span>
+                        </div>
+                        <div class="collection-meta">
+                            <span>Created 15.01.2025</span>
+                            <span>2.5 MB</span>
+                        </div>
+                        <button class="delete-button" onclick="event.stopPropagation();">×</button>
+                    </div>
+
+                    <div class="collection-item" onclick="selectCollection(this, 'FastAPI Guide')">
+                        <div class="collection-name">FastAPI Guide</div>
+                        <div class="collection-description">Complete FastAPI documentation</div>
+                        <div class="collection-badges">
+                            <span class="collection-badge">8 files</span>
+                            <span class="collection-badge">2 folders</span>
+                        </div>
+                        <div class="collection-meta">
+                            <span>Created 20.01.2025</span>
+                            <span>1.9 MB</span>
+                        </div>
+                        <button class="delete-button" onclick="event.stopPropagation();">×</button>
+                    </div>
+
+                    <div class="collection-item" onclick="selectCollection(this, 'AI Research Papers')">
+                        <div class="collection-name">AI Research Papers</div>
+                        <div class="collection-description">Collection of ML/AI research papers</div>
+                        <div class="collection-badges">
+                            <span class="collection-badge">5 files</span>
+                            <span class="collection-badge">0 folders</span>
+                        </div>
+                        <div class="collection-meta">
+                            <span>Created 25.01.2025</span>
+                            <span>5.1 MB</span>
+                        </div>
+                        <button class="delete-button" onclick="event.stopPropagation();">×</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- File Manager Area -->
+            <div class="file-manager-area">
+                <!-- Welcome State (when no collection selected) -->
+                <div class="welcome-state" id="welcomeState" style="display: none;">
+                    <div class="welcome-content">
+                        <div class="material-icons welcome-icon">web</div>
+                        <h1 class="welcome-title">Welcome to Crawl4AI File Manager</h1>
+                        <p class="welcome-description">
+                            Organize your web content in collections. Create a collection to start crawling and managing your documents, or select an existing collection from the sidebar.
+                        </p>
+                        <div class="welcome-actions">
+                            <button class="welcome-button primary">
+                                <span class="material-icons" style="vertical-align: middle; margin-right: 8px; font-size: 18px;">create_new_folder</span>
+                                Create New Collection
+                            </button>
+                            <button class="welcome-button secondary" disabled>
+                                Import Collection (Coming Soon)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Collection Content -->
+                <div id="collectionContent">
+                    <!-- Collection Header -->
+                    <div class="collection-header">
+                        <div class="header-left">
+                            <span class="material-icons header-icon">folder</span>
+                            <div>
+                                <div class="header-title" id="collectionTitle">Documentation Hub</div>
+                                <div class="header-description" id="collectionDescription">Python documentation and tutorials</div>
+                            </div>
+                        </div>
+                        <div class="header-actions">
+                            <button class="header-button success">
+                                <span class="material-icons" style="vertical-align: middle; margin-right: 8px; font-size: 16px;">web</span>
+                                Add Page
+                            </button>
+                            <button class="header-button outline">
+                                <span class="material-icons" style="vertical-align: middle; margin-right: 8px; font-size: 16px;">description</span>
+                                New File
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Content Area -->
+                    <div class="content-area">
+                        <!-- File Explorer -->
+                        <div class="file-explorer">
+                            <h3 class="file-explorer-title">Files & Folders</h3>
+                            <div class="file-placeholder">
+                                <div class="material-icons file-placeholder-icon">description</div>
+                                <div class="file-placeholder-text">Select files to edit</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Editor Area -->
+                        <div class="editor-area">
+                            <div class="editor-container">
+                                <div class="editor-placeholder">
+                                    <div class="material-icons editor-placeholder-icon">description</div>
+                                    <div class="editor-placeholder-title">Markdown Editor</div>
+                                    <div class="editor-placeholder-text">Select a file to start editing</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const collections = {
+            'Documentation Hub': {
+                name: 'Documentation Hub',
+                description: 'Python documentation and tutorials'
+            },
+            'FastAPI Guide': {
+                name: 'FastAPI Guide',
+                description: 'Complete FastAPI documentation'
+            },
+            'AI Research Papers': {
+                name: 'AI Research Papers',
+                description: 'Collection of ML/AI research papers'
+            }
+        };
+
+        function selectCollection(element, collectionName) {
+            // Remove active class from all items
+            document.querySelectorAll('.collection-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Add active class to selected item
+            element.classList.add('active');
+            
+            // Update collection content
+            const collection = collections[collectionName];
+            document.getElementById('collectionTitle').textContent = collection.name;
+            document.getElementById('collectionDescription').textContent = collection.description;
+            
+            // Show collection content, hide welcome state
+            document.getElementById('welcomeState').style.display = 'none';
+            document.getElementById('collectionContent').style.display = 'block';
+        }
+
+        // Add some interactive effects
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add hover effects to buttons
+            document.querySelectorAll('button').forEach(button => {
+                button.addEventListener('mouseenter', function() {
+                    this.style.transition = 'all 0.2s ease';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

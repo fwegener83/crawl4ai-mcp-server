@@ -1,108 +1,76 @@
+import { CircularProgress, Box, Typography } from './ui';
+
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
-  color?: 'blue' | 'green' | 'purple' | 'gray' | 'white';
+  color?: 'primary' | 'secondary' | 'success' | 'error' | 'info' | 'warning' | 'inherit';
   text?: string;
   centered?: boolean;
 }
 
 export function LoadingSpinner({ 
   size = 'md', 
-  color = 'blue', 
+  color = 'primary', 
   text,
   centered = false 
 }: LoadingSpinnerProps) {
-  const getSizeClasses = () => {
+  const getSize = () => {
     switch (size) {
       case 'sm':
-        return 'h-4 w-4';
+        return 16;
       case 'md':
-        return 'h-6 w-6';
+        return 24;
       case 'lg':
-        return 'h-8 w-8';
+        return 32;
       case 'xl':
-        return 'h-8 w-8';
+        return 40;
       default:
-        return 'h-6 w-6';
+        return 24;
     }
   };
 
-  const getColorClasses = () => {
-    switch (color) {
-      case 'blue':
-        return 'text-blue-600';
-      case 'green':
-        return 'text-green-600';
-      case 'purple':
-        return 'text-purple-600';
-      case 'gray':
-        return 'text-gray-600';
-      case 'white':
-        return 'text-white';
-      default:
-        return 'text-blue-600';
-    }
-  };
-
-  const getTextSizeClasses = () => {
+  const getTextVariant = () => {
     switch (size) {
       case 'sm':
-        return 'text-sm';
+        return 'body2' as const;
       case 'md':
-        return 'text-base';
+        return 'body1' as const;
       case 'lg':
-        return 'text-lg';
+        return 'h6' as const;
       case 'xl':
-        return 'text-xl';
+        return 'h5' as const;
       default:
-        return 'text-base';
+        return 'body1' as const;
     }
   };
 
   const spinner = (
-    <>
-      <svg
-        className={`animate-spin ${getSizeClasses()} ${getColorClasses()}`}
-        width={size === 'xl' ? '32' : size === 'lg' ? '32' : size === 'md' ? '24' : '16'}
-        height={size === 'xl' ? '32' : size === 'lg' ? '32' : size === 'md' ? '24' : '16'}
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle
-          className="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          strokeWidth="4"
-        />
-        <path
-          className="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-        />
-      </svg>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <CircularProgress 
+        size={getSize()} 
+        color={color}
+      />
       {text && (
-        <span className={`ml-3 ${getTextSizeClasses()} ${color === 'white' ? 'text-white' : 'text-gray-600 dark:text-gray-300'}`}>
+        <Typography variant={getTextVariant()} color="text.secondary">
           {text}
-        </span>
+        </Typography>
       )}
-    </>
+    </Box>
   );
 
   if (centered) {
     return (
-      <div className="flex items-center justify-center p-8">
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        p: 4 
+      }}>
         {spinner}
-      </div>
+      </Box>
     );
   }
 
-  return (
-    <div className="flex items-center">
-      {spinner}
-    </div>
-  );
+  return spinner;
 }
 
 export default LoadingSpinner;

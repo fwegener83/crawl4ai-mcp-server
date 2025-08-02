@@ -1,6 +1,21 @@
 import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { useCollections } from '../hooks/useApi';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
+  Alert,
+  Box,
+  Typography,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select
+} from './ui';
+import { LoadingButton } from './ui/LoadingButton';
 
 interface SaveToCollectionModalProps {
   isOpen: boolean;
@@ -70,150 +85,112 @@ export function SaveToCollectionModal({
     }
   };
 
-  if (!isOpen) return null;
-
-  const modalContent = (
-    <div 
-      className="fixed inset-0 flex items-center justify-center" 
-      style={{ 
-        zIndex: 999999,
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
-        display: 'flex !important',
-        visibility: 'visible' as any,
-        opacity: '1 !important',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0
-      }}
-    >
-      <div 
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4"
-        style={{
-          visibility: 'visible',
-          opacity: 1,
-          display: 'block',
-          backgroundColor: 'white',
-          border: '1px solid #e5e7eb'
-        }}
-      >
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Save to Collection
-          </h3>
-        </div>
-
-        <div className="px-6 py-4 space-y-4">
+  return (
+    <Dialog open={isOpen} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Save to Collection</DialogTitle>
+      
+      <DialogContent>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>
           {/* Collection Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Select Collection
-            </label>
-            
+          <Box>
             {!isNewCollection ? (
-              <select
-                value={collectionName}
-                onChange={(e) => handleCollectionChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                data-testid="collection-select"
-              >
-                <option value="default">Default Collection</option>
-                {collections.map((collection) => (
-                  <option key={collection.name} value={collection.name}>
-                    {collection.name} ({collection.count} items)
-                  </option>
-                ))}
-                <option value="__new__">+ Create New Collection</option>
-              </select>
+              <FormControl fullWidth>
+                <InputLabel>Select Collection</InputLabel>
+                <Select
+                  value={collectionName}
+                  onChange={(e) => handleCollectionChange(e.target.value as string)}
+                  label="Select Collection"
+                  data-testid="collection-select"
+                >
+                  <MenuItem value="default">Default Collection</MenuItem>
+                  {collections.map((collection) => (
+                    <MenuItem key={collection.name} value={collection.name}>
+                      {collection.name} ({collection.count} items)
+                    </MenuItem>
+                  ))}
+                  <MenuItem value="__new__">+ Create New Collection</MenuItem>
+                </Select>
+              </FormControl>
             ) : (
-              <div className="space-y-2">
-                <input
-                  type="text"
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <TextField
+                  fullWidth
                   value={newCollectionName}
                   onChange={(e) => setNewCollectionName(e.target.value)}
+                  label="Collection Name"
                   placeholder="Enter collection name"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                   data-testid="collection-name"
                   autoFocus
                 />
-                <button
+                <Button
+                  variant="text"
+                  size="small"
                   onClick={() => setIsNewCollection(false)}
-                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  sx={{ alignSelf: 'flex-start' }}
                 >
                   ← Back to existing collections
-                </button>
-              </div>
+                </Button>
+              </Box>
             )}
-          </div>
+          </Box>
 
           {/* Content Preview */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <Box>
+            <Typography variant="body2" fontWeight="medium" gutterBottom>
               Content to Save
-            </label>
-            <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md p-3 max-h-32 overflow-y-auto">
-              <p className="text-sm text-gray-600 dark:text-gray-300">
+            </Typography>
+            <Box 
+              sx={{ 
+                bgcolor: 'action.selected', 
+                border: 1, 
+                borderColor: 'divider',
+                borderRadius: 1, 
+                p: 2, 
+                maxHeight: 128, 
+                overflow: 'auto' 
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">
                 {content.length > 200 ? `${content.substring(0, 200)}...` : content}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                 {content.length} characters
-              </p>
-            </div>
-          </div>
+              </Typography>
+            </Box>
+          </Box>
 
           {/* Error Display */}
           {storeError && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
-              <p className="text-sm text-red-600 dark:text-red-400">
-                {storeError}
-              </p>
-            </div>
+            <Alert severity="error">
+              {storeError}
+            </Alert>
           )}
-        </div>
+        </Box>
+      </DialogContent>
 
-        {/* Actions */}
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-          <button
-            onClick={onClose}
-            disabled={storeLoading}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={
-              storeLoading || 
-              !content.trim() ||
-              (isNewCollection && !newCollectionName.trim()) ||
-              (!isNewCollection && !collectionName)
-            }
-            data-testid="save-confirm"
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-md transition-colors flex items-center space-x-2"
-          >
-            {storeLoading ? (
-              <>
-                <svg className="animate-spin h-4 w-4" width="16" height="16" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>Saving...</span>
-              </>
-            ) : (
-              <span>Save to Collection</span>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
+      <DialogActions>
+        <Button
+          onClick={onClose}
+          disabled={storeLoading}
+        >
+          Cancel
+        </Button>
+        <LoadingButton
+          onClick={handleSave}
+          disabled={
+            !content.trim() ||
+            (isNewCollection && !newCollectionName.trim()) ||
+            (!isNewCollection && !collectionName)
+          }
+          loading={storeLoading}
+          variant="contained"
+          data-testid="save-confirm"
+        >
+          Save to Collection
+        </LoadingButton>
+      </DialogActions>
+    </Dialog>
   );
-
-  // Use portal but with better error handling
-  const portalRoot = typeof document !== 'undefined' ? document.body : null;
-  if (!portalRoot) return null;
-  
-  return createPortal(modalContent, portalRoot);
 }
 
 export default SaveToCollectionModal;
