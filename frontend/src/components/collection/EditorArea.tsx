@@ -140,14 +140,30 @@ export function EditorArea({}: EditorAreaProps = {}) {
       </Box>
 
       {/* Editor */}
-      <Box sx={{ flex: 1, overflow: 'hidden' }}>
-        <MarkdownEditor
-          content={state.editor.content}
-          onChange={updateContent}
-          onSave={() => {
-            handleSave();
-          }}
-        />
+      <Box sx={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+        {state.ui.loading.files && !state.editor.content ? (
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            height: '100%',
+            flexDirection: 'column',
+            gap: 2
+          }}>
+            <CircularProgress />
+            <Typography variant="body2" color="text.secondary">
+              Loading file content...
+            </Typography>
+          </Box>
+        ) : (
+          <MarkdownEditor
+            content={state.editor.content}
+            onChange={updateContent}
+            onSave={() => {
+              handleSave();
+            }}
+          />
+        )}
       </Box>
     </Box>
   );

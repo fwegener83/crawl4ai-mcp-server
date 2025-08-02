@@ -131,13 +131,22 @@ export function useCollectionOperations() {
   }, [dispatch]);
 
   const openFile = useCallback(async (collectionId: string, filename: string, folder?: string) => {
+    const filePath = folder ? `${folder}/${filename}` : filename;
+    
+    // Check if we're already opening this file
+    if (state.editor.filePath === filePath && !state.ui.loading.files) {
+      return; // Already open
+    }
+    
+    // Always immediately update the editor to show we're switching files
+    dispatch({ type: 'OPEN_FILE', payload: { path: filePath, content: '' } });
     dispatch({ type: 'SET_LOADING', payload: { key: 'files', value: true } });
     dispatch({ type: 'SET_ERROR', payload: null });
     
     try {
       const content = await APIService.readFileFromCollection(collectionId, filename, folder);
-      const filePath = folder ? `${folder}/${filename}` : filename;
       
+      // Update with the actual content
       dispatch({ type: 'OPEN_FILE', payload: { path: filePath, content } });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to open file';
@@ -145,7 +154,7 @@ export function useCollectionOperations() {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { key: 'files', value: false } });
     }
-  }, [dispatch]);
+  }, [dispatch, state.editor.filePath, state.ui.loading.files]);
 
   const saveCurrentFile = useCallback(async (collectionId: string) => {
     if (!state.editor.filePath || !state.editor.modified) {
