@@ -260,6 +260,9 @@ export function useCollectionOperations() {
     
     let savedCount = 0;
     const errors: string[] = [];
+    const totalSuccessful = crawlResults.filter(r => r.success).length;
+    
+    console.log(`Starting to save ${totalSuccessful} successful results out of ${crawlResults.length} total results to collection: ${collectionId}`);
     
     try {
       for (const result of crawlResults) {
@@ -278,23 +281,69 @@ ${result.metadata.score > 0 ? `**Score:** ${result.metadata.score.toFixed(1)}  `
 
 ${result.content}`;
 
+          // Create unique filename to prevent collisions
+          const baseFilename = result.title || 'untitled';
+          const safeFilename = baseFilename.replace(/[<>:"/\\|?*]/g, '-'); // Sanitize filename
+          const timestamp = new Date().getTime();
+          const filename = `${safeFilename}-${timestamp}.md`;
+
+          console.log(`Saving page ${savedCount + 1}/${crawlResults.filter(r => r.success).length}: "${filename}"`);
+
           await APIService.saveFileToCollection(collectionId, {
-            filename: `${result.title || 'untitled'}.md`,
+            filename: filename,
             content: contentWithMetadata,
             folder: folder
           });
           
           savedCount++;
+          console.log(`Successfully saved: "${filename}"`);
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : 'Unknown error';
           errors.push(`Failed to save "${result.title || result.url}": ${errorMsg}`);
         }
       }
       
-      // Refresh collections to show new content
+      // Refresh collections and reload files for current collection to show new content
       await loadCollections();
+      if (collectionId === state.selectedCollection) {
+        console.log(`Reloading files for collection: ${collectionId}`);
+        // Manually reload files without using selectCollection to avoid dependency loop
+        dispatch({ type: 'SET_LOADING', payload: { key: 'files', value: true } });
+        try {
+          const fileList = await APIService.listFilesInCollection(collectionId);
+          const files: FileNode[] = fileList.files.map(file => ({
+            name: file.name,
+            path: file.path,
+            type: 'file' as const,
+            metadata: {
+              filename: file.name,
+              folder_path: file.folder || '',
+              created_at: file.created_at,
+              size: file.size,
+              source_url: file.source_url || undefined
+            }
+          }));
+          
+          const folders: FolderNode[] = fileList.folders.map(folder => ({
+            name: folder.name,
+            path: folder.path,
+            type: 'folder' as const,
+            children: []
+          }));
+          
+          dispatch({ type: 'SET_FILES', payload: { files, folders } });
+          console.log(`Successfully reloaded ${files.length} files and ${folders.length} folders`);
+        } catch (reloadError) {
+          console.error('Failed to reload files:', reloadError);
+        } finally {
+          dispatch({ type: 'SET_LOADING', payload: { key: 'files', value: false } });
+        }
+      }
+      
+      console.log(`Completed saving: ${savedCount} successful, ${errors.length} errors`);
       
       if (errors.length > 0) {
+        console.warn('Errors encountered:', errors);
         dispatch({ type: 'SET_ERROR', payload: `Saved ${savedCount} pages. ${errors.length} errors: ${errors.join(', ')}` });
       }
       
