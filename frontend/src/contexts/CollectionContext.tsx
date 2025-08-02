@@ -48,6 +48,7 @@ export interface CollectionState {
     modals: {
       newCollection: boolean;
       addPage: boolean;
+      addMultiplePages: boolean;
       newFile: boolean;
       deleteConfirmation: { open: boolean; type: 'collection' | 'file'; target: string | null };
     };
@@ -78,6 +79,7 @@ const initialState: CollectionState = {
     modals: {
       newCollection: false,
       addPage: false,
+      addMultiplePages: false,
       newFile: false,
       deleteConfirmation: { open: false, type: 'collection', target: null },
     },

@@ -3,6 +3,7 @@ import CollectionSidebar from './CollectionSidebar';
 import MainContent from './MainContent';
 import NewCollectionModal from './modals/NewCollectionModal';
 import AddPageModal from './modals/AddPageModal';
+import AddMultiplePagesModal from './modals/AddMultiplePagesModal';
 import NewFileModal from './modals/NewFileModal';
 import DeleteConfirmationModal from './modals/DeleteConfirmationModal';
 
@@ -13,6 +14,7 @@ export interface CollectionFileManagerProps {
 export const CollectionFileManager: React.FC<CollectionFileManagerProps> = ({ 
   className = '' 
 }) => {
+  
   return (
     <Box 
       sx={{ 
@@ -41,6 +43,7 @@ export const CollectionFileManager: React.FC<CollectionFileManagerProps> = ({
       {/* Modals */}
       <NewCollectionModal />
       <AddPageModal />
+      <AddMultiplePagesModal />
       <NewFileModal />
       <DeleteConfirmationModal />
     </Box>

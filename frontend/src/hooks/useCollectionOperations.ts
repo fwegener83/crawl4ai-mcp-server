@@ -5,7 +5,8 @@ import type {
   CreateCollectionRequest, 
   SaveFileRequest, 
   UpdateFileRequest,
-  CrawlToCollectionRequest
+  CrawlToCollectionRequest,
+  CrawlResult
 } from '../types/api';
 import type { FileNode, FolderNode } from '../contexts/CollectionContext';
 
@@ -239,6 +240,65 @@ export function useCollectionOperations() {
     return await crawlPageToCollection(collectionId, { url, folder });
   }, [crawlPageToCollection]);
 
+  // Add multiple pages to collection from crawl results
+  const addMultiplePagesToCollection = useCallback(async (
+    collectionId: string, 
+    crawlResults: CrawlResult[], 
+    folder?: string
+  ) => {
+    dispatch({ type: 'SET_LOADING', payload: { key: 'crawling', value: true } });
+    dispatch({ type: 'SET_ERROR', payload: null });
+    
+    let savedCount = 0;
+    const errors: string[] = [];
+    
+    try {
+      for (const result of crawlResults) {
+        if (!result.success) continue;
+        
+        try {
+          // Create content with metadata similar to BulkSaveModal
+          const contentWithMetadata = `# ${result.title || 'Untitled Page'}
+
+**URL:** ${result.url}  
+**Crawled:** ${new Date(result.metadata.crawl_time).toLocaleString()}  
+**Depth:** ${result.depth}  
+${result.metadata.score > 0 ? `**Score:** ${result.metadata.score.toFixed(1)}  ` : ''}
+
+---
+
+${result.content}`;
+
+          await APIService.saveFileToCollection(collectionId, {
+            filename: `${result.title || 'untitled'}.md`,
+            content: contentWithMetadata,
+            folder: folder
+          });
+          
+          savedCount++;
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          errors.push(`Failed to save "${result.title || result.url}": ${errorMsg}`);
+        }
+      }
+      
+      // Refresh collections to show new content
+      await loadCollections();
+      
+      if (errors.length > 0) {
+        dispatch({ type: 'SET_ERROR', payload: `Saved ${savedCount} pages. ${errors.length} errors: ${errors.join(', ')}` });
+      }
+      
+      return { savedCount, errors };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save pages to collection';
+      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      throw error;
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: { key: 'crawling', value: false } });
+    }
+  }, [dispatch, loadCollections, state.selectedCollection]);
+
   // Create new file
   const createNewFile = useCallback(async (collectionId: string, filename: string, content: string, folder?: string) => {
     const result = await saveFile(collectionId, { filename, content, folder });
@@ -289,6 +349,7 @@ export function useCollectionOperations() {
     // Crawl operations
     crawlPageToCollection,
     addPageToCollection,
+    addMultiplePagesToCollection,
     createNewFile,
     
     // Modal operations

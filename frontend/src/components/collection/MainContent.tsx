@@ -5,6 +5,7 @@ import { Box, Typography, Button, Paper } from '../ui';
 import DescriptionIcon from '@mui/icons-material/Description';
 import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
 import WebIcon from '@mui/icons-material/Web';
+import TravelExploreIcon from '@mui/icons-material/TravelExplore';
 
 interface MainContentProps {
   className?: string;
@@ -106,7 +107,7 @@ export function MainContent({ className = '' }: MainContentProps) {
                 )}
               </Box>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
               <Button
                 onClick={() => openModal('addPage')}
                 variant="contained"
@@ -115,6 +116,15 @@ export function MainContent({ className = '' }: MainContentProps) {
                 startIcon={<WebIcon />}
               >
                 Add Page
+              </Button>
+              <Button
+                onClick={() => openModal('addMultiplePages')}
+                variant="contained"
+                color="primary"
+                size="medium"
+                startIcon={<TravelExploreIcon />}
+              >
+                Add Multiple Pages
               </Button>
               <Button
                 onClick={() => openModal('newFile')}

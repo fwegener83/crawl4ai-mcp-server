@@ -131,8 +131,8 @@ describe('CollectionSidebar', () => {
     );
 
     expect(screen.getByText('Collections')).toBeInTheDocument();
-    expect(screen.getByText('No collections yet')).toBeInTheDocument();
-    expect(screen.getByText('Create your first collection')).toBeInTheDocument();
+    expect(screen.getByText('No Collections Yet')).toBeInTheDocument();
+    expect(screen.getByText('Create your first collection to start organizing your web content')).toBeInTheDocument();
   });
 
   it('should render collections list', () => {
@@ -272,7 +272,7 @@ describe('CollectionSidebar', () => {
       </CollectionProvider>
     );
 
-    fireEvent.click(screen.getByText('New'));
+    fireEvent.click(screen.getByText('New Collection'));
     expect(mockOpenModal).toHaveBeenCalledWith('newCollection');
   });
 
