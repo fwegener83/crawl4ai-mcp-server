@@ -11,7 +11,8 @@ import uvicorn
 # Import MCP tools directly
 from tools.web_extract import web_content_extract
 from tools.mcp_domain_tools import domain_deep_crawl, domain_link_preview
-from tools.collection_manager import CollectionFileManager
+from tools.sqlite_collection_manager import create_collection_manager
+import os
 
 # Try to import RAG tools
 try:
@@ -33,8 +34,9 @@ except ImportError:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize Collection File Manager
-collection_manager = CollectionFileManager()
+# Initialize Collection Manager (SQLite by default, configurable via environment)
+use_sqlite = os.getenv('CRAWL4AI_USE_SQLITE', 'true').lower() == 'true'
+collection_manager = create_collection_manager(use_sqlite=use_sqlite)
 
 # FastAPI app
 app = FastAPI(title="Crawl4AI HTTP API", version="1.0.0")

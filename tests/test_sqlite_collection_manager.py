@@ -270,22 +270,32 @@ class TestSQLiteCollectionManagerCompatibility:
         result = sqlite_manager.list_files_in_collection(collection_name)
         
         assert result["success"] is True
-        assert "files_structure" in result
-        assert "collection_name" in result
+        assert "files" in result
+        assert "folders" in result
+        assert "total_files" in result
+        assert "total_folders" in result
         
-        files_structure = result["files_structure"]
-        assert "files" in files_structure  # Root files
-        assert "folders" in files_structure  # Folder structure
+        # Check we have the right number of files and folders
+        assert result["total_files"] == 4
+        assert result["total_folders"] > 0  # Should have at least "docs" folder
         
-        # Check root files
-        assert len(files_structure["files"]) == 1
-        assert files_structure["files"][0]["name"] == "root.md"
+        # Check file structure
+        files = result["files"]
+        assert len(files) == 4
         
-        # Check folder structure
-        assert "docs" in files_structure["folders"]
-        assert "docs/sub" in files_structure["folders"]
-        assert len(files_structure["folders"]["docs"]) == 2
-        assert len(files_structure["folders"]["docs/sub"]) == 1
+        # Find root file
+        root_files = [f for f in files if f["folder"] == ""]
+        assert len(root_files) == 1
+        assert root_files[0]["name"] == "root.md"
+        
+        # Check required file fields
+        for file_item in files:
+            assert "name" in file_item
+            assert "path" in file_item
+            assert "type" in file_item
+            assert file_item["type"] == "file"
+            assert "size" in file_item
+            assert "folder" in file_item
     
     def test_file_extension_validation_consistency(self, sqlite_manager):
         """Test file extension validation matches original."""

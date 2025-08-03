@@ -173,9 +173,13 @@ class SQLiteCollectionFileManager:
             )
             
             if result["success"]:
+                # Generate virtual path for compatibility with file manager
+                virtual_path = str(self.base_dir / sanitized_collection_name / safe_folder / filename)
+                
                 return {
                     "success": True,
                     "content": result["content"],
+                    "path": virtual_path,  # For compatibility with file manager
                     "metadata": {
                         "size": result["metadata"]["file_size"],
                         "created_at": result["metadata"]["created_at"],
@@ -201,19 +205,28 @@ class SQLiteCollectionFileManager:
                 # Transform to match original format
                 collections = []
                 for col in result["collections"]:
-                    # Create CollectionMetadata for compatibility
-                    metadata = {
+                    # Create collection data matching original file manager format
+                    collection_data = {
                         "name": col["name"],
                         "description": col["description"],
                         "created_at": col["created_at"],
                         "file_count": col["file_count"],
-                        "folders": []  # Will be populated if needed
+                        "folders": [],  # Will be populated if needed
+                        "metadata": {
+                            "created_at": col["created_at"],
+                            "description": col["description"],
+                            "last_modified": col["created_at"],  # Use created_at as fallback
+                            "file_count": col["file_count"],
+                            "total_size": col["total_size"]
+                        },
+                        "path": str(self.base_dir / col["name"])  # Virtual path for compatibility
                     }
-                    collections.append(metadata)
+                    collections.append(collection_data)
                 
                 return {
                     "success": True,
-                    "collections": collections
+                    "collections": collections,
+                    "total": len(collections)
                 }
             else:
                 return result

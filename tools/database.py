@@ -41,6 +41,9 @@ class DatabaseManager:
         
         # Initialize database schema
         self._initialize_database()
+        
+        # Apply performance optimizations
+        self._optimize_database()
     
     def _get_connection(self) -> sqlite3.Connection:
         """Get thread-local database connection."""
@@ -134,6 +137,27 @@ class DatabaseManager:
                 logger.info("Database schema initialized with version 1")
             else:
                 logger.info(f"Database schema version: {current_version['version']}")
+    
+    def _optimize_database(self):
+        """Apply performance optimizations to the database."""
+        optimization_sql = """
+        -- Enable optimizations for better performance
+        PRAGMA synchronous = NORMAL;          -- Faster than FULL, still safe with WAL
+        PRAGMA cache_size = 10000;            -- 10MB cache
+        PRAGMA temp_store = MEMORY;           -- Store temporary tables in memory
+        PRAGMA mmap_size = 268435456;         -- 256MB memory-mapped I/O
+        PRAGMA optimize;                      -- Analyze tables for query optimization
+        
+        -- Additional indexes for common query patterns
+        CREATE INDEX IF NOT EXISTS idx_files_content_hash ON files(content_hash);
+        CREATE INDEX IF NOT EXISTS idx_files_updated_at ON files(updated_at);
+        CREATE INDEX IF NOT EXISTS idx_collections_updated_at ON collections(updated_at);
+        CREATE INDEX IF NOT EXISTS idx_files_folder_filename ON files(collection_id, folder_path, filename);
+        """
+        
+        with self.get_connection() as conn:
+            conn.executescript(optimization_sql)
+            logger.info("Database performance optimizations applied")
     
     def get_schema_version(self) -> int:
         """Get current database schema version."""
