@@ -1,0 +1,74 @@
+{
+  "sqlite": {
+    "create_collection": 0.00017162500880658628,
+    "save_time": 0.007220175000838935,
+    "read_time": 0.0002618582220748067,
+    "list_collections": 9.674986358731985e-06,
+    "get_collection_info": 1.723360037431121e-05,
+    "list_files_in_collection": 0.00022665840806439518
+  },
+  "file": {
+    "create_collection": 0.000402150209993124,
+    "save_time": 0.040104583592619744,
+    "read_time": 0.003146366588771343,
+    "list_collections": 0.00015432521468028426,
+    "get_collection_info": 0.0007456164108589292,
+    "list_files_in_collection": 0.0006845833966508507
+  },
+  "performance_comparison": {
+    "create_collection": {
+      "sqlite_time": 0.00017162500880658628,
+      "file_time": 0.000402150209993124,
+      "improvement_percent": 57.32315822748899,
+      "speedup_factor": 2.3431911980050026,
+      "target_met": true
+    },
+    "save_time": {
+      "sqlite_time": 0.007220175000838935,
+      "file_time": 0.040104583592619744,
+      "improvement_percent": 81.99663391551177,
+      "speedup_factor": 5.5545168348357015,
+      "target_met": true
+    },
+    "read_time": {
+      "sqlite_time": 0.0002618582220748067,
+      "file_time": 0.003146366588771343,
+      "improvement_percent": 91.67744079760705,
+      "speedup_factor": 12.015534833473744,
+      "target_met": true
+    },
+    "list_collections": {
+      "sqlite_time": 9.674986358731985e-06,
+      "file_time": 0.00015432521468028426,
+      "improvement_percent": 93.73078056053532,
+      "speedup_factor": 15.950949071985079,
+      "target_met": true
+    },
+    "get_collection_info": {
+      "sqlite_time": 1.723360037431121e-05,
+      "file_time": 0.0007456164108589292,
+      "improvement_percent": 97.68867743207817,
+      "speedup_factor": 43.265272181334886,
+      "target_met": true
+    },
+    "list_files_in_collection": {
+      "sqlite_time": 0.00022665840806439518,
+      "file_time": 0.0006845833966508507,
+      "improvement_percent": 66.8910450978999,
+      "speedup_factor": 3.0203309133643788,
+      "target_met": true
+    }
+  },
+  "benchmark_config": {
+    "iterations": 5,
+    "test_files_count": 50
+  },
+  "performance_summary": {
+    "average_improvement_percent": 81.5512893385202,
+    "median_improvement_percent": 86.8370373565594,
+    "min_improvement_percent": 57.32315822748899,
+    "max_improvement_percent": 97.68867743207817,
+    "target_met_overall": true,
+    "operations_meeting_target": 6
+  }
+}
