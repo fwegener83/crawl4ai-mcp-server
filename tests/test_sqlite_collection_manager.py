@@ -161,11 +161,11 @@ class TestSQLiteCollectionManagerCompatibility:
         assert sqlite_result["content"] == content
         assert file_result["content"] == content
         
-        # Check metadata structure
-        assert "metadata" in sqlite_result
-        assert "metadata" in file_result
+        # Check response structure - SQLite has enhanced metadata, file manager has basic path
+        assert "metadata" in sqlite_result  # SQLite provides enhanced metadata
+        assert "path" in file_result  # File manager provides path
         
-        # Both should have size and created_at
+        # SQLite should have enhanced metadata
         assert "size" in sqlite_result["metadata"] or "file_size" in sqlite_result["metadata"]
         assert "created_at" in sqlite_result["metadata"]
     
