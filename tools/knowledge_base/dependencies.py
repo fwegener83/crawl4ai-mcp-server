@@ -21,8 +21,9 @@ class RAGDependencies:
         
         # LangChain Text Splitters
         try:
-            from langchain_text_splitters import RecursiveCharacterTextSplitter
+            from langchain_text_splitters import RecursiveCharacterTextSplitter, MarkdownHeaderTextSplitter
             self.components['RecursiveCharacterTextSplitter'] = RecursiveCharacterTextSplitter
+            self.components['MarkdownHeaderTextSplitter'] = MarkdownHeaderTextSplitter
             success_count += 1
         except ImportError as e:
             self.missing_deps['langchain_text_splitters'] = str(e)
