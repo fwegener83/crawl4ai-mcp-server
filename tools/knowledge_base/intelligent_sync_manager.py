@@ -423,11 +423,33 @@ class IntelligentSyncManager:
                     chunk, collection_name, file_path, current_hash
                 )
                 
-                # Prepare for vector storage
+                # Prepare for vector storage - serialize enums to strings for vector DB compatibility
+                metadata_dict = chunk_meta.model_dump()
+                
+                # Convert all non-primitive values to compatible types for vector DB
+                def serialize_for_vector_db(obj):
+                    """Recursively convert non-primitive values to vector DB compatible types."""
+                    from datetime import datetime
+                    
+                    if isinstance(obj, dict):
+                        return {k: serialize_for_vector_db(v) for k, v in obj.items()}
+                    elif isinstance(obj, list):
+                        return [serialize_for_vector_db(item) for item in obj]
+                    elif hasattr(obj, 'value'):  # Enum object
+                        return obj.value
+                    elif isinstance(obj, datetime):  # DateTime objects
+                        return obj.isoformat()
+                    elif hasattr(obj, '__dict__'):  # Complex object, convert to string
+                        return str(obj)
+                    else:
+                        return obj
+                
+                metadata_dict = serialize_for_vector_db(metadata_dict)
+                
                 vector_chunks.append({
                     'id': chunk['id'],
                     'content': chunk['content'],
-                    'metadata': chunk_meta.model_dump()
+                    'metadata': metadata_dict
                 })
                 chunk_metadatas.append(chunk_meta)
             
