@@ -426,19 +426,52 @@ class IntelligentSyncManager:
                 # Prepare for vector storage - serialize enums to strings for vector DB compatibility
                 metadata_dict = chunk_meta.model_dump()
                 
-                # Convert all non-primitive values to compatible types for vector DB
+                # Convert all non-primitive values to compatible types for vector DB (ChromaDB)
                 def serialize_for_vector_db(obj):
-                    """Recursively convert non-primitive values to vector DB compatible types."""
+                    """Recursively convert non-primitive values to ChromaDB compatible types.
+                    
+                    ChromaDB only accepts: str, int, float, bool
+                    ChromaDB REJECTS: None, empty lists [], complex objects
+                    """
                     from datetime import datetime
                     
                     if isinstance(obj, dict):
-                        return {k: serialize_for_vector_db(v) for k, v in obj.items()}
+                        # Clean dictionary - remove None values and empty lists
+                        result = {}
+                        for k, v in obj.items():
+                            serialized_v = serialize_for_vector_db(v)
+                            # Skip None values and empty lists - ChromaDB rejects them
+                            if serialized_v is not None:
+                                if isinstance(serialized_v, list) and len(serialized_v) == 0:
+                                    # Skip empty lists entirely
+                                    continue
+                                else:
+                                    result[k] = serialized_v
+                        return result
                     elif isinstance(obj, list):
-                        return [serialize_for_vector_db(item) for item in obj]
+                        if len(obj) == 0:
+                            # Return None for empty lists, will be filtered out by dict handling
+                            return None
+                        # ChromaDB does NOT accept lists at all - convert to string
+                        # Process list items first, then join as string
+                        processed_items = []
+                        for item in obj:
+                            processed_item = serialize_for_vector_db(item)
+                            if processed_item is not None:
+                                processed_items.append(str(processed_item))
+                        # Join list elements into a single string
+                        return " > ".join(processed_items) if processed_items else None
+                    elif obj is None:
+                        # Return None as-is, will be filtered out by dict handling
+                        return None
                     elif hasattr(obj, 'value'):  # Enum object
                         return obj.value
                     elif isinstance(obj, datetime):  # DateTime objects
                         return obj.isoformat()
+                    elif isinstance(obj, bool):  # Explicit bool handling
+                        return obj
+                    elif isinstance(obj, (str, int, float)):  # Primitive types
+                        return obj
                     elif hasattr(obj, '__dict__'):  # Complex object, convert to string
                         return str(obj)
                     else:
