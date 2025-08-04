@@ -148,3 +148,82 @@ export interface FileCollectionListResponse {
 export interface FileContentResponse {
   content: string;
 }
+
+// Vector Sync Types - matching backend schemas
+export interface VectorSyncStatus {
+  collection_name: string;
+  sync_enabled: boolean;
+  status: 'never_synced' | 'in_sync' | 'out_of_sync' | 'syncing' | 'sync_error' | 'partial_sync';
+  total_files: number;
+  synced_files: number;
+  changed_files_count: number;
+  chunk_count: number;
+  total_chunks: number;
+  last_sync: string | null;
+  last_sync_attempt: string | null;
+  last_sync_duration: number | null;
+  sync_progress: number | null; // 0.0 to 1.0 when syncing
+  sync_health_score: number;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface SyncResult {
+  job_id: string;
+  collection_name: string;
+  operation_type: 'create' | 'update' | 'delete';
+  success: boolean;
+  started_at: string;
+  completed_at: string | null;
+  total_duration: number | null;
+  files_processed: number;
+  chunks_created: number;
+  chunks_updated: number;
+  chunks_deleted: number;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface VectorSearchRequest {
+  query: string;
+  collection_name?: string;
+  limit?: number;
+  similarity_threshold?: number;
+}
+
+export interface VectorSearchResult {
+  content: string;
+  score: number;
+  collection_name: string;
+  file_path: string;
+  chunk_index: number;
+  metadata: {
+    chunk_type: string;
+    header_hierarchy: string;
+    contains_code: boolean;
+    programming_language?: string;
+    created_at: string;
+  };
+}
+
+export interface VectorSearchResponse {
+  success: boolean;
+  results: VectorSearchResult[];
+  query: string;
+  total_found: number;
+  search_time: number;
+  error?: string;
+}
+
+export interface SyncCollectionRequest {
+  force_reprocess?: boolean;
+  chunking_strategy?: 'baseline' | 'markdown_intelligent' | 'auto';
+}
+
+export interface SyncCollectionResponse {
+  success: boolean;
+  job_id: string;
+  message: string;
+  sync_result?: SyncResult;
+  error?: string;
+}

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer } from 'react';
 import type { ReactNode } from 'react';
-import type { FileCollection, FileMetadata } from '../types/api';
+import type { FileCollection, FileMetadata, VectorSyncStatus, VectorSearchResult } from '../types/api';
 
 // State Types
 export interface FileNode {
@@ -37,6 +37,14 @@ export interface CollectionState {
   // Editor state
   editor: EditorState;
   
+  // Vector sync state
+  vectorSync: {
+    statuses: Record<string, VectorSyncStatus>; // collectionName -> status
+    searchResults: VectorSearchResult[];
+    searchQuery: string;
+    searchLoading: boolean;
+  };
+  
   // UI state
   ui: {
     loading: {
@@ -44,6 +52,8 @@ export interface CollectionState {
       files: boolean;
       saving: boolean;
       crawling: boolean;
+      vectorSync: boolean;
+      vectorSearch: boolean;
     };
     modals: {
       newCollection: boolean;
@@ -51,6 +61,7 @@ export interface CollectionState {
       addMultiplePages: boolean;
       newFile: boolean;
       deleteConfirmation: { open: boolean; type: 'collection' | 'file'; target: string | null };
+      vectorSearch: boolean;
     };
     error: string | null;
   };
@@ -69,12 +80,20 @@ const initialState: CollectionState = {
     modified: false,
     saving: false,
   },
+  vectorSync: {
+    statuses: {},
+    searchResults: [],
+    searchQuery: '',
+    searchLoading: false,
+  },
   ui: {
     loading: {
       collections: false,
       files: false,
       saving: false,
       crawling: false,
+      vectorSync: false,
+      vectorSearch: false,
     },
     modals: {
       newCollection: false,
@@ -82,6 +101,7 @@ const initialState: CollectionState = {
       addMultiplePages: false,
       newFile: false,
       deleteConfirmation: { open: false, type: 'collection', target: null },
+      vectorSearch: false,
     },
     error: null,
   },
@@ -118,7 +138,15 @@ export type CollectionAction =
   | { type: 'CLOSE_DELETE_CONFIRMATION' }
   
   // Error actions
-  | { type: 'SET_ERROR'; payload: string | null };
+  | { type: 'SET_ERROR'; payload: string | null }
+  
+  // Vector sync actions
+  | { type: 'SET_VECTOR_SYNC_STATUS'; payload: { collectionName: string; status: VectorSyncStatus } }
+  | { type: 'SET_VECTOR_SYNC_STATUSES'; payload: Record<string, VectorSyncStatus> }
+  | { type: 'UPDATE_SYNC_PROGRESS'; payload: { collectionName: string; progress: number; message?: string } }
+  | { type: 'SET_VECTOR_SEARCH_RESULTS'; payload: VectorSearchResult[] }
+  | { type: 'SET_VECTOR_SEARCH_QUERY'; payload: string }
+  | { type: 'CLEAR_VECTOR_SEARCH' };
 
 // Reducer
 function collectionReducer(state: CollectionState, action: CollectionAction): CollectionState {
@@ -308,6 +336,77 @@ function collectionReducer(state: CollectionState, action: CollectionAction): Co
         ui: {
           ...state.ui,
           error: action.payload,
+        },
+      };
+
+    // Vector sync cases
+    case 'SET_VECTOR_SYNC_STATUS':
+      return {
+        ...state,
+        vectorSync: {
+          ...state.vectorSync,
+          statuses: {
+            ...state.vectorSync.statuses,
+            [action.payload.collectionName]: action.payload.status,
+          },
+        },
+      };
+
+    case 'SET_VECTOR_SYNC_STATUSES':
+      return {
+        ...state,
+        vectorSync: {
+          ...state.vectorSync,
+          statuses: action.payload,
+        },
+      };
+
+    case 'UPDATE_SYNC_PROGRESS': {
+      const currentStatus = state.vectorSync.statuses[action.payload.collectionName];
+      if (currentStatus) {
+        return {
+          ...state,
+          vectorSync: {
+            ...state.vectorSync,
+            statuses: {
+              ...state.vectorSync.statuses,
+              [action.payload.collectionName]: {
+                ...currentStatus,
+                sync_progress: action.payload.progress,
+                status: action.payload.progress < 1.0 ? 'syncing' : 'in_sync',
+              },
+            },
+          },
+        };
+      }
+      return state;
+    }
+
+    case 'SET_VECTOR_SEARCH_RESULTS':
+      return {
+        ...state,
+        vectorSync: {
+          ...state.vectorSync,
+          searchResults: action.payload,
+        },
+      };
+
+    case 'SET_VECTOR_SEARCH_QUERY':
+      return {
+        ...state,
+        vectorSync: {
+          ...state.vectorSync,
+          searchQuery: action.payload,
+        },
+      };
+
+    case 'CLEAR_VECTOR_SEARCH':
+      return {
+        ...state,
+        vectorSync: {
+          ...state.vectorSync,
+          searchResults: [],
+          searchQuery: '',
         },
       };
       
