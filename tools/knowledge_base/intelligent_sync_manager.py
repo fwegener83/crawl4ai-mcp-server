@@ -79,7 +79,7 @@ class IntelligentSyncManager:
         # Progress callbacks
         self.progress_callbacks: Dict[str, Callable] = {}
         
-        logger.info(f"IntelligentSyncManager initialized with config: {self.config.dict()}")
+        logger.info(f"IntelligentSyncManager initialized with config: {self.config.model_dump()}")
     
     def get_collection_sync_status(self, collection_name: str) -> VectorSyncStatus:
         """Get current sync status for a collection."""
@@ -149,7 +149,8 @@ class IntelligentSyncManager:
         try:
             # Check if collection exists
             if not self._collection_exists(collection_name):
-                raise ValueError(f"Collection '{collection_name}' does not exist")
+                result.errors.append(f"Collection '{collection_name}' does not exist")
+                return result
             
             # Get collection info and files
             collection_info = self.collection_manager.get_collection_info(collection_name)
@@ -262,7 +263,40 @@ class IntelligentSyncManager:
         """Identify files that need processing based on content hash comparison."""
         if force_reprocess:
             logger.info(f"Force reprocess enabled - processing all {len(files_info)} files")
-            return files_info
+            # Still need to read content for all files even when force reprocessing
+            changed_files = []
+            for file_info in files_info:
+                file_path = file_info.get('path', '')
+                if not file_path:
+                    continue
+                    
+                try:
+                    # Read file content and calculate hash
+                    read_result = self.collection_manager.read_file(
+                        collection_name, file_info['name'], file_info.get('folder', '')
+                    )
+                    
+                    if not read_result.get('success'):
+                        logger.warning(f"Failed to read file {file_path}: {read_result.get('error', 'Unknown error')}")
+                        continue
+                    
+                    content = read_result.get('content', '')
+                    
+                    if not content:
+                        logger.warning(f"Empty content for file {file_path}")
+                        continue
+                    
+                    current_hash = calculate_file_hash(content)
+                    file_info['content'] = content
+                    file_info['current_hash'] = current_hash
+                    changed_files.append(file_info)
+                    logger.debug(f"Force reprocess: {file_path}")
+                    
+                except Exception as e:
+                    logger.error(f"Error processing file {file_path}: {str(e)}")
+                    continue
+            
+            return changed_files
         
         # Get existing file mappings
         collection_mappings = self.file_mappings.get(collection_name, {})
@@ -276,9 +310,15 @@ class IntelligentSyncManager:
             
             try:
                 # Read file content and calculate hash
-                content = self.collection_manager.read_from_collection(
+                read_result = self.collection_manager.read_file(
                     collection_name, file_info['name'], file_info.get('folder', '')
                 )
+                
+                if not read_result.get('success'):
+                    logger.warning(f"Failed to read file {file_path}: {read_result.get('error', 'Unknown error')}")
+                    continue
+                
+                content = read_result.get('content', '')
                 
                 if not content:
                     logger.warning(f"Empty content for file {file_path}")
@@ -387,7 +427,7 @@ class IntelligentSyncManager:
                 vector_chunks.append({
                     'id': chunk['id'],
                     'content': chunk['content'],
-                    'metadata': chunk_meta.dict()
+                    'metadata': chunk_meta.model_dump()
                 })
                 chunk_metadatas.append(chunk_meta)
             
@@ -439,17 +479,17 @@ class IntelligentSyncManager:
     def _collection_exists(self, collection_name: str) -> bool:
         """Check if collection exists."""
         try:
-            self.collection_manager.get_collection_info(collection_name)
-            return True
+            result = self.collection_manager.get_collection_info(collection_name)
+            return result.get('success', False)
         except Exception:
             return False
     
     def _get_collection_files(self, collection_name: str) -> List[Dict[str, Any]]:
         """Get list of files in collection."""
         try:
-            result = self.collection_manager.list_files(collection_name)
+            result = self.collection_manager.list_files_in_collection(collection_name)
             if result.get('success'):
-                return result['data']['files']
+                return result.get('files', [])
             return []
         except Exception as e:
             logger.error(f"Error listing files for collection {collection_name}: {str(e)}")

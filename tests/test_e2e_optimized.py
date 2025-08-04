@@ -274,8 +274,8 @@ class TestSystemIntegration:
                 collection_available = all(tool_name in tool_names for tool_name in collection_tools)
                 
                 if rag_available and collection_available:
-                    # Original 3 + 4 RAG tools + 6 collection tools = 13 tools
-                    assert len(tools) == 13
+                    # Original 3 + 4 RAG tools + 6 collection tools + 7 vector sync tools = 20 tools
+                    assert len(tools) == 20
                 elif collection_available:
                     # Original 3 + 6 collection tools = 9 tools (RAG not available)
                     assert len(tools) == 9

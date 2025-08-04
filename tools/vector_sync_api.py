@@ -114,9 +114,11 @@ class VectorSyncAPI:
         try:
             # Validate collection exists
             if not self._collection_exists(collection_name):
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Collection '{collection_name}' not found"
+                return SyncCollectionResponse(
+                    success=False,
+                    job_id="",
+                    message=f"Collection '{collection_name}' not found",
+                    error=f"Collection '{collection_name}' not found"
                 )
             
             # Check if sync is enabled for this collection
@@ -637,13 +639,13 @@ async def handle_vector_sync_tool(
                 collection_name=arguments["collection_name"],
                 request=request
             )
-            return response.dict()
+            return response.model_dump()
         
         elif tool_name == "get_collection_sync_status":
             response = await sync_api.get_collection_sync_status(
                 collection_name=arguments["collection_name"]
             )
-            return response.dict()
+            return response.model_dump()
         
         elif tool_name == "list_collection_sync_statuses":
             return await sync_api.list_collection_sync_statuses()
@@ -651,7 +653,7 @@ async def handle_vector_sync_tool(
         elif tool_name == "search_collection_vectors":
             request = VectorSearchRequest(**arguments)
             response = await sync_api.search_vectors(request)
-            return response.dict()
+            return response.model_dump()
         
         elif tool_name == "enable_collection_sync":
             return await sync_api.enable_collection_sync(

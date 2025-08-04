@@ -273,3 +273,132 @@ class VectorStore:
         except Exception as e:
             logger.error(f"Failed to count documents: {str(e)}")
             raise
+    
+    def delete_documents(self, ids: List[str]) -> None:
+        """Delete documents by their IDs.
+        
+        Args:
+            ids: List of document IDs to delete.
+            
+        Raises:
+            Exception: If deletion fails.
+        """
+        if not self.collection:
+            self.get_or_create_collection()
+        
+        try:
+            self.collection.delete(ids=ids)
+            logger.info(f"Deleted {len(ids)} documents from collection")
+        except Exception as e:
+            logger.error(f"Failed to delete documents: {str(e)}")
+            raise
+    
+    def similarity_search(
+        self,
+        query: str,
+        k: int = 5,
+        score_threshold: float = 0.0,
+        filter: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
+        """Search for similar documents.
+        
+        Args:
+            query: Query text.
+            k: Number of results to return.
+            score_threshold: Minimum similarity score.
+            filter: Metadata filter conditions.
+            
+        Returns:
+            List of similar documents with metadata and scores.
+        """
+        if not self.collection:
+            self.get_or_create_collection()
+        
+        try:
+            results = self.collection.query(
+                query_texts=[query],
+                n_results=k,
+                where=filter
+            )
+            
+            # Convert ChromaDB results to standard format
+            documents = []
+            if results['documents'] and results['documents'][0]:
+                for i, doc in enumerate(results['documents'][0]):
+                    metadata = results['metadatas'][0][i] if results['metadatas'] and results['metadatas'][0] else {}
+                    distance = results['distances'][0][i] if results['distances'] and results['distances'][0] else 0.0
+                    score = 1.0 - distance  # Convert distance to similarity score
+                    
+                    # Apply score threshold
+                    if score >= score_threshold:
+                        documents.append({
+                            'id': results['ids'][0][i] if results['ids'] and results['ids'][0] else '',
+                            'content': doc,
+                            'metadata': metadata,
+                            'score': score
+                        })
+            
+            logger.info(f"Similarity search returned {len(documents)} results")
+            return documents
+            
+        except Exception as e:
+            logger.error(f"Failed to perform similarity search: {str(e)}")
+            raise
+    
+    def get_document(self, doc_id: str) -> Optional[Dict[str, Any]]:
+        """Get a specific document by ID.
+        
+        Args:
+            doc_id: Document ID.
+            
+        Returns:
+            Document data or None if not found.
+        """
+        if not self.collection:
+            self.get_or_create_collection()
+        
+        try:
+            results = self.collection.get(ids=[doc_id], include=['documents', 'metadatas'])
+            
+            if results['documents'] and results['documents'][0]:
+                return {
+                    'id': doc_id,
+                    'content': results['documents'][0],
+                    'metadata': results['metadatas'][0] if results['metadatas'] else {}
+                }
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Failed to get document {doc_id}: {str(e)}")
+            raise
+    
+    def update_documents(
+        self,
+        ids: List[str],
+        documents: List[str],
+        metadatas: List[Dict[str, Any]]
+    ) -> None:
+        """Update existing documents.
+        
+        Args:
+            ids: List of document IDs to update.
+            documents: List of new document texts.
+            metadatas: List of new metadata dictionaries.
+            
+        Raises:
+            Exception: If update fails.
+        """
+        if not self.collection:
+            self.get_or_create_collection()
+        
+        try:
+            self.collection.update(
+                ids=ids,
+                documents=documents,
+                metadatas=metadatas
+            )
+            logger.info(f"Updated {len(ids)} documents in collection")
+        except Exception as e:
+            logger.error(f"Failed to update documents: {str(e)}")
+            raise

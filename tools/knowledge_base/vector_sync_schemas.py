@@ -150,7 +150,7 @@ class FileVectorMapping(BaseModel):
         return v
 
 
-class SyncOperation(BaseModel):
+class SyncOperationRecord(BaseModel):
     """Individual sync operation record."""
     operation_id: str = Field(..., description="Unique operation identifier")
     collection_name: str = Field(..., description="Target collection")

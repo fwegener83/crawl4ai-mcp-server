@@ -12,6 +12,13 @@ from tools.web_extract import WebExtractParams, web_content_extract
 from tools.mcp_domain_tools import domain_deep_crawl, domain_link_preview
 from tools.collection_manager import CollectionFileManager
 
+# Configure logging first
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 # Try to import RAG tools, but don't fail if dependencies are missing
 try:
     from tools.knowledge_base.dependencies import is_rag_available
@@ -22,19 +29,19 @@ try:
             list_collections as rag_list_collections,
             delete_collection as rag_delete_collection
         )
+        # Import vector sync tools
+        from tools.knowledge_base.vector_store import VectorStore
+        from tools.knowledge_base.intelligent_sync_manager import IntelligentSyncManager
+        from tools.vector_sync_api import VectorSyncAPI
         RAG_TOOLS_AVAILABLE = True
+        VECTOR_SYNC_AVAILABLE = True
     else:
         RAG_TOOLS_AVAILABLE = False
+        VECTOR_SYNC_AVAILABLE = False
 except ImportError as e:
     logger.warning(f"RAG tools not available: {e}")
     RAG_TOOLS_AVAILABLE = False
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+    VECTOR_SYNC_AVAILABLE = False
 
 
 def load_environment():
@@ -269,6 +276,286 @@ else:
 
 # Initialize Collection File Manager
 collection_manager = CollectionFileManager()
+
+# Initialize Vector Sync components if available
+vector_sync_api = None
+if VECTOR_SYNC_AVAILABLE:
+    try:
+        # Initialize vector store and sync manager
+        vector_store = VectorStore()
+        sync_manager = IntelligentSyncManager(
+            vector_store=vector_store,
+            collection_manager=collection_manager
+        )
+        vector_sync_api = VectorSyncAPI(
+            sync_manager=sync_manager,
+            vector_store=vector_store,
+            collection_manager=collection_manager
+        )
+        logger.info("Vector sync components initialized successfully")
+    except Exception as e:
+        logger.warning(f"Failed to initialize vector sync components: {e}")
+        VECTOR_SYNC_AVAILABLE = False
+
+
+# Vector Sync Tools
+def register_vector_sync_tools():
+    """Register vector sync tools if available."""
+    
+    @mcp.tool()
+    async def sync_collection_to_vectors(
+        collection_name: str,
+        force_reprocess: bool = False,
+        chunking_strategy: str = None
+    ) -> str:
+        """Sync a file collection to vector storage with intelligent chunking.
+        
+        Args:
+            collection_name: Name of the collection to sync
+            force_reprocess: Force reprocessing of all files (ignore hashes)
+            chunking_strategy: Chunking strategy override (baseline, markdown_intelligent, auto)
+            
+        Returns:
+            str: JSON string with sync operation result
+        """
+        logger.info(f"Starting vector sync for collection: {collection_name}")
+        
+        try:
+            from tools.vector_sync_api import SyncCollectionRequest
+            
+            request = SyncCollectionRequest(
+                force_reprocess=force_reprocess,
+                chunking_strategy=chunking_strategy
+            )
+            
+            response = await vector_sync_api.sync_collection(collection_name, request)
+            
+            if response.success:
+                logger.info(f"Vector sync completed for collection '{collection_name}': "
+                           f"{response.sync_result.get('files_processed', 0)} files processed, "
+                           f"{response.sync_result.get('chunks_created', 0)} chunks created")
+            else:
+                logger.error(f"Vector sync failed for collection '{collection_name}': {response.error}")
+            
+            return json.dumps(response.model_dump())
+            
+        except Exception as e:
+            error_result = {
+                "success": False,
+                "error": str(e),
+                "message": f"Unexpected error syncing collection '{collection_name}'"
+            }
+            logger.error(f"Unexpected error in vector sync: {str(e)}")
+            return json.dumps(error_result)
+    
+    @mcp.tool()
+    async def get_collection_sync_status(collection_name: str) -> str:
+        """Get vector sync status for a collection.
+        
+        Args:
+            collection_name: Name of the collection
+            
+        Returns:
+            str: JSON string with sync status information
+        """
+        logger.info(f"Getting sync status for collection: {collection_name}")
+        
+        try:
+            response = await vector_sync_api.get_collection_sync_status(collection_name)
+            
+            if response.success:
+                logger.info(f"Retrieved sync status for collection '{collection_name}'")
+            else:
+                logger.error(f"Failed to get sync status: {response.error}")
+            
+            return json.dumps(response.model_dump())
+            
+        except Exception as e:
+            error_result = {
+                "success": False,
+                "error": str(e),
+                "message": f"Unexpected error getting sync status for collection '{collection_name}'"
+            }
+            logger.error(f"Unexpected error getting sync status: {str(e)}")
+            return json.dumps(error_result)
+    
+    @mcp.tool()
+    async def list_collection_sync_statuses() -> str:
+        """Get vector sync status for all collections.
+        
+        Returns:
+            str: JSON string with sync statuses for all collections
+        """
+        logger.info("Getting sync status for all collections")
+        
+        try:
+            response = await vector_sync_api.list_collection_sync_statuses()
+            
+            if response.get('success'):
+                total_collections = len(response.get('statuses', {}))
+                logger.info(f"Retrieved sync status for {total_collections} collections")
+            else:
+                logger.error(f"Failed to list sync statuses: {response.get('error')}")
+            
+            return json.dumps(response)
+            
+        except Exception as e:
+            error_result = {
+                "success": False,
+                "error": str(e),
+                "message": "Unexpected error listing collection sync statuses"
+            }
+            logger.error(f"Unexpected error listing sync statuses: {str(e)}")
+            return json.dumps(error_result)
+    
+    @mcp.tool()
+    async def search_collection_vectors(
+        query: str,
+        collection_name: str = None,
+        limit: int = 10,
+        similarity_threshold: float = 0.7
+    ) -> str:
+        """Search vectors across collections with file location mapping.
+        
+        Args:
+            query: Search query text
+            collection_name: Specific collection to search (optional)
+            limit: Maximum number of results
+            similarity_threshold: Minimum similarity score (0.0-1.0)
+            
+        Returns:
+            str: JSON string with search results and file locations
+        """
+        logger.info(f"Searching collection vectors: '{query[:50]}...'")
+        
+        try:
+            from tools.vector_sync_api import VectorSearchRequest
+            
+            request = VectorSearchRequest(
+                query=query,
+                collection_name=collection_name,
+                limit=limit,
+                similarity_threshold=similarity_threshold
+            )
+            
+            response = await vector_sync_api.search_vectors(request)
+            
+            if response.success:
+                logger.info(f"Vector search returned {response.total_results} results in {response.query_time:.3f}s")
+            else:
+                logger.error(f"Vector search failed: {response.error}")
+            
+            return json.dumps(response.model_dump())
+            
+        except Exception as e:
+            error_result = {
+                "success": False,
+                "error": str(e),
+                "message": "Unexpected error searching collection vectors"
+            }
+            logger.error(f"Unexpected error in vector search: {str(e)}")
+            return json.dumps(error_result)
+    
+    @mcp.tool()
+    async def enable_collection_sync(collection_name: str) -> str:
+        """Enable vector sync for a collection.
+        
+        Args:
+            collection_name: Name of the collection
+            
+        Returns:
+            str: JSON string with operation result
+        """
+        logger.info(f"Enabling sync for collection: {collection_name}")
+        
+        try:
+            response = await vector_sync_api.enable_collection_sync(collection_name)
+            
+            if response.get('success'):
+                logger.info(f"Sync enabled for collection '{collection_name}'")
+            else:
+                logger.error(f"Failed to enable sync: {response.get('error')}")
+            
+            return json.dumps(response)
+            
+        except Exception as e:
+            error_result = {
+                "success": False,
+                "error": str(e),
+                "message": f"Unexpected error enabling sync for collection '{collection_name}'"
+            }
+            logger.error(f"Unexpected error enabling sync: {str(e)}")
+            return json.dumps(error_result)
+    
+    @mcp.tool()
+    async def disable_collection_sync(collection_name: str) -> str:
+        """Disable vector sync for a collection.
+        
+        Args:
+            collection_name: Name of the collection
+            
+        Returns:
+            str: JSON string with operation result
+        """
+        logger.info(f"Disabling sync for collection: {collection_name}")
+        
+        try:
+            response = await vector_sync_api.disable_collection_sync(collection_name)
+            
+            if response.get('success'):
+                logger.info(f"Sync disabled for collection '{collection_name}'")
+            else:
+                logger.error(f"Failed to disable sync: {response.get('error')}")
+            
+            return json.dumps(response)
+            
+        except Exception as e:
+            error_result = {
+                "success": False,
+                "error": str(e),
+                "message": f"Unexpected error disabling sync for collection '{collection_name}'"
+            }
+            logger.error(f"Unexpected error disabling sync: {str(e)}")
+            return json.dumps(error_result)
+    
+    @mcp.tool()
+    async def delete_collection_vectors(collection_name: str) -> str:
+        """Delete all vectors for a collection.
+        
+        Args:
+            collection_name: Name of the collection
+            
+        Returns:
+            str: JSON string with operation result
+        """
+        logger.warning(f"Deleting vectors for collection: {collection_name}")
+        
+        try:
+            response = await vector_sync_api.delete_collection_vectors(collection_name)
+            
+            if response.get('success'):
+                chunks_deleted = response.get('chunks_deleted', 0)
+                logger.info(f"Deleted {chunks_deleted} vectors for collection '{collection_name}'")
+            else:
+                logger.error(f"Failed to delete vectors: {response.get('error')}")
+            
+            return json.dumps(response)
+            
+        except Exception as e:
+            error_result = {
+                "success": False,
+                "error": str(e),
+                "message": f"Unexpected error deleting vectors for collection '{collection_name}'"
+            }
+            logger.error(f"Unexpected error deleting vectors: {str(e)}")
+            return json.dumps(error_result)
+
+
+if VECTOR_SYNC_AVAILABLE:
+    register_vector_sync_tools()
+    logger.info("Vector sync tools registered successfully")
+else:
+    logger.info("Vector sync tools not available - RAG dependencies required")
 
 
 # Collection Management Tools
