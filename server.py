@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 from tools.web_extract import WebExtractParams, web_content_extract
 from tools.mcp_domain_tools import domain_deep_crawl, domain_link_preview
-from tools.collection_manager import CollectionFileManager
+from tools.sqlite_collection_manager import create_collection_manager
 
 # Configure logging first
 logging.basicConfig(
@@ -274,8 +274,9 @@ else:
     logger.info("RAG tools not available - install dependencies to enable: pip install chromadb sentence-transformers langchain-text-splitters numpy")
 
 
-# Initialize Collection File Manager
-collection_manager = CollectionFileManager()
+# Initialize Collection Manager (SQLite by default, consistent with HTTP server)
+use_sqlite = os.getenv('CRAWL4AI_USE_SQLITE', 'true').lower() == 'true'
+collection_manager = create_collection_manager(use_sqlite=use_sqlite)
 
 # Initialize Vector Sync components if available
 vector_sync_api = None

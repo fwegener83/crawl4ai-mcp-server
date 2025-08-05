@@ -1,11 +1,19 @@
+import React from 'react';
 import { useCollectionOperations } from '../../hooks/useCollectionOperations';
+import { useVectorSync } from '../../hooks/useVectorSync';
+import type { SyncCollectionRequest } from '../../types/api';
+import { CollectionSyncButton } from './CollectionSyncButton';
+import { VectorSyncIndicator } from './VectorSyncIndicator';
+import { VectorSearchPanel } from './VectorSearchPanel';
 import FileExplorer from './FileExplorer';
 import EditorArea from './EditorArea';
-import { Box, Typography, Button, Paper } from '../ui';
+import { Box, Typography, Button, Paper, IconButton, Collapse } from '../ui';
 import DescriptionIcon from '@mui/icons-material/Description';
 import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
 import WebIcon from '@mui/icons-material/Web';
 import TravelExploreIcon from '@mui/icons-material/TravelExplore';
+import SearchIcon from '@mui/icons-material/Search';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 
 interface MainContentProps {
   className?: string;
@@ -13,6 +21,47 @@ interface MainContentProps {
 
 export function MainContent({ className = '' }: MainContentProps) {
   const { state, openModal } = useCollectionOperations();
+  const { 
+    getSyncStatus, 
+    syncCollection, 
+    deleteVectors,
+    searchVectors,
+    searchResults: vectorSearchResults,
+    searchQuery: vectorSearchQuery,
+    searchLoading: vectorSearchLoading,
+    clearSearch: clearVectorSearch
+  } = useVectorSync();
+  
+  const [searchPanelOpen, setSearchPanelOpen] = React.useState(false);
+
+  // Vector search handlers
+  const handleVectorSearch = async (query: string, collectionName?: string) => {
+    if (state.selectedCollection) {
+      await searchVectors(query, collectionName || state.selectedCollection);
+    }
+  };
+
+  const handleSearchResultClick = (result: unknown) => {
+    // TODO: Navigate to file and highlight the chunk
+    console.log('Navigate to:', result);
+  };
+
+  // Vector sync handlers - bind collection name
+  const handleSyncCollection = async (request: SyncCollectionRequest) => {
+    if (state.selectedCollection) {
+      await syncCollection(state.selectedCollection, request);
+    }
+  };
+
+  const handleDeleteVectors = async () => {
+    if (state.selectedCollection) {
+      await deleteVectors(state.selectedCollection);
+    }
+  };
+
+  const toggleSearchPanel = () => {
+    setSearchPanelOpen(!searchPanelOpen);
+  };
 
   if (!state.selectedCollection) {
     return (
@@ -108,6 +157,40 @@ export function MainContent({ className = '' }: MainContentProps) {
               </Box>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+              {/* Vector Sync Status & Controls */}
+              {state.selectedCollection && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <VectorSyncIndicator
+                    collectionName={state.selectedCollection}
+                    syncStatus={getSyncStatus(state.selectedCollection)}
+                    showText={true}
+                    size="medium"
+                  />
+                  <CollectionSyncButton
+                    collectionName={state.selectedCollection}
+                    syncStatus={getSyncStatus(state.selectedCollection)}
+                    onSync={handleSyncCollection}
+                    onDeleteVectors={handleDeleteVectors}
+                    size="medium"
+                  />
+                </Box>
+              )}
+              
+              <IconButton
+                onClick={toggleSearchPanel}
+                color={searchPanelOpen ? 'primary' : 'default'}
+                size="medium"
+                sx={{ 
+                  mr: 1,
+                  bgcolor: searchPanelOpen ? 'primary.50' : 'transparent',
+                  '&:hover': {
+                    bgcolor: searchPanelOpen ? 'primary.100' : 'action.hover'
+                  }
+                }}
+              >
+                <SearchIcon />
+              </IconButton>
+              
               <Button
                 onClick={() => openModal('addPage')}
                 variant="contained"
@@ -151,6 +234,53 @@ export function MainContent({ className = '' }: MainContentProps) {
         }}>
           <FileExplorer />
         </Box>
+        
+        {/* Vector Search Panel */}
+        <Collapse 
+          in={searchPanelOpen} 
+          orientation="horizontal" 
+          sx={{ display: searchPanelOpen ? 'flex' : 'none' }}
+        >
+          <Box sx={{ 
+            width: 350, 
+            flexShrink: 0,
+            borderRight: 1,
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+            position: 'relative'
+          }}>
+            {/* Toggle Button */}
+            <IconButton
+              onClick={toggleSearchPanel}
+              size="small"
+              sx={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                zIndex: 1,
+                bgcolor: 'background.paper',
+                border: 1,
+                borderColor: 'divider',
+                '&:hover': {
+                  bgcolor: 'action.hover'
+                }
+              }}
+            >
+              <ChevronLeftIcon />
+            </IconButton>
+
+            <VectorSearchPanel
+              collectionName={state.selectedCollection}
+              collectionSyncStatus={getSyncStatus(state.selectedCollection)}
+              searchResults={vectorSearchResults}
+              searchQuery={vectorSearchQuery}
+              searchLoading={vectorSearchLoading}
+              onSearch={handleVectorSearch}
+              onResultClick={handleSearchResultClick}
+              onClearSearch={clearVectorSearch}
+            />
+          </Box>
+        </Collapse>
         
         {/* Editor Area */}
         <Box sx={{ flex: 1, bgcolor: 'background.default' }}>
