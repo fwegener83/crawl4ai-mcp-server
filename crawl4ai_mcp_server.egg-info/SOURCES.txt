@@ -19,6 +19,7 @@ tests/test_domain_crawler_factory.py
 tests/test_domain_crawler_parameters.py
 tests/test_domain_link_preview_core.py
 tests/test_e2e_optimized.py
+tests/test_end_to_end_vector_sync.py
 tests/test_enhanced_content_processor.py
 tests/test_error_sanitization.py
 tests/test_file_listing.py
@@ -42,6 +43,8 @@ tests/test_security_validation.py
 tests/test_sqlite_collection_manager.py
 tests/test_stdout_contamination.py
 tests/test_strategy_factory.py
+tests/test_vector_sync_integration.py
+tests/test_vector_sync_schemas.py
 tests/test_web_extract.py
 tests/test_web_extract_security.py
 tools/__init__.py
@@ -53,6 +56,7 @@ tools/error_sanitizer.py
 tools/mcp_domain_tools.py
 tools/performance_benchmark.py
 tools/sqlite_collection_manager.py
+tools/vector_sync_api.py
 tools/web_extract.py
 tools/knowledge_base/__init__.py
 tools/knowledge_base/benchmarks.py
@@ -61,6 +65,8 @@ tools/knowledge_base/content_processor.py
 tools/knowledge_base/dependencies.py
 tools/knowledge_base/embeddings.py
 tools/knowledge_base/enhanced_content_processor.py
+tools/knowledge_base/intelligent_sync_manager.py
 tools/knowledge_base/markdown_content_processor.py
 tools/knowledge_base/rag_tools.py
 tools/knowledge_base/vector_store.py
+tools/knowledge_base/vector_sync_schemas.py

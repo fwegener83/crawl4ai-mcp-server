@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useCollection } from '../contexts/CollectionContext';
 import { APIService } from '../services/api';
 import type { 
@@ -35,6 +35,39 @@ interface UseVectorSyncReturn {
 export const useVectorSync = (): UseVectorSyncReturn => {
   const { state, dispatch } = useCollection();
   const { vectorSync, ui } = state;
+  
+  // Track active polling intervals for sync operations
+  const pollingIntervals = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
+  // Utility functions for polling management
+  const startPolling = useCallback((collectionName: string, pollFunction: () => void, interval: number = 3000) => {
+    // Clear any existing polling first
+    const existingInterval = pollingIntervals.current.get(collectionName);
+    if (existingInterval) {
+      clearInterval(existingInterval);
+      pollingIntervals.current.delete(collectionName);
+    }
+    
+    const intervalId = setInterval(pollFunction, interval);
+    pollingIntervals.current.set(collectionName, intervalId);
+  }, []);
+
+  const stopPolling = useCallback((collectionName: string) => {
+    const intervalId = pollingIntervals.current.get(collectionName);
+    if (intervalId) {
+      clearInterval(intervalId);
+      pollingIntervals.current.delete(collectionName);
+    }
+  }, []);
+
+  // Cleanup all polling on unmount
+  useEffect(() => {
+    const currentIntervals = pollingIntervals.current;
+    return () => {
+      currentIntervals.forEach((intervalId) => clearInterval(intervalId));
+      currentIntervals.clear();
+    };
+  }, []);
 
   // Get sync status for a collection
   const getSyncStatus = useCallback((collectionName: string): VectorSyncStatus | undefined => {
@@ -101,32 +134,27 @@ export const useVectorSync = (): UseVectorSyncReturn => {
       // Start sync operation
       await APIService.syncCollection(collectionName, request);
       
-      // Poll for progress updates (simplified - in real implementation might use WebSocket)
-      const pollProgress = async () => {
-        let attempts = 0;
-        const maxAttempts = 60; // 5 minutes max
-        
-        const poll = async () => {
-          try {
-            const status = await APIService.getCollectionSyncStatus(collectionName);
-            dispatch({ 
-              type: 'SET_VECTOR_SYNC_STATUS', 
-              payload: { collectionName, status } 
-            });
-            
-            if (status.status === 'syncing' && attempts < maxAttempts) {
-              attempts++;
-              setTimeout(poll, 5000); // Poll every 5 seconds
-            }
-          } catch (error) {
-            console.error('Error polling sync progress:', error);
+      // Start real-time polling for progress updates
+      const pollSyncProgress = async () => {
+        try {
+          const status = await APIService.getCollectionSyncStatus(collectionName);
+          dispatch({ 
+            type: 'SET_VECTOR_SYNC_STATUS', 
+            payload: { collectionName, status } 
+          });
+          
+          // Stop polling if sync is complete or failed
+          if (status.status !== 'syncing') {
+            stopPolling(collectionName);
           }
-        };
-        
-        poll();
+        } catch (error) {
+          console.error('Error polling sync progress:', error);
+          stopPolling(collectionName);
+        }
       };
 
-      pollProgress();
+      // Start polling every 2 seconds for real-time updates
+      startPolling(collectionName, pollSyncProgress, 2000);
       
     } catch (error) {
       dispatch({ 
@@ -139,7 +167,7 @@ export const useVectorSync = (): UseVectorSyncReturn => {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSync', value: false } });
     }
-  }, [dispatch, getSyncStatus, refreshSyncStatus]);
+  }, [dispatch, getSyncStatus, refreshSyncStatus, startPolling, stopPolling]);
 
   // Enable sync for a collection
   const enableSync = useCallback(async (collectionName: string) => {
@@ -172,6 +200,9 @@ export const useVectorSync = (): UseVectorSyncReturn => {
     try {
       dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSync', value: true } });
       
+      // Stop any active polling for this collection
+      stopPolling(collectionName);
+      
       await APIService.deleteCollectionVectors(collectionName);
       await refreshSyncStatus(collectionName);
     } catch (error) {
@@ -182,7 +213,7 @@ export const useVectorSync = (): UseVectorSyncReturn => {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSync', value: false } });
     }
-  }, [dispatch, refreshSyncStatus]);
+  }, [dispatch, refreshSyncStatus, stopPolling]);
 
   // Search vectors
   const searchVectors = useCallback(async (query: string, collectionName?: string) => {

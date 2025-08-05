@@ -87,4 +87,5 @@ export {
   ToggleButtonGroup,
   ToggleButton,
   Menu,
+  Collapse,
 } from '@mui/material';

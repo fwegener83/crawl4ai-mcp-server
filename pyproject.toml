@@ -23,6 +23,7 @@ dependencies = [
     "tomli>=2.2.1",
     "pytest-asyncio>=1.0.0",
     "requests>=2.32.4",
+    "langchain>=0.3.27",
 ]
 
 [tool.setuptools.packages.find]

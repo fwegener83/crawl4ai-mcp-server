@@ -14,6 +14,10 @@ from tools.mcp_domain_tools import domain_deep_crawl, domain_link_preview
 from tools.sqlite_collection_manager import create_collection_manager
 import os
 
+# Configure logging first
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Try to import RAG tools
 try:
     from tools.knowledge_base.dependencies import is_rag_available
@@ -24,19 +28,50 @@ try:
             list_collections,
             delete_collection
         )
+        from tools.vector_sync_api import VectorSyncAPI
+        from tools.knowledge_base.intelligent_sync_manager import IntelligentSyncManager
+        from tools.knowledge_base.vector_store import VectorStore
         RAG_AVAILABLE = True
+        
+        # Initialize Vector Sync API components
+        try:
+            vector_store = VectorStore()
+            sync_manager = IntelligentSyncManager(
+                vector_store=vector_store,
+                collection_manager=None  # Will be set later
+            )
+            vector_sync_api = VectorSyncAPI(
+                sync_manager=sync_manager,
+                vector_store=vector_store,
+                collection_manager=None  # Will be set later
+            )
+        except Exception as e:
+            logger.warning(f"Failed to initialize Vector Sync API: {e}")
+            vector_sync_api = None
     else:
         RAG_AVAILABLE = False
-except ImportError:
+        vector_sync_api = None
+except ImportError as e:
+    logger.warning(f"RAG dependencies not available: {e}")
     RAG_AVAILABLE = False
+    vector_sync_api = None
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Configure logging (already done above)
 
 # Initialize Collection Manager (SQLite by default, configurable via environment)
 use_sqlite = os.getenv('CRAWL4AI_USE_SQLITE', 'true').lower() == 'true'
 collection_manager = create_collection_manager(use_sqlite=use_sqlite)
+
+# Set collection manager for vector sync components if available
+if RAG_AVAILABLE and vector_sync_api:
+    try:
+        # Update the sync manager and vector sync API with the collection manager
+        vector_sync_api.sync_manager.collection_manager = collection_manager
+        vector_sync_api.collection_manager = collection_manager
+        logger.info("Vector Sync API initialized successfully with collection manager")
+    except Exception as e:
+        logger.warning(f"Failed to set collection manager for Vector Sync API: {e}")
+        vector_sync_api = None
 
 # FastAPI app
 app = FastAPI(title="Crawl4AI HTTP API", version="1.0.0")
@@ -94,6 +129,16 @@ class UpdateFileRequest(BaseModel):
 class CrawlToCollectionRequest(BaseModel):
     url: str
     folder: str = ""
+
+# Vector sync models
+class SyncCollectionRequest(BaseModel):
+    force_reprocess: bool = False
+    chunking_strategy: str = "auto"  # auto, baseline, markdown_intelligent
+
+class VectorSearchRequest(BaseModel):
+    query: str
+    collection_name: Optional[str] = None
+    limit: int = 20
 
 # Health check
 @app.get("/api/health")
@@ -547,6 +592,170 @@ else:
     @app.get("/api/search")
     async def search_stub():
         raise HTTPException(status_code=503, detail="RAG functionality not available")
+
+# ===== VECTOR SYNC ENDPOINTS =====
+
+if RAG_AVAILABLE and vector_sync_api:
+    @app.get("/api/vector-sync/collections/{collection_name}/status")
+    async def get_collection_sync_status(collection_name: str):
+        """Get vector sync status for a collection."""
+        try:
+            status = await vector_sync_api.get_collection_sync_status(collection_name)
+            return {
+                "success": True,
+                "status": status.model_dump()
+            }
+        except Exception as e:
+            logger.error(f"Get sync status failed: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/api/vector-sync/collections/statuses")
+    async def list_collection_sync_statuses():
+        """Get vector sync status for all collections."""
+        try:
+            response = await vector_sync_api.list_collection_sync_statuses()
+            
+            # Handle the case where the response is a dict with success/error structure
+            if isinstance(response, dict):
+                if response.get('success'):
+                    return {
+                        "success": True,
+                        "statuses": response.get('statuses', {})
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "statuses": {},
+                        "error": response.get('error', 'Unknown error')
+                    }
+            else:
+                # Fallback for unexpected response format
+                return {
+                    "success": True,
+                    "statuses": {}
+                }
+        except Exception as e:
+            logger.error(f"List sync statuses failed: {e}")
+            return {
+                "success": False,
+                "statuses": {},
+                "error": str(e)
+            }
+
+    @app.post("/api/vector-sync/collections/{collection_name}/sync")
+    async def sync_collection(collection_name: str, request: SyncCollectionRequest):
+        """Sync a collection to vector store."""
+        try:
+            from tools.vector_sync_api import SyncCollectionRequest as APISyncRequest
+            
+            api_request = APISyncRequest(
+                force_reprocess=request.force_reprocess,
+                chunking_strategy=request.chunking_strategy
+            )
+            
+            response = await vector_sync_api.sync_collection(collection_name, api_request)
+            return response.model_dump()
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"Sync collection failed: {error_msg}")
+            
+            # Handle specific HTTP status codes
+            if "409:" in error_msg:
+                return {
+                    "success": False,
+                    "error": "Collection is already syncing",
+                    "status_code": 409
+                }
+            elif "404:" in error_msg:
+                return {
+                    "success": False,
+                    "error": "Collection not found",
+                    "status_code": 404
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": error_msg,
+                    "status_code": 500
+                }
+
+    @app.post("/api/vector-sync/collections/{collection_name}/enable")
+    async def enable_collection_sync(collection_name: str):
+        """Enable vector sync for a collection."""
+        try:
+            result = await vector_sync_api.enable_collection_sync(collection_name)
+            return result
+        except Exception as e:
+            logger.error(f"Enable sync failed: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/api/vector-sync/collections/{collection_name}/disable")
+    async def disable_collection_sync(collection_name: str):
+        """Disable vector sync for a collection."""
+        try:
+            result = await vector_sync_api.disable_collection_sync(collection_name)
+            return result
+        except Exception as e:
+            logger.error(f"Disable sync failed: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.delete("/api/vector-sync/collections/{collection_name}/vectors")
+    async def delete_collection_vectors(collection_name: str):
+        """Delete all vectors for a collection."""
+        try:
+            result = await vector_sync_api.delete_collection_vectors(collection_name)
+            return result
+        except Exception as e:
+            logger.error(f"Delete vectors failed: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/api/vector-sync/search")
+    async def search_vectors(request: VectorSearchRequest):
+        """Search vectors across collections."""
+        try:
+            from tools.vector_sync_api import VectorSearchRequest as APISearchRequest
+            
+            api_request = APISearchRequest(
+                query=request.query,
+                collection_name=request.collection_name,
+                limit=request.limit
+            )
+            
+            response = await vector_sync_api.search_vectors(api_request)
+            return response.model_dump()
+        except Exception as e:
+            logger.error(f"Vector search failed: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+else:
+    # Stub endpoints when RAG is not available
+    @app.get("/api/vector-sync/collections/{collection_name}/status")
+    async def get_collection_sync_status_stub(collection_name: str):
+        raise HTTPException(status_code=503, detail="Vector sync functionality not available - RAG dependencies not installed")
+
+    @app.get("/api/vector-sync/collections/statuses")
+    async def list_collection_sync_statuses_stub():
+        raise HTTPException(status_code=503, detail="Vector sync functionality not available - RAG dependencies not installed")
+
+    @app.post("/api/vector-sync/collections/{collection_name}/sync")
+    async def sync_collection_stub(collection_name: str, request: SyncCollectionRequest):
+        raise HTTPException(status_code=503, detail="Vector sync functionality not available - RAG dependencies not installed")
+
+    @app.post("/api/vector-sync/collections/{collection_name}/enable")
+    async def enable_collection_sync_stub(collection_name: str):
+        raise HTTPException(status_code=503, detail="Vector sync functionality not available - RAG dependencies not installed")
+
+    @app.post("/api/vector-sync/collections/{collection_name}/disable")
+    async def disable_collection_sync_stub(collection_name: str):
+        raise HTTPException(status_code=503, detail="Vector sync functionality not available - RAG dependencies not installed")
+
+    @app.delete("/api/vector-sync/collections/{collection_name}/vectors")
+    async def delete_collection_vectors_stub(collection_name: str):
+        raise HTTPException(status_code=503, detail="Vector sync functionality not available - RAG dependencies not installed")
+
+    @app.post("/api/vector-sync/search")
+    async def search_vectors_stub(request: VectorSearchRequest):
+        raise HTTPException(status_code=503, detail="Vector sync functionality not available - RAG dependencies not installed")
 
 # Root endpoint
 @app.get("/")
