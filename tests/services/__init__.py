@@ -1,0 +1,1 @@
+"""Service layer tests for unified server architecture."""
