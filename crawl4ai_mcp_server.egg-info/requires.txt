@@ -7,6 +7,12 @@ sentence-transformers>=2.0.0
 langchain-text-splitters>=0.2.0
 fastapi>=0.116.1
 uvicorn>=0.35.0
+pytest>=8.4.1
+markdown2>=2.5.4
+tomli>=2.2.1
+pytest-asyncio>=1.0.0
+requests>=2.32.4
+langchain>=0.3.27
 
 [dev]
 mypy

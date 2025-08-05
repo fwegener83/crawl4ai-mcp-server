@@ -1,0 +1,115 @@
+{
+  "simple_text": {
+    "baseline": {
+      "success": true,
+      "chunks_generated": 1,
+      "processing_time": 7.915496826171875e-05,
+      "avg_chunk_size": 222.0,
+      "code_chunks": 0,
+      "header_chunks": 0,
+      "strategy_used": "baseline"
+    },
+    "markdown_intelligent": {
+      "success": true,
+      "chunks_generated": 1,
+      "processing_time": 0.00018596649169921875,
+      "avg_chunk_size": 222.0,
+      "code_chunks": 0,
+      "header_chunks": 0,
+      "strategy_used": "markdown_intelligent"
+    },
+    "auto": {
+      "success": true,
+      "chunks_generated": 1,
+      "processing_time": 2.6941299438476562e-05,
+      "avg_chunk_size": 222.0,
+      "code_chunks": 0,
+      "header_chunks": 0,
+      "strategy_used": "baseline"
+    }
+  },
+  "structured_markdown": {
+    "baseline": {
+      "success": true,
+      "chunks_generated": 3,
+      "processing_time": 7.295608520507812e-05,
+      "avg_chunk_size": 688.6666666666666,
+      "code_chunks": 0,
+      "header_chunks": 0,
+      "strategy_used": "baseline"
+    },
+    "markdown_intelligent": {
+      "success": true,
+      "chunks_generated": 8,
+      "processing_time": 0.0002770423889160156,
+      "avg_chunk_size": 224.25,
+      "code_chunks": 4,
+      "header_chunks": 8,
+      "strategy_used": "markdown_intelligent"
+    },
+    "auto": {
+      "success": true,
+      "chunks_generated": 8,
+      "processing_time": 0.00018405914306640625,
+      "avg_chunk_size": 224.25,
+      "code_chunks": 4,
+      "header_chunks": 8,
+      "strategy_used": "markdown_intelligent"
+    },
+    "ab_comparison": {
+      "success": true,
+      "baseline_chunks": 3,
+      "enhanced_chunks": 8,
+      "baseline_time": 4.506111145019531e-05,
+      "enhanced_time": 0.000171661376953125,
+      "baseline_avg_size": 688.6666666666666,
+      "enhanced_avg_size": 224.25,
+      "semantic_score": 0.7511,
+      "quality_improvement": 0.7511,
+      "performance_ratio": 0.2625,
+      "recommendation": "markdown_intelligent"
+    }
+  },
+  "code_heavy": {
+    "baseline": {
+      "success": true,
+      "chunks_generated": 3,
+      "processing_time": 4.6253204345703125e-05,
+      "avg_chunk_size": 751.0,
+      "code_chunks": 0,
+      "header_chunks": 0,
+      "strategy_used": "baseline"
+    },
+    "markdown_intelligent": {
+      "success": true,
+      "chunks_generated": 3,
+      "processing_time": 0.0001361370086669922,
+      "avg_chunk_size": 551.3333333333334,
+      "code_chunks": 3,
+      "header_chunks": 3,
+      "strategy_used": "markdown_intelligent"
+    },
+    "auto": {
+      "success": true,
+      "chunks_generated": 3,
+      "processing_time": 0.0001308917999267578,
+      "avg_chunk_size": 551.3333333333334,
+      "code_chunks": 3,
+      "header_chunks": 3,
+      "strategy_used": "markdown_intelligent"
+    },
+    "ab_comparison": {
+      "success": true,
+      "baseline_chunks": 3,
+      "enhanced_chunks": 3,
+      "baseline_time": 3.981590270996094e-05,
+      "enhanced_time": 0.00012683868408203125,
+      "baseline_avg_size": 751.0,
+      "enhanced_avg_size": 551.3333333333334,
+      "semantic_score": 0.9466666666666667,
+      "quality_improvement": 0.9466666666666667,
+      "performance_ratio": 0.31390977443609025,
+      "recommendation": "markdown_intelligent"
+    }
+  }
+}

@@ -18,6 +18,12 @@ import type {
   CrawlToCollectionResponse,
   FileCollectionListResponse,
   FileContentResponse,
+  // Vector Sync types
+  VectorSyncStatus,
+  VectorSearchRequest,
+  VectorSearchResponse,
+  SyncCollectionRequest,
+  SyncCollectionResponse,
 } from '../types/api';
 
 // Configure axios instance with base URL for backend API
@@ -335,6 +341,108 @@ export class APIService {
     
     if (!response.data.success) {
       throw new Error(response.data.error || 'Failed to crawl page to collection');
+    }
+    
+    return response.data;
+  }
+
+  // ===== VECTOR SYNC TOOLS =====
+  // Note: These will be integrated with MCP server tools in the backend
+
+  /**
+   * Get vector sync status for a specific collection
+   */
+  static async getCollectionSyncStatus(collectionName: string): Promise<VectorSyncStatus> {
+    const response: AxiosResponse<{ success: boolean; status: VectorSyncStatus; error?: string }> = 
+      await api.get(`/vector-sync/collections/${collectionName}/status`);
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to get sync status');
+    }
+    
+    return response.data.status;
+  }
+
+  /**
+   * Get vector sync status for all collections
+   */
+  static async listCollectionSyncStatuses(): Promise<Record<string, VectorSyncStatus>> {
+    const response: AxiosResponse<{ success: boolean; statuses: Record<string, VectorSyncStatus>; error?: string }> = 
+      await api.get('/vector-sync/collections/statuses');
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to list sync statuses');
+    }
+    
+    return response.data.statuses;
+  }
+
+  /**
+   * Sync a collection to vector store
+   */
+  static async syncCollection(
+    collectionName: string, 
+    request: SyncCollectionRequest = {}
+  ): Promise<SyncCollectionResponse> {
+    const response: AxiosResponse<SyncCollectionResponse> = await api.post(
+      `/vector-sync/collections/${collectionName}/sync`,
+      request
+    );
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to sync collection');
+    }
+    
+    return response.data;
+  }
+
+  /**
+   * Enable vector sync for a collection
+   */
+  static async enableCollectionSync(collectionName: string): Promise<void> {
+    const response: AxiosResponse<{ success: boolean; error?: string }> = await api.post(
+      `/vector-sync/collections/${collectionName}/enable`
+    );
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to enable sync');
+    }
+  }
+
+  /**
+   * Disable vector sync for a collection
+   */
+  static async disableCollectionSync(collectionName: string): Promise<void> {
+    const response: AxiosResponse<{ success: boolean; error?: string }> = await api.post(
+      `/vector-sync/collections/${collectionName}/disable`
+    );
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to disable sync');
+    }
+  }
+
+  /**
+   * Delete all vectors for a collection
+   */
+  static async deleteCollectionVectors(collectionName: string): Promise<void> {
+    const response: AxiosResponse<{ success: boolean; error?: string }> = await api.delete(
+      `/vector-sync/collections/${collectionName}/vectors`
+    );
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to delete vectors');
+    }
+  }
+
+  /**
+   * Search vectors across collections
+   */
+  static async searchVectors(request: VectorSearchRequest): Promise<VectorSearchResponse> {
+    const response: AxiosResponse<VectorSearchResponse> = await api.post('/vector-sync/search', request);
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to search vectors');
     }
     
     return response.data;

@@ -15,6 +15,8 @@ import {
   Divider
 } from '../ui';
 import { useCollectionOperations } from '../../hooks/useCollectionOperations';
+import { useVectorSync } from '../../hooks/useVectorSync';
+import { VectorSyncIndicator } from './VectorSyncIndicator';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import AddIcon from '@mui/icons-material/Add';
 import FolderIcon from '@mui/icons-material/Folder';
@@ -37,6 +39,8 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
     openDeleteConfirmation,
     clearError,
   } = useCollectionOperations();
+
+  const { getSyncStatus } = useVectorSync();
 
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -258,7 +262,16 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
                 }}
               >
                 <ListItemIcon sx={{ minWidth: 40 }}>
-                  <FolderIcon />
+                  <Box sx={{ position: 'relative' }}>
+                    <FolderIcon />
+                    <Box sx={{ position: 'absolute', top: -4, right: -8 }}>
+                      <VectorSyncIndicator
+                        collectionName={collection.name}
+                        syncStatus={getSyncStatus(collection.name)}
+                        size="small"
+                      />
+                    </Box>
+                  </Box>
                 </ListItemIcon>
                 <ListItemText
                   primary={
