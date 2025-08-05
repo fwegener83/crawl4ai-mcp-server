@@ -12,13 +12,24 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timezone
 
-# Import components to test
-from tools.knowledge_base.vector_sync_schemas import (
-    VectorSyncStatus, SyncConfiguration, SyncResult, SyncStatus, SyncOperation
-)
-from tools.knowledge_base.intelligent_sync_manager import IntelligentSyncManager
-from tools.vector_sync_api import VectorSyncAPI, SyncCollectionRequest, VectorSearchRequest
-from tools.collection_manager import CollectionFileManager
+# Check if RAG dependencies are available
+try:
+    from tools.knowledge_base.dependencies import is_rag_available
+    RAG_AVAILABLE = is_rag_available()
+except ImportError:
+    RAG_AVAILABLE = False
+
+# Conditionally import components to test
+if RAG_AVAILABLE:
+    from tools.knowledge_base.vector_sync_schemas import (
+        VectorSyncStatus, SyncConfiguration, SyncResult, SyncStatus, SyncOperation
+    )
+    from tools.knowledge_base.intelligent_sync_manager import IntelligentSyncManager
+    from tools.vector_sync_api import VectorSyncAPI, SyncCollectionRequest, VectorSearchRequest
+    from tools.collection_manager import CollectionFileManager
+else:
+    # Skip all tests in this module if RAG is not available
+    pytestmark = pytest.mark.skip(reason="RAG dependencies not available")
 
 
 # Fixtures

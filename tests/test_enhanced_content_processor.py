@@ -4,10 +4,23 @@ Comprehensive tests for EnhancedContentProcessor and A/B testing framework.
 
 import pytest
 import os
-from tools.knowledge_base.enhanced_content_processor import (
-    EnhancedContentProcessor, 
-    ChunkingComparisonResult
-)
+
+# Check if RAG dependencies are available
+try:
+    from tools.knowledge_base.dependencies import is_rag_available
+    RAG_AVAILABLE = is_rag_available()
+except ImportError:
+    RAG_AVAILABLE = False
+
+# Conditionally import components to test
+if RAG_AVAILABLE:
+    from tools.knowledge_base.enhanced_content_processor import (
+        EnhancedContentProcessor, 
+        ChunkingComparisonResult
+    )
+else:
+    # Skip all tests in this module if RAG is not available
+    pytestmark = pytest.mark.skip(reason="RAG dependencies not available")
 
 
 class TestEnhancedContentProcessor:

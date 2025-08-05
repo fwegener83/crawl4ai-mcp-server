@@ -4,8 +4,21 @@ Comprehensive tests for the enhanced MarkdownContentProcessor.
 
 import pytest
 import os
-from tools.knowledge_base.markdown_content_processor import MarkdownContentProcessor
-from tools.knowledge_base.content_processor import ContentProcessor
+
+# Check if RAG dependencies are available
+try:
+    from tools.knowledge_base.dependencies import is_rag_available
+    RAG_AVAILABLE = is_rag_available()
+except ImportError:
+    RAG_AVAILABLE = False
+
+# Conditionally import components to test
+if RAG_AVAILABLE:
+    from tools.knowledge_base.markdown_content_processor import MarkdownContentProcessor
+    from tools.knowledge_base.content_processor import ContentProcessor
+else:
+    # Skip all tests in this module if RAG is not available
+    pytestmark = pytest.mark.skip(reason="RAG dependencies not available")
 
 
 class TestMarkdownContentProcessor:
