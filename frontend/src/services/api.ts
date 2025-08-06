@@ -3,10 +3,6 @@ import type {
   CrawlResult,
   DeepCrawlConfig,
   LinkPreview,
-  StoreResult,
-  SearchResult,
-  Collection,
-  DeleteResult,
   APIError,
   FileCollection,
   FileMetadata,
@@ -16,9 +12,8 @@ import type {
   CrawlToCollectionRequest,
   FileCollectionResponse,
   CrawlToCollectionResponse,
-  FileCollectionListResponse,
   FileContentResponse,
-  // Vector Sync types
+  // Vector Sync types (for File Collections)
   VectorSyncStatus,
   VectorSearchRequest,
   VectorSearchResponse,
@@ -49,8 +44,8 @@ api.interceptors.response.use(
 );
 
 /**
- * API Service for Extended MCP Tools Integration
- * 3 Basic Crawling Tools + 4 RAG Knowledge Base Tools + File Collection Management
+ * API Service for Unified Server Integration
+ * 3 Basic Crawling Tools + File Collection Management + Vector Sync for File Collections
  */
 export class APIService {
   // ===== BASIC CRAWLING TOOLS =====
@@ -69,16 +64,16 @@ export class APIService {
    * Perform deep domain crawling with advanced configuration
    */
   static async deepCrawlDomain(config: DeepCrawlConfig): Promise<CrawlResult[]> {
-    const response: AxiosResponse<{ results: { success: boolean; pages: CrawlResult[]; crawl_summary: unknown; streaming: boolean; error?: string } }> = await api.post('/deep-crawl', config);
+    const response: AxiosResponse<{ success: boolean; pages: CrawlResult[]; error?: string }> = await api.post('/deep-crawl', config);
     
     // Check if the backend returned an error
-    if (!response.data.results.success) {
-      const errorMsg = response.data.results.error || 'Deep crawl failed';
+    if (!response.data.success) {
+      const errorMsg = response.data.error || 'Deep crawl failed';
       console.error('Backend deep crawl error:', errorMsg);
       throw new Error(`Deep crawl failed: ${errorMsg}`);
     }
     
-    return response.data.results.pages || [];
+    return response.data.pages || [];
   }
 
   /**
@@ -95,62 +90,7 @@ export class APIService {
     return response.data;
   }
 
-  // ===== RAG KNOWLEDGE BASE TOOLS =====
-
-  /**
-   * Store crawled content in RAG knowledge base
-   */
-  static async storeInCollection(
-    content: string,
-    collection_name: string = 'default'
-  ): Promise<StoreResult> {
-    const response: AxiosResponse<StoreResult> = await api.post('/collections', {
-      crawl_result: content,
-      collection_name,
-    });
-    return response.data;
-  }
-
-  /**
-   * Search across collections with semantic search
-   */
-  static async searchCollections(
-    query: string,
-    collection_name: string = 'default',
-    n_results: number = 5,
-    similarity_threshold?: number
-  ): Promise<SearchResult[]> {
-    const params: Record<string, unknown> = {
-      query,
-      collection_name,
-      n_results,
-    };
-    
-    if (similarity_threshold !== undefined) {
-      params.similarity_threshold = similarity_threshold;
-    }
-
-    const response: AxiosResponse<{ results: SearchResult[] }> = await api.get('/search', {
-      params,
-    });
-    return response.data.results;
-  }
-
-  /**
-   * List all available collections with statistics
-   */
-  static async listCollections(): Promise<Collection[]> {
-    const response: AxiosResponse<{ collections: Collection[] }> = await api.get('/collections');
-    return response.data.collections;
-  }
-
-  /**
-   * Delete a collection from knowledge base
-   */
-  static async deleteCollection(collection_name: string): Promise<DeleteResult> {
-    const response: AxiosResponse<DeleteResult> = await api.delete(`/collections/${collection_name}`);
-    return response.data;
-  }
+  // Note: RAG Knowledge Base tools removed - replaced by File Collections with Vector Sync
 
   // ===== UTILITY METHODS =====
 
@@ -197,13 +137,14 @@ export class APIService {
    * List all file collections
    */
   static async listFileCollections(): Promise<FileCollection[]> {
-    const response: AxiosResponse<FileCollectionResponse<FileCollectionListResponse>> = await api.get('/file-collections');
+    const response: AxiosResponse<any> = await api.get('/file-collections');
     
     if (!response.data.success) {
       throw new Error(response.data.error || 'Failed to list collections');
     }
     
-    return response.data.data?.collections || [];
+    // Backend returns collections directly in response.data.collections, not nested in data.data
+    return response.data.collections || [];
   }
 
   /**

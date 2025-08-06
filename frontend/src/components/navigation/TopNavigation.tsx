@@ -143,6 +143,7 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
                 label={tab.label}
                 icon={tab.icon}
                 iconPosition="start"
+                data-testid={`${tab.id}-tab`}
                 sx={{ 
                   minWidth: 'auto',
                   px: 2

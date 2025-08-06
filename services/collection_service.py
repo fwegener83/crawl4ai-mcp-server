@@ -44,8 +44,8 @@ class CollectionService(ICollectionService):
         try:
             logger.info("Listing all collections")
             
-            # Use existing collection manager
-            result = await self.collection_manager.list_collections()
+            # Use existing collection manager (synchronous call)
+            result = self.collection_manager.list_collections()
             
             # Parse JSON result if it's a string
             if isinstance(result, str):
@@ -88,7 +88,7 @@ class CollectionService(ICollectionService):
             logger.info(f"Creating collection: {name}")
             
             # Use existing collection manager
-            result = await self.collection_manager.create_collection(name, description)
+            result = self.collection_manager.create_collection(name, description)
             
             # Parse JSON result if it's a string
             if isinstance(result, str):
@@ -126,7 +126,7 @@ class CollectionService(ICollectionService):
             logger.info(f"Getting collection info: {name}")
             
             # Use existing collection manager
-            result = await self.collection_manager.get_collection_info(name)
+            result = self.collection_manager.get_collection_info(name)
             
             # Parse JSON result if it's a string
             if isinstance(result, str):
@@ -164,7 +164,7 @@ class CollectionService(ICollectionService):
             logger.info(f"Deleting collection: {name}")
             
             # Use existing collection manager
-            result = await self.collection_manager.delete_collection(name)
+            result = self.collection_manager.delete_collection(name)
             
             # Parse JSON result if it's a string
             if isinstance(result, str):
@@ -199,7 +199,7 @@ class CollectionService(ICollectionService):
             logger.info(f"Listing files in collection: {collection_name}, folder: {folder_path}")
             
             # Use existing collection manager
-            result = await self.collection_manager.list_files(collection_name, folder_path)
+            result = self.collection_manager.list_files(collection_name, folder_path)
             
             # Parse JSON result if it's a string
             if isinstance(result, str):
@@ -213,6 +213,49 @@ class CollectionService(ICollectionService):
                 
         except Exception as e:
             logger.error(f"Error listing files in {collection_name}: {str(e)}")
+            raise
+    
+    async def list_files_in_collection(self, collection_name: str) -> List[FileInfo]:
+        """
+        List all files in a collection with full metadata.
+        
+        Args:
+            collection_name: Name of the collection
+            
+        Returns:
+            List of FileInfo objects
+        """
+        try:
+            logger.info(f"Listing files in collection {collection_name}")
+            
+            # Use existing collection manager
+            result = self.collection_manager.list_files_in_collection(collection_name)
+            
+            # Parse JSON result if it's a string
+            if isinstance(result, str):
+                import json
+                result = json.loads(result)
+            
+            if not result.get("success", False):
+                raise Exception(result.get("error", "Failed to list files"))
+            
+            # Convert to FileInfo objects
+            files = []
+            for file_data in result.get("files", []):
+                files.append(FileInfo(
+                    name=file_data.get("name", ""),
+                    path=file_data.get("path", ""),
+                    size=file_data.get("size", 0),
+                    created_at=file_data.get("created_at", ""),
+                    updated_at=file_data.get("updated_at", ""),
+                    content="",  # Content not loaded in list
+                    metadata=file_data.get("metadata", {})
+                ))
+            
+            return files
+                
+        except Exception as e:
+            logger.error(f"Error listing files in collection {collection_name}: {str(e)}")
             raise
     
     async def save_file(self, collection_name: str, file_path: str, content: str, folder_path: str = "") -> FileInfo:
@@ -232,7 +275,7 @@ class CollectionService(ICollectionService):
             logger.info(f"Saving file {file_path} in collection {collection_name}")
             
             # Use existing collection manager
-            result = await self.collection_manager.save_to_collection(
+            result = self.collection_manager.save_file(
                 collection_name, file_path, content, folder_path
             )
             
@@ -273,7 +316,7 @@ class CollectionService(ICollectionService):
             logger.info(f"Getting file {file_path} from collection {collection_name}")
             
             # Use existing collection manager
-            result = await self.collection_manager.read_from_collection(
+            result = self.collection_manager.read_file(
                 collection_name, file_path, folder_path
             )
             
@@ -283,13 +326,14 @@ class CollectionService(ICollectionService):
                 result = json.loads(result)
             
             if result.get("success", False):
-                file_data = result.get("file", {})
                 return FileInfo(
-                    path=file_data.get("path", file_path),
-                    content=file_data.get("content", ""),
-                    metadata=file_data.get("metadata", {}),
-                    created_at=file_data.get("created_at", ""),
-                    updated_at=file_data.get("updated_at", "")
+                    name=file_path,
+                    path=result.get("path", file_path),
+                    content=result.get("content", ""),
+                    metadata=result.get("metadata", {}),
+                    size=result.get("metadata", {}).get("size", 0),
+                    created_at=result.get("metadata", {}).get("created_at", ""),
+                    updated_at=result.get("metadata", {}).get("updated_at", "")
                 )
             else:
                 raise Exception(result.get("error", "File not found"))
@@ -337,12 +381,22 @@ class CollectionService(ICollectionService):
             logger.info(f"Deleting file {file_path} from collection {collection_name}")
             
             # Use existing collection manager
-            # Note: The existing manager might not have a direct delete_file method
-            # For now, we'll raise NotImplementedError until we can implement it
-            raise NotImplementedError("File deletion not yet implemented in collection manager")
-                
-        except NotImplementedError:
-            raise
+            result = self.collection_manager.delete_file(
+                collection_name, file_path, folder_path
+            )
+            
+            # Parse JSON result if it's a string
+            if isinstance(result, str):
+                import json
+                result = json.loads(result)
+            
+            if result.get("success", False):
+                return {
+                    "success": True,
+                    "message": result.get("message", f"File {file_path} deleted successfully")
+                }
+            else:
+                raise Exception(result.get("error", "File deletion failed"))
         except Exception as e:
             logger.error(f"Error deleting file {file_path} from {collection_name}: {str(e)}")
             raise

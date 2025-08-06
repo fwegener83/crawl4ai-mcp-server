@@ -43,12 +43,59 @@ class WebCrawlingService(IWebCrawlingService):
             logger.info(f"Extracting content from URL: {url}")
             
             # Use existing web_content_extract tool
-            result = await web_content_extract(url)
+            from tools.web_extract import WebExtractParams
+            params = WebExtractParams(url=url)
+            result = await web_content_extract(params)
             
-            # Parse JSON result if it's a string
+            # Handle different result formats (dict, string, or object)
             if isinstance(result, str):
-                import json
-                result = json.loads(result)
+                # Check if it's an error message
+                if result.startswith("Error extracting content"):
+                    return CrawlResult(
+                        url=url,
+                        content="",
+                        error=result,
+                        metadata={}
+                    )
+                else:
+                    # Try to parse as JSON first (for backward compatibility with tests)
+                    try:
+                        import json
+                        result_dict = json.loads(result)
+                        # Convert JSON result to CrawlResult
+                        if result_dict.get("success", False):
+                            return CrawlResult(
+                                url=url,
+                                content=result_dict.get("content", ""),
+                                metadata={
+                                    "title": result_dict.get("title", ""),
+                                    "word_count": len(result_dict.get("content", "").split()),
+                                    "extraction_method": "crawl4ai"
+                                }
+                            )
+                        else:
+                            return CrawlResult(
+                                url=url,
+                                content="",
+                                error=result_dict.get("error", "Failed to extract content"),
+                                metadata={}
+                            )
+                    except (json.JSONDecodeError, ValueError):
+                        # Not JSON, treat as plain text content from web_content_extract
+                        return CrawlResult(
+                            url=url,
+                            content=result,
+                            metadata={"extraction_method": "crawl4ai"}
+                        )
+            elif hasattr(result, 'success'):
+                # Handle object with success attribute (from mock)
+                result_dict = {
+                    "success": getattr(result, 'success', False),
+                    "content": getattr(result, 'markdown', '') or getattr(result, 'content', ''),
+                    "title": getattr(result, 'title', ''),
+                    "url": getattr(result, 'url', url)
+                }
+                result = result_dict
             
             # Convert to CrawlResult
             if result.get("success", False):

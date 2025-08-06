@@ -196,6 +196,42 @@ class SQLiteCollectionFileManager:
                 "message": f"Failed to read file '{filename}'"
             }
     
+    def delete_file(self, collection_name: str, filename: str, folder: str = "") -> Dict[str, Any]:
+        """Delete a file from a collection (identical API)."""
+        try:
+            # Sanitize collection name and get collection ID
+            sanitized_collection_name = self._sanitize_collection_name(collection_name)
+            collection_id = sanitized_collection_name.lower().replace(' ', '-')
+            
+            # Sanitize folder path
+            safe_folder = folder.replace('..', '').replace('\\', '/')
+            safe_folder = safe_folder.strip('/')
+            
+            # Delete file from database
+            result = self.file_repo.delete_file(
+                collection_id=collection_id,
+                filename=filename,
+                folder_path=safe_folder
+            )
+            
+            if result["success"]:
+                # Update collection stats after deletion
+                self.collection_repo.update_collection_stats(collection_id)
+                
+                return {
+                    "success": True,
+                    "message": f"File '{filename}' deleted successfully from '{sanitized_collection_name}'"
+                }
+            else:
+                return result
+                
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "message": f"Failed to delete file '{filename}'"
+            }
+    
     def list_collections(self) -> Dict[str, Any]:
         """List all collections with metadata (identical API)."""
         try:

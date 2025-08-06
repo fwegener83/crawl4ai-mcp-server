@@ -43,7 +43,11 @@ class TestWebCrawlingService:
             assert result.metadata["word_count"] == 4  # "Test content from webpage"
             assert result.metadata["extraction_method"] == "crawl4ai"
             
-            mock_extract.assert_called_once_with("https://example.com")
+            # Check that web_content_extract was called with WebExtractParams
+            mock_extract.assert_called_once()
+            call_args = mock_extract.call_args[0][0]  # Get the first positional argument
+            assert hasattr(call_args, 'url')
+            assert call_args.url == "https://example.com"
     
     @pytest.mark.asyncio
     async def test_extract_content_failure(self, service):

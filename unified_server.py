@@ -6,6 +6,7 @@ using shared service layer for consistent business logic. It replaces the dual-s
 architecture with a clean, maintainable unified approach.
 """
 import asyncio
+import json
 import logging
 import sys
 import os
@@ -80,10 +81,12 @@ class UnifiedServer:
             """Extract content from a single web page."""
             try:
                 result = await web_service.extract_content(url)
-                return result.model_dump_json()
+                if result.error:
+                    return f"Error extracting content: {result.error}"
+                return result.content
             except Exception as e:
                 logger.error(f"MCP web_content_extract error: {e}")
-                return CrawlResult(url=url, content="", error=str(e)).model_dump_json()
+                return f"Error extracting content: {str(e)}"
         
         @mcp_server.tool()
         async def domain_deep_crawl_tool(
@@ -228,26 +231,26 @@ class UnifiedServer:
                     config["chunking_strategy"] = chunking_strategy
                 
                 status = await vector_service.sync_collection(collection_name, config)
-                return {
+                return json.dumps({
                     "success": True,
                     "sync_result": status.model_dump()
-                }
+                })
             except Exception as e:
                 logger.error(f"MCP sync_collection_to_vectors error: {e}")
-                return {"success": False, "error": str(e)}
+                return json.dumps({"success": False, "error": str(e)})
         
         @mcp_server.tool()
         async def get_collection_sync_status(collection_name: str) -> str:
             """Get synchronization status for a collection."""
             try:
                 status = await vector_service.get_sync_status(collection_name)
-                return {
+                return json.dumps({
                     "success": True,
                     "status": status.model_dump()
-                }
+                })
             except Exception as e:
                 logger.error(f"MCP get_collection_sync_status error: {e}")
-                return {"success": False, "error": str(e)}
+                return json.dumps({"success": False, "error": str(e)})
         
         @mcp_server.tool()
         async def search_collection_vectors(
@@ -262,13 +265,13 @@ class UnifiedServer:
                 # Filter by similarity threshold if needed
                 filtered_results = [r for r in results if r.score >= similarity_threshold]
                 
-                return {
+                return json.dumps({
                     "success": True,
                     "results": [result.model_dump() for result in filtered_results]
-                }
+                })
             except Exception as e:
                 logger.error(f"MCP search_collection_vectors error: {e}")
-                return {"success": False, "error": str(e)}
+                return json.dumps({"success": False, "error": str(e)})
         
         self.mcp_server = mcp_server
         logger.info("MCP protocol handler configured with service layer adapters")
@@ -358,7 +361,12 @@ class UnifiedServer:
                             "url": result.url,
                             "title": result.metadata.get("title", ""),
                             "content": result.content,
-                            "metadata": result.metadata,
+                            "success": result.error is None,
+                            "depth": result.metadata.get("depth", 0),
+                            "metadata": {
+                                "crawl_time": result.metadata.get("crawl_time", ""),
+                                "score": result.metadata.get("score", 0.0)
+                            },
                             "error": result.error
                         }
                         for result in results
@@ -451,6 +459,170 @@ class UnifiedServer:
                 logger.error(f"HTTP delete_collection error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
         
+        # ===== FILE MANAGEMENT ENDPOINTS =====
+        
+        @app.get("/api/file-collections/{collection_id}/files")
+        async def list_files_in_collection(collection_id: str):
+            """List all files and folders in a collection."""
+            try:
+                from urllib.parse import unquote
+                decoded_collection_id = unquote(collection_id)
+                
+                files = await collection_service.list_files_in_collection(decoded_collection_id)
+                return {
+                    "success": True,
+                    "data": {
+                        "files": [f.model_dump() for f in files],
+                        "folders": [],  # Placeholder - implement if needed
+                        "total_files": len(files),
+                        "total_folders": 0
+                    }
+                }
+            except Exception as e:
+                logger.error(f"HTTP list_files_in_collection error: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
+        @app.post("/api/file-collections/{collection_id}/files")
+        async def save_file_to_collection_endpoint(collection_id: str, request: dict):
+            """Save a file to a collection."""
+            try:
+                from urllib.parse import unquote
+                decoded_collection_id = unquote(collection_id)
+                
+                filename = request.get("filename")
+                content = request.get("content")
+                folder = request.get("folder", "")
+                
+                if not filename:
+                    raise HTTPException(status_code=400, detail="Filename is required")
+                if not content:
+                    raise HTTPException(status_code=400, detail="Content is required")
+                
+                file_info = await collection_service.save_file(decoded_collection_id, filename, content, folder)
+                return {
+                    "success": True,
+                    "data": file_info.model_dump()
+                }
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"HTTP save_file_to_collection error: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
+        @app.get("/api/file-collections/{collection_id}/files/{filename}")
+        async def read_file_from_collection_endpoint(collection_id: str, filename: str, folder: str = ""):
+            """Read a file from a collection."""
+            try:
+                from urllib.parse import unquote
+                decoded_collection_id = unquote(collection_id)
+                decoded_filename = unquote(filename)
+                
+                file_info = await collection_service.get_file(decoded_collection_id, decoded_filename, folder)
+                return {
+                    "success": True,
+                    "data": {
+                        "content": file_info.content
+                    }
+                }
+            except Exception as e:
+                logger.error(f"HTTP read_file_from_collection error: {e}")
+                raise HTTPException(status_code=404, detail=str(e))
+        
+        @app.put("/api/file-collections/{collection_id}/files/{filename}")
+        async def update_file_in_collection_endpoint(collection_id: str, filename: str, request: dict, folder: str = ""):
+            """Update a file in a collection."""
+            try:
+                from urllib.parse import unquote
+                decoded_collection_id = unquote(collection_id)
+                decoded_filename = unquote(filename)
+                
+                content = request.get("content")
+                if not content:
+                    raise HTTPException(status_code=400, detail="Content is required")
+                
+                file_info = await collection_service.save_file(decoded_collection_id, decoded_filename, content, folder)
+                return {
+                    "success": True,
+                    "data": file_info.model_dump()
+                }
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"HTTP update_file_in_collection error: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
+        @app.delete("/api/file-collections/{collection_id}/files/{filename}")
+        async def delete_file_from_collection_endpoint(collection_id: str, filename: str, folder: str = ""):
+            """Delete a file from a collection."""
+            try:
+                from urllib.parse import unquote
+                decoded_collection_id = unquote(collection_id)
+                decoded_filename = unquote(filename)
+                
+                await collection_service.delete_file(decoded_collection_id, decoded_filename, folder)
+                return {"success": True}
+            except Exception as e:
+                logger.error(f"HTTP delete_file_from_collection error: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
+        @app.post("/api/crawl/single/{collection_id}")
+        async def crawl_single_page_to_collection(collection_id: str, request: dict):
+            """Crawl a single page and save to collection."""
+            try:
+                from urllib.parse import unquote, urlparse
+                
+                # URL decode the collection_id to handle names with spaces
+                decoded_collection_id = unquote(collection_id)
+                
+                # Extract required fields from request
+                url = request.get("url")
+                folder = request.get("folder", "")
+                
+                if not url:
+                    raise HTTPException(status_code=400, detail="URL is required")
+                
+                # Extract content from URL using web service
+                content_result = await web_service.extract_content(url)
+                
+                if content_result.error:
+                    raise HTTPException(status_code=400, detail=f"Failed to crawl URL: {content_result.error}")
+                
+                # Generate filename from URL
+                parsed_url = urlparse(url)
+                domain = parsed_url.netloc.replace("www.", "")
+                path_parts = [p for p in parsed_url.path.split("/") if p]
+                if path_parts:
+                    filename = f"{domain}_{path_parts[-1]}.md"
+                else:
+                    filename = f"{domain}_index.md"
+                
+                # Clean filename
+                import re
+                filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
+                
+                # Save to collection using collection service
+                file_info = await collection_service.save_file(
+                    decoded_collection_id, 
+                    filename, 
+                    content_result.content, 
+                    folder
+                )
+                
+                return {
+                    "success": True,
+                    "filename": filename,
+                    "url": url,
+                    "folder": folder,
+                    "content_length": len(content_result.content),
+                    "message": f"Successfully saved content from {url} to {decoded_collection_id}/{folder if folder else ''}{filename}"
+                }
+                
+            except HTTPException:
+                raise  # Re-raise HTTPExceptions without wrapping
+            except Exception as e:
+                logger.error(f"HTTP crawl_single_page_to_collection error: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
         # ===== VECTOR SYNC ENDPOINTS =====
         
         @app.post("/api/vector-sync/collections/{collection_name}/sync")
@@ -478,6 +650,19 @@ class UnifiedServer:
                 }
             except Exception as e:
                 logger.error(f"HTTP get_sync_status error: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
+        @app.get("/api/vector-sync/collections/statuses")
+        async def list_all_sync_statuses():
+            """Get synchronization status for all collections."""
+            try:
+                statuses = await vector_service.list_sync_statuses()
+                return {
+                    "success": True,
+                    "statuses": {status.collection_name: status.model_dump() for status in statuses}
+                }
+            except Exception as e:
+                logger.error(f"HTTP list_all_sync_statuses error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
         
         @app.post("/api/vector-sync/search")

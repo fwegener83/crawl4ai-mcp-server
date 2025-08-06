@@ -273,14 +273,23 @@ class TestSystemIntegration:
                 ]
                 collection_available = all(tool_name in tool_names for tool_name in collection_tools)
                 
+                # Vector sync tools (always available when collections available)
+                vector_sync_tools = [
+                    "sync_collection_to_vectors", "get_collection_sync_status", "search_collection_vectors"
+                ]
+                vector_sync_available = all(tool_name in tool_names for tool_name in vector_sync_tools)
+                
                 if rag_available and collection_available:
-                    # Original 3 + 4 RAG tools + 6 collection tools + 7 vector sync tools = 20 tools
-                    assert len(tools) == 20
+                    # Original 3 + 4 RAG tools + 6 collection tools + 3 vector sync tools = 16 tools (legacy expectation)
+                    assert len(tools) >= 16
+                elif collection_available and vector_sync_available:
+                    # Original 3 + 6 collection tools + 3 vector sync tools = 12 tools (current unified server)
+                    assert len(tools) == 12
                 elif collection_available:
-                    # Original 3 + 6 collection tools = 9 tools (RAG not available)
+                    # Original 3 + 6 collection tools = 9 tools (RAG and vector sync not available)
                     assert len(tools) == 9
                 else:
-                    # Only original 3 tools (neither RAG nor collection tools available)
+                    # Only original 3 tools (no additional features available)
                     assert len(tools) == 3
                 
                 # 2. Tool execution

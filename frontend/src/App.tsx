@@ -6,7 +6,7 @@ import { CollectionProvider } from './contexts/CollectionContext';
 import HomePage from './pages/HomePage';
 import SimpleCrawlPage from './pages/SimpleCrawlPage';
 import DeepCrawlPage from './pages/DeepCrawlPage';
-import CollectionsPage from './pages/CollectionsPage';
+// CollectionsPage removed - RAG Knowledge Base replaced by File Collections
 import FileCollectionsPage from './pages/FileCollectionsPage';
 import SettingsPage from './pages/SettingsPage';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -24,7 +24,7 @@ function App() {
       case 'deep-crawl':
         return <DeepCrawlPage />;
       case 'collections':
-        return <CollectionsPage />;
+        return <FileCollectionsPage />; // Redirect RAG collections to File Collections
       case 'file-collections':
         return <FileCollectionsPage />;
       case 'settings':

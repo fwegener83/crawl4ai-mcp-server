@@ -36,6 +36,8 @@ class VectorSyncService(IVectorSyncService):
         self.vector_store = vector_store
         self.collection_service = collection_service
         self.vector_available = self._check_vector_availability()
+        # Cache sync managers to maintain status between calls
+        self._sync_manager_cache = {}
     
     def _check_vector_availability(self) -> bool:
         """Check if vector dependencies are available."""
@@ -77,10 +79,14 @@ class VectorSyncService(IVectorSyncService):
             if not self.vector_store:
                 self.vector_store = VectorStore()
             
-            sync_manager = IntelligentSyncManager(
-                vector_store=self.vector_store,
-                collection_manager=self.collection_service.collection_manager if self.collection_service else None
-            )
+            # Use cached sync manager or create new one
+            cache_key = f"sync_{collection_name}"
+            if cache_key not in self._sync_manager_cache:
+                self._sync_manager_cache[cache_key] = IntelligentSyncManager(
+                    vector_store=self.vector_store,
+                    collection_manager=self.collection_service.collection_manager if self.collection_service else None
+                )
+            sync_manager = self._sync_manager_cache[cache_key]
             
             vector_sync_api = VectorSyncAPI(
                 sync_manager=sync_manager,
@@ -88,22 +94,33 @@ class VectorSyncService(IVectorSyncService):
                 collection_manager=self.collection_service.collection_manager if self.collection_service else None
             )
             
-            # Perform sync operation
-            result = await vector_sync_api.sync_collection_to_vectors(collection_name, config or {})
+            # Prepare sync request
+            from tools.vector_sync_api import SyncCollectionRequest
+            sync_request = SyncCollectionRequest(
+                force_reprocess=config.get("force_reprocess", False) if config else False,
+                chunking_strategy=config.get("chunking_strategy") if config else None
+            )
             
-            # Parse JSON result if it's a string
+            # Perform sync operation
+            result = await vector_sync_api.sync_collection(collection_name, sync_request)
+            
+            # Handle both string and object responses
             if isinstance(result, str):
                 import json
-                result = json.loads(result)
+                result_data = json.loads(result)
+            elif hasattr(result, 'model_dump'):
+                result_data = result.model_dump()
+            else:
+                result_data = result
             
-            if result.get("success", False):
-                sync_data = result.get("sync_result", {})
+            if result_data.get("success", False):
+                sync_data = result_data.get("sync_result", {})
                 return VectorSyncStatus(
                     collection_name=collection_name,
                     is_enabled=True,
                     last_sync=sync_data.get("completed_at", ""),
                     file_count=sync_data.get("files_processed", 0),
-                    vector_count=sync_data.get("vectors_created", 0),
+                    vector_count=sync_data.get("chunks_created", 0),  # Fixed: chunks_created not vectors_created
                     sync_status="completed"
                 )
             else:
@@ -111,7 +128,7 @@ class VectorSyncService(IVectorSyncService):
                     collection_name=collection_name,
                     is_enabled=False,
                     sync_status="error",
-                    error_message=result.get("error", "Sync failed")
+                    error_message=result_data.get("error", "Sync failed")
                 )
                 
         except Exception as e:
@@ -153,10 +170,14 @@ class VectorSyncService(IVectorSyncService):
             if not self.vector_store:
                 self.vector_store = VectorStore()
             
-            sync_manager = IntelligentSyncManager(
-                vector_store=self.vector_store,
-                collection_manager=self.collection_service.collection_manager if self.collection_service else None
-            )
+            # Use cached sync manager or create new one - REUSE THE SAME INSTANCE!
+            cache_key = f"sync_{collection_name}"
+            if cache_key not in self._sync_manager_cache:
+                self._sync_manager_cache[cache_key] = IntelligentSyncManager(
+                    vector_store=self.vector_store,
+                    collection_manager=self.collection_service.collection_manager if self.collection_service else None
+                )
+            sync_manager = self._sync_manager_cache[cache_key]
             
             vector_sync_api = VectorSyncAPI(
                 sync_manager=sync_manager,
@@ -167,27 +188,31 @@ class VectorSyncService(IVectorSyncService):
             # Get sync status
             result = await vector_sync_api.get_collection_sync_status(collection_name)
             
-            # Parse JSON result if it's a string
+            # Handle both string and object responses
             if isinstance(result, str):
                 import json
-                result = json.loads(result)
+                result_data = json.loads(result)
+            elif hasattr(result, 'model_dump'):
+                result_data = result.model_dump()
+            else:
+                result_data = result
             
-            if result.get("success", False):
-                status_data = result.get("status", {})
+            if result_data.get("success", False):
+                status_data = result_data.get("status", {})
                 return VectorSyncStatus(
                     collection_name=collection_name,
-                    is_enabled=status_data.get("is_enabled", False),
+                    is_enabled=status_data.get("sync_enabled", False),
                     last_sync=status_data.get("last_sync", ""),
-                    file_count=status_data.get("file_count", 0),
-                    vector_count=status_data.get("vector_count", 0),
-                    sync_status=status_data.get("sync_status", "idle")
+                    file_count=status_data.get("total_files", 0),
+                    vector_count=status_data.get("chunk_count", 0),
+                    sync_status=status_data.get("status", "idle")
                 )
             else:
                 return VectorSyncStatus(
                     collection_name=collection_name,
                     is_enabled=False,
                     sync_status="error",
-                    error_message=result.get("error", "Failed to get status")
+                    error_message=result_data.get("error", "Failed to get status")
                 )
                 
         except Exception as e:
@@ -221,40 +246,24 @@ class VectorSyncService(IVectorSyncService):
             if not self.vector_store:
                 self.vector_store = VectorStore()
             
-            sync_manager = IntelligentSyncManager(
-                vector_store=self.vector_store,
-                collection_manager=self.collection_service.collection_manager if self.collection_service else None
-            )
+            # Get all collections first to ensure cache entries exist
+            collections = await self.collection_service.list_collections()
+            all_statuses = []
             
-            vector_sync_api = VectorSyncAPI(
-                sync_manager=sync_manager,
-                vector_store=self.vector_store,
-                collection_manager=self.collection_service.collection_manager if self.collection_service else None
-            )
-            
-            # Get all sync statuses
-            result = await vector_sync_api.list_collection_sync_statuses()
-            
-            # Parse JSON result if it's a string
-            if isinstance(result, str):
-                import json
-                result = json.loads(result)
-            
-            statuses = []
-            if result.get("success", False):
-                status_list = result.get("statuses", [])
-                for status_data in status_list:
-                    status = VectorSyncStatus(
-                        collection_name=status_data.get("collection_name", ""),
-                        is_enabled=status_data.get("is_enabled", False),
-                        last_sync=status_data.get("last_sync", ""),
-                        file_count=status_data.get("file_count", 0),
-                        vector_count=status_data.get("vector_count", 0),
-                        sync_status=status_data.get("sync_status", "idle")
+            # For each collection, get or create cached sync manager
+            for collection in collections:
+                cache_key = f"sync_{collection.name}"
+                if cache_key not in self._sync_manager_cache:
+                    self._sync_manager_cache[cache_key] = IntelligentSyncManager(
+                        vector_store=self.vector_store,
+                        collection_manager=self.collection_service.collection_manager if self.collection_service else None
                     )
-                    statuses.append(status)
+                
+                # Get status for this specific collection
+                status = await self.get_sync_status(collection.name)
+                all_statuses.append(status)
             
-            return statuses
+            return all_statuses
             
         except Exception as e:
             logger.error(f"Error listing sync statuses: {str(e)}")
@@ -508,31 +517,36 @@ class VectorSyncService(IVectorSyncService):
                 collection_manager=self.collection_service.collection_manager if self.collection_service else None
             )
             
+            # Prepare search request
+            from tools.vector_sync_api import VectorSearchRequest
+            search_request = VectorSearchRequest(
+                query=query,
+                collection_name=collection_name,
+                limit=limit
+            )
+            
             # Perform vector search
-            search_params = {
-                "query": query,
-                "limit": limit
-            }
-            if collection_name:
-                search_params["collection_name"] = collection_name
+            result = await vector_sync_api.search_vectors(search_request)
             
-            result = await vector_sync_api.search_collection_vectors(search_params)
-            
-            # Parse JSON result if it's a string
+            # Handle both string and object responses
             if isinstance(result, str):
                 import json
-                result = json.loads(result)
+                result_data = json.loads(result)
+            elif hasattr(result, 'model_dump'):
+                result_data = result.model_dump()
+            else:
+                result_data = result
             
             search_results = []
-            if result.get("success", False):
-                results_data = result.get("results", [])
-                for result_data in results_data:
+            if result_data.get("success", False):
+                results_data = result_data.get("results", [])
+                for result_item in results_data:
                     search_result = VectorSearchResult(
-                        content=result_data.get("content", ""),
-                        metadata=result_data.get("metadata", {}),
-                        score=result_data.get("score", 0.0),
-                        collection_name=result_data.get("collection_name", collection_name or ""),
-                        file_path=result_data.get("file_path", "")
+                        content=result_item.get("content", ""),
+                        metadata=result_item.get("metadata", {}),
+                        score=result_item.get("score", 0.0),
+                        collection_name=result_item.get("collection_name", collection_name or ""),
+                        file_path=result_item.get("source_file", result_item.get("file_path", ""))
                     )
                     search_results.append(search_result)
             
