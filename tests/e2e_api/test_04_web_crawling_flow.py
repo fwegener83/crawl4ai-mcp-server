@@ -80,18 +80,21 @@ async def test_deep_crawl(client: httpx.AsyncClient):
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is True
-    assert "results" in data
-    assert isinstance(data["results"], list)
+    assert "pages" in data
+    assert isinstance(data["pages"], list)
     
     # Check that we got some results
-    results = data["results"]
+    results = data["pages"]
     assert len(results) > 0
     
     # Verify result structure
     for result in results:
         assert "url" in result
-        assert "markdown" in result
+        assert "content" in result
         assert "success" in result
+        assert "title" in result
+        assert "depth" in result
+        assert "metadata" in result
 
 
 @pytest.mark.asyncio
@@ -188,7 +191,7 @@ async def test_deep_crawl_with_parameters(client: httpx.AsyncClient):
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is True
-    assert "results" in data
+    assert "pages" in data
 
 
 @pytest.mark.asyncio

@@ -7,15 +7,83 @@ import pytest
 import pytest_asyncio
 import httpx
 import asyncio
+import uvicorn
+import threading
+import time
+import os
+import sys
 from typing import AsyncGenerator
+
+# Add project root to Python path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 # Test configuration
 BASE_URL = "http://localhost:8000"
 TEST_TIMEOUT = 30.0
 
 
+@pytest.fixture(scope="session")
+def test_server():
+    """Start the unified server for testing."""
+    # Check if server is already running
+    try:
+        import httpx
+        with httpx.Client(timeout=2.0) as client:
+            response = client.get(f"{BASE_URL}/api/health")
+            if response.status_code == 200:
+                # Server is already running
+                yield
+                return
+    except:
+        pass
+    
+    # Start server in thread
+    from unified_server import UnifiedServer
+    
+    server_instance = UnifiedServer()
+    app = server_instance.setup_http_app()
+    
+    config = uvicorn.Config(
+        app,
+        host="127.0.0.1",
+        port=8000,
+        log_level="warning",
+        access_log=False
+    )
+    server = uvicorn.Server(config)
+    
+    def run_server():
+        try:
+            asyncio.set_event_loop(asyncio.new_event_loop())
+            server.run()
+        except Exception as e:
+            print(f"Server error: {e}")
+    
+    server_thread = threading.Thread(target=run_server, daemon=True)
+    server_thread.start()
+    
+    # Wait for server to be ready
+    max_attempts = 30
+    for _ in range(max_attempts):
+        try:
+            import httpx
+            with httpx.Client(timeout=2.0) as client:
+                response = client.get(f"{BASE_URL}/api/health")
+                if response.status_code == 200:
+                    break
+        except:
+            pass
+        time.sleep(1)
+    else:
+        raise RuntimeError("Test server failed to start")
+    
+    yield
+    
+    # Cleanup happens automatically when test session ends
+
+
 @pytest_asyncio.fixture
-async def client() -> AsyncGenerator[httpx.AsyncClient, None]:
+async def client(test_server) -> AsyncGenerator[httpx.AsyncClient, None]:
     """Async HTTP client for API testing."""
     async with httpx.AsyncClient(
         base_url=BASE_URL,
