@@ -5,7 +5,7 @@ Tests the protocol-agnostic collection management business logic
 with mocked dependencies for isolation.
 """
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, Mock, patch, MagicMock
 import json
 from pathlib import Path
 
@@ -19,7 +19,7 @@ class TestCollectionService:
     @pytest.fixture
     def mock_collection_manager(self):
         """Create a mock collection manager."""
-        return AsyncMock()
+        return Mock()  # Use regular Mock since collection_manager methods are synchronous
     
     @pytest.fixture
     def service(self, mock_collection_manager):
