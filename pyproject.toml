@@ -50,6 +50,7 @@ dev = [
     "ruff",
     "bandit",
     "safety",
+    "dependency-injector>=4.48.1",
 ]
 
 [tool.pytest.ini_options]
