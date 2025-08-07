@@ -10,6 +10,47 @@ This is a Crawl4AI MCP (Model Context Protocol) Server with a React frontend for
 - **Frontend**: React/TypeScript application with Vite, TailwindCSS, and comprehensive testing
 - **Architecture**: Dual-mode system supporting both RAG knowledge base and file-based collections
 
+## API Status Code Rules
+
+### HTTP Status Code Matrix for Vector Sync APIs
+
+The vector sync API endpoints follow RESTful conventions with consistent error handling:
+
+| Szenario | Status Code | Response Structure | Anwendung |
+|----------|-------------|-------------------|-----------|
+| **Erfolgreiche Operation** | 200 | `{"success": true, "data": {...}}` | Sync erfolgreich, Status abgerufen, Suche mit Ergebnissen |
+| **Collection nicht gefunden** | 404 | `{"detail": {"error": {"code": "COLLECTION_NOT_FOUND", "message": "...", "details": {...}}}}` | Collection existiert nicht |
+| **Ungültige Parameter** | 400 | `{"detail": {"error": {"code": "MISSING_QUERY\|INVALID_LIMIT", "message": "...", "details": {...}}}}` | Fehlende/ungültige Request-Parameter |
+| **Server/Sync-Fehler** | 500 | `{"detail": {"error": {"code": "SYNC_FAILED", "message": "...", "details": {...}}}}` | Technische Sync-Fehler |
+| **Service nicht verfügbar** | 503 | `{"detail": {"error": {"code": "SERVICE_UNAVAILABLE", "message": "...", "details": {...}}}}` | RAG-Dependencies nicht installiert |
+
+### Vector Sync Endpoints
+
+**Manual Sync Design**: Vector synchronization is exclusively triggered manually - no automatic syncing on file changes.
+
+- `POST /api/vector-sync/collections/{name}/sync` - Collection synchronisieren (manuell)
+- `GET /api/vector-sync/collections/{name}/status` - Sync-Status einer Collection
+- `GET /api/vector-sync/collections/statuses` - Status aller Collections
+- `POST /api/vector-sync/search` - Vektorsuche
+- `DELETE /api/vector-sync/collections/{name}/vectors` - Alle Vektoren einer Collection löschen
+
+### Error Response Format
+
+```json
+{
+  "detail": {
+    "error": {
+      "code": "ERROR_CODE",
+      "message": "Human readable error message",
+      "details": {
+        "field1": "additional context",
+        "field2": "more context"
+      }
+    }
+  }
+}
+```
+
 ## Essential Commands
 
 ### Backend Development

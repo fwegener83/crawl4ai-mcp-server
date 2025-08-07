@@ -269,216 +269,6 @@ class VectorSyncService(IVectorSyncService):
             logger.error(f"Error listing sync statuses: {str(e)}")
             return []
     
-    async def enable_sync(self, collection_name: str) -> VectorSyncStatus:
-        """
-        Enable vector synchronization for a collection.
-        
-        Args:
-            collection_name: Name of the collection
-            
-        Returns:
-            VectorSyncStatus after enabling sync
-        """
-        if not self.vector_available:
-            return VectorSyncStatus(
-                collection_name=collection_name,
-                is_enabled=False,
-                sync_status="error",
-                error_message="Vector dependencies not available"
-            )
-        
-        try:
-            logger.info(f"Enabling sync for collection: {collection_name}")
-            
-            # Import vector sync tools
-            from tools.vector_sync_api import VectorSyncAPI
-            from tools.knowledge_base.intelligent_sync_manager import IntelligentSyncManager
-            from tools.knowledge_base.vector_store import VectorStore
-            
-            # Initialize components if not provided
-            if not self.vector_store:
-                self.vector_store = VectorStore()
-            
-            sync_manager = IntelligentSyncManager(
-                vector_store=self.vector_store,
-                collection_manager=self.collection_service.collection_manager if self.collection_service else None
-            )
-            
-            vector_sync_api = VectorSyncAPI(
-                sync_manager=sync_manager,
-                vector_store=self.vector_store,
-                collection_manager=self.collection_service.collection_manager if self.collection_service else None
-            )
-            
-            # Enable sync
-            result = await vector_sync_api.enable_collection_sync(collection_name)
-            
-            # Parse JSON result if it's a string
-            if isinstance(result, str):
-                import json
-                result = json.loads(result)
-            
-            if result.get("success", False):
-                return VectorSyncStatus(
-                    collection_name=collection_name,
-                    is_enabled=True,
-                    sync_status="enabled"
-                )
-            else:
-                return VectorSyncStatus(
-                    collection_name=collection_name,
-                    is_enabled=False,
-                    sync_status="error",
-                    error_message=result.get("error", "Failed to enable sync")
-                )
-                
-        except Exception as e:
-            logger.error(f"Error enabling sync for {collection_name}: {str(e)}")
-            return VectorSyncStatus(
-                collection_name=collection_name,
-                is_enabled=False,
-                sync_status="error",
-                error_message=str(e)
-            )
-    
-    async def disable_sync(self, collection_name: str) -> VectorSyncStatus:
-        """
-        Disable vector synchronization for a collection.
-        
-        Args:
-            collection_name: Name of the collection
-            
-        Returns:
-            VectorSyncStatus after disabling sync
-        """
-        if not self.vector_available:
-            return VectorSyncStatus(
-                collection_name=collection_name,
-                is_enabled=False,
-                sync_status="error",
-                error_message="Vector dependencies not available"
-            )
-        
-        try:
-            logger.info(f"Disabling sync for collection: {collection_name}")
-            
-            # Import vector sync tools
-            from tools.vector_sync_api import VectorSyncAPI
-            from tools.knowledge_base.intelligent_sync_manager import IntelligentSyncManager
-            from tools.knowledge_base.vector_store import VectorStore
-            
-            # Initialize components if not provided
-            if not self.vector_store:
-                self.vector_store = VectorStore()
-            
-            sync_manager = IntelligentSyncManager(
-                vector_store=self.vector_store,
-                collection_manager=self.collection_service.collection_manager if self.collection_service else None
-            )
-            
-            vector_sync_api = VectorSyncAPI(
-                sync_manager=sync_manager,
-                vector_store=self.vector_store,
-                collection_manager=self.collection_service.collection_manager if self.collection_service else None
-            )
-            
-            # Disable sync
-            result = await vector_sync_api.disable_collection_sync(collection_name)
-            
-            # Parse JSON result if it's a string
-            if isinstance(result, str):
-                import json
-                result = json.loads(result)
-            
-            if result.get("success", False):
-                return VectorSyncStatus(
-                    collection_name=collection_name,
-                    is_enabled=False,
-                    sync_status="disabled"
-                )
-            else:
-                return VectorSyncStatus(
-                    collection_name=collection_name,
-                    is_enabled=False,
-                    sync_status="error",
-                    error_message=result.get("error", "Failed to disable sync")
-                )
-                
-        except Exception as e:
-            logger.error(f"Error disabling sync for {collection_name}: {str(e)}")
-            return VectorSyncStatus(
-                collection_name=collection_name,
-                is_enabled=False,
-                sync_status="error",
-                error_message=str(e)
-            )
-    
-    async def delete_vectors(self, collection_name: str) -> Dict[str, Any]:
-        """
-        Delete all vectors for a collection.
-        
-        Args:
-            collection_name: Name of the collection
-            
-        Returns:
-            Status information about the deletion
-        """
-        if not self.vector_available:
-            return {
-                "success": False,
-                "error": "Vector dependencies not available"
-            }
-        
-        try:
-            logger.info(f"Deleting vectors for collection: {collection_name}")
-            
-            # Import vector sync tools
-            from tools.vector_sync_api import VectorSyncAPI
-            from tools.knowledge_base.intelligent_sync_manager import IntelligentSyncManager
-            from tools.knowledge_base.vector_store import VectorStore
-            
-            # Initialize components if not provided
-            if not self.vector_store:
-                self.vector_store = VectorStore()
-            
-            sync_manager = IntelligentSyncManager(
-                vector_store=self.vector_store,
-                collection_manager=self.collection_service.collection_manager if self.collection_service else None
-            )
-            
-            vector_sync_api = VectorSyncAPI(
-                sync_manager=sync_manager,
-                vector_store=self.vector_store,
-                collection_manager=self.collection_service.collection_manager if self.collection_service else None
-            )
-            
-            # Delete vectors
-            result = await vector_sync_api.delete_collection_vectors(collection_name)
-            
-            # Parse JSON result if it's a string
-            if isinstance(result, str):
-                import json
-                result = json.loads(result)
-            
-            if result.get("success", False):
-                return {
-                    "success": True,
-                    "message": f"Vectors deleted for collection {collection_name}",
-                    "deleted_count": result.get("deleted_count", 0)
-                }
-            else:
-                return {
-                    "success": False,
-                    "error": result.get("error", "Failed to delete vectors")
-                }
-                
-        except Exception as e:
-            logger.error(f"Error deleting vectors for {collection_name}: {str(e)}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
-    
     async def search_vectors(self, query: str, collection_name: Optional[str] = None, limit: int = 10) -> List[VectorSearchResult]:
         """
         Search vectors using semantic similarity.
@@ -555,3 +345,85 @@ class VectorSyncService(IVectorSyncService):
         except Exception as e:
             logger.error(f"Error searching vectors with query '{query}': {str(e)}")
             return []
+    
+    async def delete_collection_vectors(self, collection_name: str) -> Dict[str, Any]:
+        """
+        Delete all vectors associated with a collection.
+        
+        Args:
+            collection_name: Name of the collection
+            
+        Returns:
+            Dictionary with deletion results including count
+        """
+        if not self.vector_available:
+            return {
+                "success": False,
+                "error": "Vector dependencies not available",
+                "deleted_count": 0
+            }
+        
+        try:
+            logger.info(f"Deleting vectors for collection: {collection_name}")
+            
+            # Import vector sync tools
+            from tools.vector_sync_api import VectorSyncAPI
+            from tools.knowledge_base.intelligent_sync_manager import IntelligentSyncManager
+            from tools.knowledge_base.vector_store import VectorStore
+            
+            # Initialize components if not provided
+            if not self.vector_store:
+                self.vector_store = VectorStore()
+            
+            # Use cached sync manager or create new one
+            cache_key = f"sync_{collection_name}"
+            if cache_key not in self._sync_manager_cache:
+                self._sync_manager_cache[cache_key] = IntelligentSyncManager(
+                    vector_store=self.vector_store,
+                    collection_manager=self.collection_service.collection_manager if self.collection_service else None
+                )
+            sync_manager = self._sync_manager_cache[cache_key]
+            
+            vector_sync_api = VectorSyncAPI(
+                sync_manager=sync_manager,
+                vector_store=self.vector_store,
+                collection_manager=self.collection_service.collection_manager if self.collection_service else None
+            )
+            
+            # Delete vectors for collection
+            result = await vector_sync_api.delete_collection_vectors(collection_name)
+            
+            # Handle both string and object responses
+            if isinstance(result, str):
+                import json
+                result_data = json.loads(result)
+            elif hasattr(result, 'model_dump'):
+                result_data = result.model_dump()
+            else:
+                result_data = result
+            
+            if result_data.get("success", False):
+                deleted_count = result_data.get("deleted_count", 0)
+                # Clear the cached sync manager for this collection
+                if cache_key in self._sync_manager_cache:
+                    del self._sync_manager_cache[cache_key]
+                
+                return {
+                    "success": True,
+                    "deleted_count": deleted_count,
+                    "message": f"Deleted {deleted_count} vectors for collection '{collection_name}'"
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": result_data.get("error", "Failed to delete vectors"),
+                    "deleted_count": 0
+                }
+                
+        except Exception as e:
+            logger.error(f"Error deleting vectors for collection {collection_name}: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e),
+                "deleted_count": 0
+            }

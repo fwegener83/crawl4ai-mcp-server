@@ -6,12 +6,13 @@ Tests endpoints: /api/vector-sync/collections/{name}/sync, /api/vector-sync/coll
 /api/vector-sync/collections/statuses, /api/vector-sync/search
 """
 import pytest
+import pytest_asyncio
 import httpx
 import uuid
 import asyncio
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_collection_with_content(client: httpx.AsyncClient, cleanup_collections):
     """Create a test collection with content for vector sync testing."""
     collection_name = f"vector_test_{uuid.uuid4().hex[:6]}"
@@ -23,8 +24,8 @@ async def test_collection_with_content(client: httpx.AsyncClient, cleanup_collec
     })
     
     assert response.status_code == 200
-    collection_id = response.json()["collection"]["id"]
-    cleanup_collections(collection_id)
+    collection_name = response.json()["data"]["name"]
+    cleanup_collections(collection_name)
     
     # Add test content
     test_files = [
@@ -43,10 +44,10 @@ async def test_collection_with_content(client: httpx.AsyncClient, cleanup_collec
     ]
     
     for file_data in test_files:
-        file_response = await client.post(f"/api/file-collections/{collection_id}/files", json=file_data)
+        file_response = await client.post(f"/api/file-collections/{collection_name}/files", json=file_data)
         assert file_response.status_code == 200
     
-    return {"collection_id": collection_id, "collection_name": collection_name}
+    return {"collection_name": collection_name}
 
 
 @pytest.mark.asyncio
@@ -203,7 +204,6 @@ async def test_force_reprocess_sync(client: httpx.AsyncClient, test_collection_w
         "force_reprocess": False
     })
     assert sync_response1.status_code == 200
-    initial_vector_count = sync_response1.json()["sync_result"]["vector_count"]
     
     # Force reprocess sync
     sync_response2 = await client.post(f"/api/vector-sync/collections/{collection_name}/sync", json={
@@ -227,8 +227,8 @@ async def test_sync_empty_collection(client: httpx.AsyncClient, cleanup_collecti
         "description": "Empty collection for sync testing"
     })
     assert response.status_code == 200
-    collection_id = response.json()["collection"]["id"]
-    cleanup_collections(collection_id)
+    collection_name = response.json()["data"]["name"]
+    cleanup_collections(collection_name)
     
     # Try to sync empty collection
     sync_response = await client.post(f"/api/vector-sync/collections/{collection_name}/sync", json={
@@ -254,6 +254,11 @@ async def test_sync_nonexistent_collection(client: httpx.AsyncClient):
     })
     
     assert response.status_code == 404
+    data = response.json()
+    assert "detail" in data
+    error = data["detail"]["error"]
+    assert error["code"] == "COLLECTION_NOT_FOUND"
+    assert "does not exist" in error["message"]
 
 
 @pytest.mark.asyncio
@@ -264,6 +269,11 @@ async def test_get_status_nonexistent_collection(client: httpx.AsyncClient):
     response = await client.get(f"/api/vector-sync/collections/{fake_collection_name}/status")
     
     assert response.status_code == 404
+    data = response.json()
+    assert "detail" in data
+    error = data["detail"]["error"]
+    assert error["code"] == "COLLECTION_NOT_FOUND"
+    assert "does not exist" in error["message"]
 
 
 @pytest.mark.asyncio
@@ -299,7 +309,6 @@ async def test_complete_vector_workflow(client: httpx.AsyncClient, test_collecti
     # Step 1: Check initial status (should be never_synced)
     initial_status_response = await client.get(f"/api/vector-sync/collections/{collection_name}/status")
     assert initial_status_response.status_code == 200
-    initial_status = initial_status_response.json()["status"]
     
     # Step 2: Sync collection
     sync_response = await client.post(f"/api/vector-sync/collections/{collection_name}/sync", json={

@@ -645,16 +645,70 @@ class UnifiedServer:
         
         # ===== VECTOR SYNC ENDPOINTS =====
         
+        async def _validate_collection_exists(collection_name: str):
+            """Validate that a collection exists, raise 404 HTTPException if not."""
+            try:
+                await collection_service.get_collection(collection_name)
+            except Exception as e:
+                error_msg = str(e).lower()
+                if "not found" in error_msg or "does not exist" in error_msg:
+                    raise HTTPException(
+                        status_code=404, 
+                        detail={
+                            "error": {
+                                "code": "COLLECTION_NOT_FOUND",
+                                "message": f"Collection '{collection_name}' does not exist",
+                                "details": {"collection_name": collection_name}
+                            }
+                        }
+                    )
+                raise  # Re-raise other exceptions
+        
         @app.post("/api/vector-sync/collections/{collection_name}/sync")
         async def sync_collection(collection_name: str, request: dict = None):
             """Synchronize a collection with the vector database."""
             try:
+                # Validate collection exists first
+                await _validate_collection_exists(collection_name)
+                
                 config = request or {}
                 status = await vector_service.sync_collection(collection_name, config)
+                
+                # Check if vector dependencies are available
+                if not vector_service.vector_available:
+                    raise HTTPException(
+                        status_code=503,
+                        detail={
+                            "error": {
+                                "code": "SERVICE_UNAVAILABLE",
+                                "message": "Vector sync service is not available - RAG dependencies not installed",
+                                "details": {"service": "vector_sync"}
+                            }
+                        }
+                    )
+                
+                # Check sync result
+                if status.sync_status == "error":
+                    # General sync error
+                    raise HTTPException(
+                        status_code=500,
+                        detail={
+                            "error": {
+                                "code": "SYNC_FAILED",
+                                "message": status.error_message,
+                                "details": {"collection_name": collection_name}
+                            }
+                        }
+                    )
+                
+                # Success case
                 return {
                     "success": True,
                     "sync_result": status.model_dump()
                 }
+                
+            except HTTPException:
+                raise  # Re-raise HTTPExceptions without wrapping
             except Exception as e:
                 logger.error(f"HTTP sync_collection error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
@@ -663,11 +717,30 @@ class UnifiedServer:
         async def get_sync_status(collection_name: str):
             """Get synchronization status for a collection."""
             try:
+                # Validate collection exists first
+                await _validate_collection_exists(collection_name)
+                
                 status = await vector_service.get_sync_status(collection_name)
+                
+                # Check if vector dependencies are available
+                if not vector_service.vector_available:
+                    raise HTTPException(
+                        status_code=503,
+                        detail={
+                            "error": {
+                                "code": "SERVICE_UNAVAILABLE",
+                                "message": "Vector sync service is not available - RAG dependencies not installed",
+                                "details": {"service": "vector_sync"}
+                            }
+                        }
+                    )
+                
                 return {
                     "success": True,
                     "status": status.model_dump()
                 }
+            except HTTPException:
+                raise  # Re-raise HTTPExceptions without wrapping
             except Exception as e:
                 logger.error(f"HTTP get_sync_status error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
@@ -694,8 +767,60 @@ class UnifiedServer:
                 limit = request.get("limit", 10)
                 similarity_threshold = request.get("similarity_threshold", 0.7)
                 
+                # Validate required parameters
                 if not query:
-                    raise HTTPException(status_code=400, detail="Query is required")
+                    raise HTTPException(
+                        status_code=400, 
+                        detail={
+                            "error": {
+                                "code": "MISSING_QUERY",
+                                "message": "Query parameter is required",
+                                "details": {"missing_field": "query"}
+                            }
+                        }
+                    )
+                
+                # Validate parameter ranges
+                if limit < 1:
+                    raise HTTPException(
+                        status_code=400,
+                        detail={
+                            "error": {
+                                "code": "INVALID_LIMIT",
+                                "message": "Limit must be greater than 0",
+                                "details": {"limit": limit}
+                            }
+                        }
+                    )
+                
+                if similarity_threshold < 0 or similarity_threshold > 1:
+                    raise HTTPException(
+                        status_code=400,
+                        detail={
+                            "error": {
+                                "code": "INVALID_THRESHOLD",
+                                "message": "Similarity threshold must be between 0 and 1",
+                                "details": {"similarity_threshold": similarity_threshold}
+                            }
+                        }
+                    )
+                
+                # If specific collection is requested, validate it exists
+                if collection_name:
+                    await _validate_collection_exists(collection_name)
+                
+                # Check if vector service is available
+                if not vector_service.vector_available:
+                    raise HTTPException(
+                        status_code=503,
+                        detail={
+                            "error": {
+                                "code": "SERVICE_UNAVAILABLE", 
+                                "message": "Vector search service is not available - RAG dependencies not installed",
+                                "details": {"service": "vector_search"}
+                            }
+                        }
+                    )
                 
                 results = await vector_service.search_vectors(query, collection_name, limit)
                 # Filter by similarity threshold
@@ -709,6 +834,38 @@ class UnifiedServer:
                 raise  # Re-raise HTTPExceptions without wrapping
             except Exception as e:
                 logger.error(f"HTTP search_vectors error: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
+        # ===== ADDITIONAL VECTOR SYNC ENDPOINTS =====
+        
+        @app.delete("/api/vector-sync/collections/{collection_name}/vectors")
+        async def delete_collection_vectors(collection_name: str):
+            """Delete all vectors for a collection."""
+            try:
+                # Validate collection exists first
+                await _validate_collection_exists(collection_name)
+                
+                # Check if vector service is available
+                if not vector_service.vector_available:
+                    raise HTTPException(
+                        status_code=503,
+                        detail={
+                            "error": {
+                                "code": "SERVICE_UNAVAILABLE",
+                                "message": "Vector sync service is not available - RAG dependencies not installed",
+                                "details": {"service": "vector_sync"}
+                            }
+                        }
+                    )
+                
+                # Delete vectors (implement in vector service)
+                result = await vector_service.delete_collection_vectors(collection_name)
+                return {"success": True, "message": f"Deleted vectors for collection '{collection_name}'", "deleted_count": result.get("deleted_count", 0)}
+                
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"HTTP delete_collection_vectors error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
         
         self.http_app = app

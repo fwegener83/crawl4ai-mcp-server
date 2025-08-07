@@ -309,44 +309,7 @@ class IVectorSyncService(ABC):
         """
         pass
     
-    @abstractmethod
-    async def enable_sync(self, collection_name: str) -> VectorSyncStatus:
-        """
-        Enable vector synchronization for a collection.
-        
-        Args:
-            collection_name: Name of the collection
-            
-        Returns:
-            VectorSyncStatus after enabling sync
-        """
-        pass
     
-    @abstractmethod
-    async def disable_sync(self, collection_name: str) -> VectorSyncStatus:
-        """
-        Disable vector synchronization for a collection.
-        
-        Args:
-            collection_name: Name of the collection
-            
-        Returns:
-            VectorSyncStatus after disabling sync
-        """
-        pass
-    
-    @abstractmethod
-    async def delete_vectors(self, collection_name: str) -> Dict[str, Any]:
-        """
-        Delete all vectors for a collection.
-        
-        Args:
-            collection_name: Name of the collection
-            
-        Returns:
-            Status information about the deletion
-        """
-        pass
     
     @abstractmethod
     async def search_vectors(self, query: str, collection_name: Optional[str] = None, limit: int = 10) -> List[VectorSearchResult]:
@@ -360,5 +323,19 @@ class IVectorSyncService(ABC):
             
         Returns:
             List of VectorSearchResult objects
+        """
+        pass
+    
+    
+    @abstractmethod
+    async def delete_collection_vectors(self, collection_name: str) -> Dict[str, Any]:
+        """
+        Delete all vectors associated with a collection.
+        
+        Args:
+            collection_name: Name of the collection
+            
+        Returns:
+            Dictionary with deletion results including count
         """
         pass
