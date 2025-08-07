@@ -46,8 +46,11 @@ def test_server():
         app = server_instance.setup_http_app()
     except ImportError:
         # Fallback to simple FastAPI app for testing if UnifiedServer not available
-        from fastapi import FastAPI
+        from fastapi import FastAPI, HTTPException
         app = FastAPI()
+        
+        # Mock storage for tests
+        mock_collections = {}
         
         @app.get("/api/health")
         def health():
@@ -55,7 +58,54 @@ def test_server():
         
         @app.get("/api/status")  
         def status():
-            return {"status": "running", "server_type": "test-mock"}
+            return {
+                "status": "running", 
+                "server_type": "test-mock",
+                "protocols": ["http"],
+                "services": ["mock_web_crawling", "mock_collection_management"]
+            }
+            
+        @app.get("/api/file-collections")
+        def list_collections():
+            return {
+                "success": True,
+                "collections": list(mock_collections.values())
+            }
+            
+        @app.post("/api/file-collections")
+        def create_collection(request: dict):
+            name = request.get("name")
+            if not name:
+                raise HTTPException(status_code=400, detail="Collection name is required")
+            
+            collection = {
+                "name": name,
+                "description": request.get("description", ""),
+                "created_at": "2024-01-01T00:00:00Z",
+                "file_count": 0,
+                "folders": [],
+                "metadata": {
+                    "created_at": "2024-01-01T00:00:00Z",
+                    "description": request.get("description", ""),
+                    "last_modified": "2024-01-01T00:00:00Z",
+                    "file_count": 0,
+                    "total_size": 0
+                }
+            }
+            mock_collections[name] = collection
+            return {"success": True, "collection": collection}
+            
+        @app.get("/api/file-collections/{collection_name}")
+        def get_collection(collection_name: str):
+            if collection_name not in mock_collections:
+                raise HTTPException(status_code=404, detail="Collection not found")
+            return {"success": True, "collection": mock_collections[collection_name]}
+            
+        @app.delete("/api/file-collections/{collection_name}")
+        def delete_collection(collection_name: str):
+            if collection_name in mock_collections:
+                del mock_collections[collection_name]
+            return {"success": True}
     
     config = uvicorn.Config(
         app,
