@@ -24,7 +24,7 @@ if os.getenv("CI"):
 
 # Test configuration
 BASE_URL = "http://localhost:8000"
-TEST_TIMEOUT = 30.0
+TEST_TIMEOUT = 120.0  # Increased timeout for crawl4ai operations
 
 
 @pytest.fixture(scope="session")
@@ -72,19 +72,22 @@ def test_server():
     server_thread.start()
     
     # Wait for server to be ready
-    max_attempts = 30
-    for _ in range(max_attempts):
+    max_attempts = 60  # Increased wait time for server startup
+    for attempt in range(max_attempts):
         try:
             import httpx
-            with httpx.Client(timeout=2.0) as client:
+            with httpx.Client(timeout=5.0) as client:
                 response = client.get(f"{BASE_URL}/api/health")
                 if response.status_code == 200:
+                    print(f"Test server ready after {attempt + 1} attempts")
                     break
-        except:
+        except Exception as e:
+            if attempt % 10 == 0:  # Log every 10 attempts
+                print(f"Waiting for server... (attempt {attempt + 1}/60): {e}")
             pass
-        time.sleep(1)
+        time.sleep(2)  # Wait 2 seconds between attempts
     else:
-        raise RuntimeError("Test server failed to start")
+        raise RuntimeError("Test server failed to start after 120 seconds")
     
     yield
     

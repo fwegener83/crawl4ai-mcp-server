@@ -39,12 +39,12 @@ async def test_single_page_extract(client: httpx.AsyncClient):
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is True
-    assert "result" in data
+    assert "content" in data
+    assert "metadata" in data
     
-    result = data["result"]
-    assert "markdown" in result
-    assert "url" in result
-    assert result["url"] == test_url
+    # Check content is extracted
+    assert len(data["content"]) > 0
+    assert "Example Domain" in data["content"]  # Should contain this from example.com
 
 
 @pytest.mark.asyncio
