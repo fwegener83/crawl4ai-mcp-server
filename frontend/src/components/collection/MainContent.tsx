@@ -123,6 +123,7 @@ export function MainContent({ className = '' }: MainContentProps) {
 
   return (
     <Box 
+      data-testid="collection-details"
       sx={{ 
         flex: 1, 
         display: 'flex', 
@@ -161,12 +162,14 @@ export function MainContent({ className = '' }: MainContentProps) {
               {state.selectedCollection && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <VectorSyncIndicator
+                    data-testid="vector-sync-indicator"
                     collectionName={state.selectedCollection}
                     syncStatus={getSyncStatus(state.selectedCollection)}
                     showText={true}
                     size="medium"
                   />
                   <CollectionSyncButton
+                    data-testid="vector-sync-btn"
                     collectionName={state.selectedCollection}
                     syncStatus={getSyncStatus(state.selectedCollection)}
                     onSync={handleSyncCollection}
@@ -192,6 +195,7 @@ export function MainContent({ className = '' }: MainContentProps) {
               </IconButton>
               
               <Button
+                data-testid="add-page-btn"
                 onClick={() => openModal('addPage')}
                 variant="contained"
                 color="success"

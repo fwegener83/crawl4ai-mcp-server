@@ -16,6 +16,7 @@ interface VectorSyncIndicatorProps {
   size?: 'small' | 'medium' | 'large';
   showText?: boolean;
   className?: string;
+  'data-testid'?: string;
 }
 
 export const VectorSyncIndicator: React.FC<VectorSyncIndicatorProps> = ({
@@ -23,7 +24,8 @@ export const VectorSyncIndicator: React.FC<VectorSyncIndicatorProps> = ({
   syncStatus,
   size = 'medium',
   showText = false,
-  className = ''
+  className = '',
+  'data-testid': dataTestId
 }) => {
   // Get status display information
   const getStatusInfo = () => {
@@ -49,7 +51,7 @@ export const VectorSyncIndicator: React.FC<VectorSyncIndicatorProps> = ({
 
       case 'in_sync':
         return {
-          icon: <CheckCircleIcon />,
+          icon: <CheckCircleIcon data-testid={dataTestId ? `${dataTestId}-success` : 'sync-success-indicator'} />,
           color: 'success' as const,
           text: 'In sync',
           tooltipTitle: `Collection "${collectionName}" is up to date (Health: ${Math.round(sync_health_score * 100)}%)`

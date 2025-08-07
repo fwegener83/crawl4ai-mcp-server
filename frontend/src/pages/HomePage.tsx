@@ -123,7 +123,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
           sx={{ maxWidth: 600, mx: 'auto' }}
         >
           Extract content from websites, perform deep crawling, and manage your data
-          with our RAG-powered knowledge base system.
+          with file collections and semantic vector search.
         </Typography>
       </Box>
 

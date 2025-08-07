@@ -38,6 +38,7 @@ interface CollectionSyncButtonProps {
   onDeleteVectors?: () => Promise<void>;
   disabled?: boolean;
   size?: 'small' | 'medium' | 'large';
+  'data-testid'?: string;
 }
 
 export const CollectionSyncButton: React.FC<CollectionSyncButtonProps> = ({
@@ -46,7 +47,8 @@ export const CollectionSyncButton: React.FC<CollectionSyncButtonProps> = ({
   onSync,
   onDeleteVectors,
   disabled = false,
-  size = 'medium'
+  size = 'medium',
+  'data-testid': dataTestId
 }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [configOpen, setConfigOpen] = useState(false);
@@ -144,6 +146,7 @@ export const CollectionSyncButton: React.FC<CollectionSyncButtonProps> = ({
       {/* Main Sync Button */}
       <Box display="flex" alignItems="center">
         <Button
+          data-testid={dataTestId}
           variant={hasChanges ? "contained" : "outlined"}
           color={getSyncButtonColor() as 'inherit' | 'primary' | 'secondary' | 'success' | 'error' | 'info' | 'warning'}
           size={size}

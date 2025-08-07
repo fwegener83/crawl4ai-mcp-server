@@ -302,7 +302,7 @@ class TestSecurityCompliance:
         # Test that server is configured securely
         assert mcp is not None
         assert isinstance(mcp, FastMCP)
-        assert mcp.name == "Crawl4AI-MCP-Server"
+        assert mcp.name == "Crawl4AI-Unified"
         
         # Test basic security characteristics
         async with Client(mcp) as client:

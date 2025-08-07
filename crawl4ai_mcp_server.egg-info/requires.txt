@@ -13,6 +13,8 @@ tomli>=2.2.1
 pytest-asyncio>=1.0.0
 requests>=2.32.4
 langchain>=0.3.27
+dependency-injector>=4.48.1
+pytest-cov>=6.2.1
 
 [dev]
 mypy

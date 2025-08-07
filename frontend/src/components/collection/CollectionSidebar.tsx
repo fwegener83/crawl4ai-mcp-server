@@ -132,6 +132,7 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
         
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Button
+            data-testid="create-collection-btn"
             onClick={() => openModal('newCollection')}
             size="medium"
             variant="contained"
@@ -149,6 +150,7 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
               color="primary"
             >
               <RefreshIcon 
+                data-testid={state.ui.loading.collections ? "loading-spinner" : undefined}
                 fontSize="medium"
                 sx={{
                   animation: state.ui.loading.collections ? 'spin 1s linear infinite' : 'none',
@@ -163,16 +165,16 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
         </Box>
         
         {/* Collection Stats */}
-        {state.collections.length > 0 && (
+        {(state.collections || []).length > 0 && (
           <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
             <Typography variant="body2" fontWeight="medium" sx={{ mb: 0.5 }}>
               Collection Summary
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-              {state.collections.length} collection{state.collections.length !== 1 ? 's' : ''}
+              {(state.collections || []).length} collection{(state.collections || []).length !== 1 ? 's' : ''}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {state.collections.reduce((sum, c) => sum + c.file_count, 0)} total files
+              {(state.collections || []).reduce((sum, c) => sum + (c?.file_count || 0), 0)} total files
             </Typography>
           </Box>
         )}
@@ -184,6 +186,7 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
       {state.ui.error && (
         <Box sx={{ p: 2 }}>
           <Alert 
+            data-testid="error-message"
             severity="error" 
             action={
               <IconButton 
@@ -202,9 +205,15 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
       )}
 
       {/* Collections List */}
-      <Box sx={{ flex: 1, overflow: 'auto', px: 1, pb: 1 }}>
-        {state.collections.length === 0 ? (
-          <Box sx={{ p: 3, textAlign: 'center' }}>
+      <Box 
+        data-testid="collections-list"
+        sx={{ flex: 1, overflow: 'auto', px: 1, pb: 1 }}
+      >
+        {(state.collections || []).length === 0 ? (
+          <Box 
+            data-testid="empty-collections"
+            sx={{ p: 3, textAlign: 'center' }}
+          >
             <CreateNewFolderIcon 
               sx={{ 
                 fontSize: 64, 
@@ -231,9 +240,11 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
           </Box>
         ) : (
           <List sx={{ p: 0 }}>
-            {state.collections.map((collection) => (
+            {(state.collections || []).map((collection) => (
               <ListItem
                 key={collection.name}
+                data-testid="collection-item"
+                aria-selected={state.selectedCollection === collection.name}
                 onClick={() => handleSelectCollection(collection.name)}
                 sx={{
                   cursor: 'pointer',
@@ -300,10 +311,10 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
                           variant="outlined"
                           color={state.selectedCollection === collection.name ? 'primary' : 'default'}
                         />
-                        {collection.folders.length > 0 && (
+                        {(collection.folders || []).length > 0 && (
                           <Chip 
                             icon={<FolderIcon />} 
-                            label={`${collection.folders.length} folders`}
+                            label={`${(collection.folders || []).length} folders`}
                             size="small"
                             variant="outlined"
                             color={state.selectedCollection === collection.name ? 'primary' : 'default'}

@@ -19,7 +19,7 @@
     "test:e2e:debug": "playwright test --debug",
     "test:all": "npm run test:run && npm run test:e2e",
     "quality:check": "npm run lint && npm run typecheck && npm run test:run && npm run build",
-    "start:all": "concurrently \"cd .. && python -m crawl4ai_mcp_server\" \"npm run dev\""
+    "start:all": "concurrently \"cd .. && UNIFIED_SERVER_MODE=http uv run python unified_server.py\" \"npm run dev\""
   },
   "dependencies": {
     "@axe-core/playwright": "^4.10.2",

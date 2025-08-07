@@ -37,9 +37,12 @@ export function SaveToCollectionModal({
   const {
     collections,
     refreshCollections,
+    createCollection,
     storeContent,
     storeLoading,
+    createLoading,
     storeError,
+    createError,
   } = useCollections();
 
   useEffect(() => {
@@ -58,6 +61,11 @@ export function SaveToCollectionModal({
     }
 
     try {
+      // Create collection first if it's a new one
+      if (isNewCollection) {
+        await createCollection(targetCollection, `Created via Simple Crawl`);
+      }
+      
       await storeContent(content, targetCollection);
       
       if (onSaveComplete) {
@@ -105,7 +113,7 @@ export function SaveToCollectionModal({
                   <MenuItem value="default">Default Collection</MenuItem>
                   {collections.map((collection) => (
                     <MenuItem key={collection.name} value={collection.name}>
-                      {collection.name} ({collection.count} items)
+                      {collection.name} ({collection.file_count} files)
                     </MenuItem>
                   ))}
                   <MenuItem value="__new__">+ Create New Collection</MenuItem>
@@ -160,9 +168,9 @@ export function SaveToCollectionModal({
           </Box>
 
           {/* Error Display */}
-          {storeError && (
+          {(storeError || createError) && (
             <Alert severity="error">
-              {storeError}
+              {storeError || createError}
             </Alert>
           )}
         </Box>
@@ -171,7 +179,7 @@ export function SaveToCollectionModal({
       <DialogActions>
         <Button
           onClick={onClose}
-          disabled={storeLoading}
+          disabled={storeLoading || createLoading}
         >
           Cancel
         </Button>
@@ -182,7 +190,7 @@ export function SaveToCollectionModal({
             (isNewCollection && !newCollectionName.trim()) ||
             (!isNewCollection && !collectionName)
           }
-          loading={storeLoading}
+          loading={storeLoading || createLoading}
           variant="contained"
           data-testid="save-confirm"
         >

@@ -47,6 +47,10 @@ tests/test_vector_sync_integration.py
 tests/test_vector_sync_schemas.py
 tests/test_web_extract.py
 tests/test_web_extract_security.py
+tests/services/__init__.py
+tests/services/test_collection_service.py
+tests/services/test_containers.py
+tests/services/test_web_crawling_service.py
 tools/__init__.py
 tools/collection_manager.py
 tools/database.py

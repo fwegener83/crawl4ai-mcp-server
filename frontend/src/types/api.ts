@@ -32,35 +32,7 @@ export interface LinkPreview {
   total_external: number;
 }
 
-// RAG Knowledge Base Types
-export interface StoreResult {
-  success: boolean;
-  message: string;
-  chunks_stored: number;
-  collection_name: string;
-}
-
-export interface SearchResult {
-  content: string;
-  metadata: {
-    source_url?: string;
-    chunk_index: number;
-    score: number;
-  };
-  distance: number;
-}
-
-export interface Collection {
-  name: string;
-  count: number;
-  metadata: Record<string, unknown>;
-}
-
-export interface DeleteResult {
-  success: boolean;
-  message: string;
-  collection_name: string;
-}
+// Note: RAG Knowledge Base types removed - using File Collections with Vector Sync instead
 
 // API Error Response
 export interface APIError {
