@@ -240,7 +240,7 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
           </Box>
         ) : (
           <List sx={{ p: 0 }}>
-            {(state.collections || []).map((collection) => (
+            {(state.collections || []).filter(collection => collection && collection.name).map((collection) => (
               <ListItem
                 key={collection.name}
                 data-testid="collection-item"

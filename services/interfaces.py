@@ -49,8 +49,10 @@ class CollectionInfo(BaseModel):
 
 class FileInfo(BaseModel):
     """Information about a file in a collection."""
+    name: str = ""
     path: str
     content: str
+    size: int = 0
     metadata: Dict[str, Any] = {}
     created_at: str
     updated_at: str

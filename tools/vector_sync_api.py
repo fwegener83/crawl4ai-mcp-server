@@ -380,6 +380,12 @@ class VectorSyncAPI:
         Returns:
             Search results with file location mapping
         """
+        # Existenzprüfung für Collection
+        if request.collection_name and not self._collection_exists(request.collection_name):
+            raise HTTPException(
+                status_code=404,
+                detail=f"Collection '{request.collection_name}' not found"
+            )
         try:
             import time
             start_time = time.time()

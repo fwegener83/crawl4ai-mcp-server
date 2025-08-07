@@ -23,9 +23,9 @@ async def test_create_collection(client: httpx.AsyncClient):
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is True
-    assert "collection" in data
+    assert "data" in data
     
-    collection = data["collection"]
+    collection = data["data"]
     assert collection["name"] == collection_name
     assert collection["description"] == "Test collection for CRUD operations"
     
@@ -55,7 +55,7 @@ async def test_get_collection_by_id(client: httpx.AsyncClient, cleanup_collectio
     })
     
     assert create_response.status_code == 200
-    collection_name = create_response.json()["collection"]["name"]
+    collection_name = create_response.json()["data"]["name"]
     cleanup_collections(collection_name)
     
     # Then get it by name
@@ -64,9 +64,9 @@ async def test_get_collection_by_id(client: httpx.AsyncClient, cleanup_collectio
     assert get_response.status_code == 200
     data = get_response.json()
     assert data["success"] is True
-    assert "collection" in data
+    assert "data" in data
     
-    collection = data["collection"]
+    collection = data["data"]
     assert collection["name"] == collection_name
     assert collection["description"] == "Test collection for get operation"
 
@@ -82,7 +82,7 @@ async def test_delete_collection(client: httpx.AsyncClient):
     })
     
     assert create_response.status_code == 200
-    collection_name = create_response.json()["collection"]["name"]
+    collection_name = create_response.json()["data"]["name"]
     
     # Delete the collection
     delete_response = await client.delete(f"/api/file-collections/{collection_name}")
@@ -107,12 +107,12 @@ async def test_full_collection_crud_flow(client: httpx.AsyncClient):
         "description": "Full CRUD flow test"
     })
     assert create_response.status_code == 200
-    collection_name = create_response.json()["collection"]["name"]
+    collection_name = create_response.json()["data"]["name"]
     
     # READ - Get by name
     get_response = await client.get(f"/api/file-collections/{collection_name}")
     assert get_response.status_code == 200
-    collection = get_response.json()["collection"]
+    collection = get_response.json()["data"]
     assert collection["name"] == collection_name
     
     # READ - List (verify it's in the list)

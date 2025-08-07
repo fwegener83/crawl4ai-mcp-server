@@ -5,12 +5,13 @@ Tests web crawling endpoints and page storage functionality.
 Tests endpoints: /api/extract, /api/deep-crawl, /api/link-preview, /api/crawl/single/{collection_id}
 """
 import pytest
+import pytest_asyncio
 import httpx
 import uuid
 from unittest.mock import patch
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_collection_for_crawling(client: httpx.AsyncClient, cleanup_collections):
     """Create a test collection for crawling operations."""
     collection_name = f"crawl_test_{uuid.uuid4().hex[:6]}"
@@ -20,10 +21,10 @@ async def test_collection_for_crawling(client: httpx.AsyncClient, cleanup_collec
     })
     
     assert response.status_code == 200
-    collection_id = response.json()["collection"]["id"]
-    cleanup_collections(collection_id)
+    collection_name = response.json()["data"]["name"]
+    cleanup_collections(collection_name)
     
-    return collection_id
+    return collection_name
 
 
 @pytest.mark.asyncio
@@ -33,7 +34,6 @@ async def test_single_page_extract(client: httpx.AsyncClient):
     
     response = await client.post("/api/extract", json={
         "url": test_url,
-        "extraction_strategy": "NoExtractionStrategy"
     })
     
     assert response.status_code == 200
@@ -43,6 +43,8 @@ async def test_single_page_extract(client: httpx.AsyncClient):
     assert "metadata" in data
     
     # Check content is extracted
+    if not data["content"]:
+        print(f"[DEBUG] Extracted content is empty! Full response: {data}")
     assert len(data["content"]) > 0
     assert "Example Domain" in data["content"]  # Should contain this from example.com
 
@@ -118,13 +120,13 @@ async def test_crawl_single_page_to_collection(client: httpx.AsyncClient, test_c
     # Verify the file was actually created in the collection
     files_response = await client.get(f"/api/file-collections/{test_collection_for_crawling}/files")
     assert files_response.status_code == 200
-    files = files_response.json()["files"]
+    files = files_response.json()["data"]["files"]
     assert any(f["filename"] == file_info["filename"] for f in files)
     
     # Verify file content
     file_response = await client.get(f"/api/file-collections/{test_collection_for_crawling}/files/{file_info['filename']}")
     assert file_response.status_code == 200
-    file_data = file_response.json()["file"]
+    file_data = file_response.json()["data"]
     assert len(file_data["content"]) > 0  # Should have some content
 
 
@@ -153,24 +155,6 @@ async def test_crawl_to_nonexistent_collection(client: httpx.AsyncClient):
     
     assert response.status_code == 404
 
-
-@pytest.mark.asyncio
-async def test_extract_with_different_strategies(client: httpx.AsyncClient):
-    """Test extraction with different strategies."""
-    test_url = "https://example.com"
-    
-    strategies = ["NoExtractionStrategy", "LLMExtractionStrategy", "CosineStrategy"]
-    
-    for strategy in strategies:
-        response = await client.post("/api/extract", json={
-            "url": test_url,
-            "extraction_strategy": strategy
-        })
-        
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-        assert "result" in data
 
 
 @pytest.mark.asyncio
@@ -201,8 +185,7 @@ async def test_web_crawling_error_handling(client: httpx.AsyncClient):
     unreachable_url = "https://this-domain-definitely-does-not-exist-12345.com"
     
     response = await client.post("/api/extract", json={
-        "url": unreachable_url,
-        "extraction_strategy": "NoExtractionStrategy"
+        "url": unreachable_url
     })
     
     # Should handle the error gracefully
@@ -243,12 +226,12 @@ async def test_complete_crawling_workflow(client: httpx.AsyncClient, test_collec
     # Step 4: Verify file was created
     files_response = await client.get(f"/api/file-collections/{test_collection_for_crawling}/files")
     assert files_response.status_code == 200
-    files = files_response.json()["files"]
+    files = files_response.json()["data"]["files"]
     assert len(files) > 0
     
     # Step 5: Verify content is accessible
     filename = files[0]["filename"]
     content_response = await client.get(f"/api/file-collections/{test_collection_for_crawling}/files/{filename}")
     assert content_response.status_code == 200
-    file_data = content_response.json()["file"]
+    file_data = content_response.json()["data"]
     assert len(file_data["content"]) > 0

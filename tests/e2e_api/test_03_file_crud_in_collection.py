@@ -22,7 +22,7 @@ async def test_collection(client: httpx.AsyncClient, cleanup_collections):
     })
     
     assert response.status_code == 200
-    collection_name = response.json()["collection"]["name"]
+    collection_name = response.json()["data"]["name"]
     cleanup_collections(collection_name)
     
     return collection_name

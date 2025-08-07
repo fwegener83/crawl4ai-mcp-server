@@ -812,11 +812,13 @@ dependencies = [
 [package.optional-dependencies]
 dev = [
     { name = "bandit" },
+    { name = "dependency-injector" },
     { name = "mypy" },
     { name = "ruff" },
     { name = "safety" },
 ]
 test = [
+    { name = "dependency-injector" },
     { name = "httpx" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -826,6 +828,7 @@ test = [
 
 [package.dev-dependencies]
 test = [
+    { name = "dependency-injector" },
     { name = "httpx" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -840,6 +843,8 @@ requires-dist = [
     { name = "chromadb", specifier = ">=0.4.0" },
     { name = "crawl4ai", extras = ["all"], specifier = ">=0.7.0" },
     { name = "dependency-injector", specifier = ">=4.48.1" },
+    { name = "dependency-injector", marker = "extra == 'dev'", specifier = ">=4.48.1" },
+    { name = "dependency-injector", marker = "extra == 'test'", specifier = ">=4.48.1" },
     { name = "fastapi", specifier = ">=0.116.1" },
     { name = "fastmcp", specifier = ">=2.0.0" },
     { name = "httpx", marker = "extra == 'test'" },
@@ -867,6 +872,7 @@ provides-extras = ["test", "dev"]
 
 [package.metadata.requires-dev]
 test = [
+    { name = "dependency-injector", specifier = ">=4.48.1" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "pytest-asyncio", specifier = ">=1.0.0" },

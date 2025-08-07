@@ -28,7 +28,7 @@ async def test_complete_content_management_workflow(client: httpx.AsyncClient, c
         "description": "Complete workflow test collection"
     })
     assert create_response.status_code == 200
-    collection_id = create_response.json()["collection"]["id"]
+    collection_id = create_response.json()["data"]["id"]
     cleanup_collections(collection_id)
     
     # Step 3: Add manual content to collection
@@ -67,17 +67,17 @@ We focus on extracting meaningful information from web pages and organizing it e
     # Step 6: Verify files are in collection
     files_response = await client.get(f"/api/file-collections/{collection_id}/files")
     assert files_response.status_code == 200
-    files = files_response.json()["files"]
+    files = files_response.json()["data"]["files"]
     assert len(files) == 2  # Manual file + crawled file
     
     # Step 7: Read and verify file contents
     manual_file_response = await client.get(f"/api/file-collections/{collection_id}/files/project_overview.md")
     assert manual_file_response.status_code == 200
-    assert manual_file_response.json()["file"]["content"] == manual_content
+    assert manual_file_response.json()["data"]["content"] == manual_content
     
     crawled_file_response = await client.get(f"/api/file-collections/{collection_id}/files/{crawled_file['filename']}")
     assert crawled_file_response.status_code == 200
-    assert len(crawled_file_response.json()["file"]["content"]) > 0
+    assert len(crawled_file_response.json()["data"]["content"]) > 0
     
     # Step 8: Sync collection to vector database
     sync_response = await client.post(f"/api/vector-sync/collections/{collection_name}/sync", json={
@@ -156,7 +156,7 @@ async def test_multi_collection_research_workflow(client: httpx.AsyncClient, cle
             "description": f"Collection for {topic} research"
         })
         assert create_response.status_code == 200
-        collection_id = create_response.json()["collection"]["id"]
+        collection_id = create_response.json()["data"]["id"]
         cleanup_collections(collection_id)
         collections[topic] = {"name": collection_name, "id": collection_id}
     
@@ -250,7 +250,7 @@ async def test_web_content_extraction_and_organization_workflow(client: httpx.As
         "description": "Collection for web-crawled content"
     })
     assert create_response.status_code == 200
-    collection_id = create_response.json()["collection"]["id"]
+    collection_id = create_response.json()["data"]["id"]
     cleanup_collections(collection_id)
     
     # Step 2: Preview available links
@@ -292,7 +292,7 @@ async def test_web_content_extraction_and_organization_workflow(client: httpx.As
     # Step 6: Verify all files are present
     files_response = await client.get(f"/api/file-collections/{collection_id}/files")
     assert files_response.status_code == 200
-    files = files_response.json()["files"]
+    files = files_response.json()["data"]["files"]
     assert len(files) >= 3  # At least 2 deep crawl + 1 single crawl
     
     # Step 7: Sync to vectors for semantic analysis
@@ -329,7 +329,7 @@ async def test_web_content_extraction_and_organization_workflow(client: httpx.As
     # Get original content
     original_response = await client.get(f"/api/file-collections/{collection_id}/files/{filename}")
     assert original_response.status_code == 200
-    original_content = original_response.json()["file"]["content"]
+    original_content = original_response.json()["data"]["content"]
     
     # Add metadata and analysis
     updated_content = f"""# Content Analysis
@@ -407,7 +407,7 @@ async def test_error_recovery_and_cleanup_workflow(client: httpx.AsyncClient):
         "description": "Collection for cleanup testing"
     })
     assert create_response.status_code == 200
-    collection_id = create_response.json()["collection"]["id"]
+    collection_id = create_response.json()["data"]["id"]
     
     # Add some content
     file_response = await client.post(f"/api/file-collections/{collection_id}/files", json={

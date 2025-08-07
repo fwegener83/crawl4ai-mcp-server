@@ -156,7 +156,7 @@ async def list_collections() -> str:       # Line ~242 (RAG Version!)
 async def delete_collection(...)           # Line ~256 (RAG Version!)
 ```
 
-**HTTP Server (`http_server.py`) - 8 Endpoints entfernen:**
+**HTTP Server (`http_server.py`) - 4 Endpoints entfernen:**
 ```python
 # ZU ENTFERNEN:
 @app.post("/api/collections")              # RAG Store + Stub

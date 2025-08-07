@@ -27,11 +27,13 @@ Requires-Dist: pytest-asyncio; extra == "test"
 Requires-Dist: pytest-cov; extra == "test"
 Requires-Dist: httpx; extra == "test"
 Requires-Dist: tomli; extra == "test"
+Requires-Dist: dependency-injector>=4.48.1; extra == "test"
 Provides-Extra: dev
 Requires-Dist: mypy; extra == "dev"
 Requires-Dist: ruff; extra == "dev"
 Requires-Dist: bandit; extra == "dev"
 Requires-Dist: safety; extra == "dev"
+Requires-Dist: dependency-injector>=4.48.1; extra == "dev"
 
 # Crawl4AI MCP Server
 

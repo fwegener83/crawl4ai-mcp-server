@@ -21,6 +21,7 @@ mypy
 ruff
 bandit
 safety
+dependency-injector>=4.48.1
 
 [test]
 pytest
@@ -28,3 +29,4 @@ pytest-asyncio
 pytest-cov
 httpx
 tomli
+dependency-injector>=4.48.1

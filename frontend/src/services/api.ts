@@ -124,13 +124,14 @@ export class APIService {
    * Create a new file collection
    */
   static async createFileCollection(request: CreateCollectionRequest): Promise<FileCollection> {
-    const response: AxiosResponse<FileCollectionResponse<FileCollection>> = await api.post('/file-collections', request);
+    const response: AxiosResponse<any> = await api.post('/file-collections', request);
     
     if (!response.data.success) {
       throw new Error(response.data.error || 'Failed to create collection');
     }
     
-    return response.data.data!;
+    // Backend returns collection directly in response.data.collection, not nested in data.data
+    return response.data.collection || response.data.data;
   }
 
   /**

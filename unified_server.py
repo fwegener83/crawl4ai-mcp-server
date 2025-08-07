@@ -428,7 +428,7 @@ class UnifiedServer:
                 collection = await collection_service.create_collection(name, description)
                 return {
                     "success": True,
-                    "collection": collection.model_dump()
+                    "data": collection.model_dump()
                 }
             except HTTPException:
                 raise  # Re-raise HTTPExceptions without wrapping
@@ -443,7 +443,7 @@ class UnifiedServer:
                 collection = await collection_service.get_collection(collection_id)
                 return {
                     "success": True,
-                    "collection": collection.model_dump()
+                    "data": collection.model_dump()
                 }
             except Exception as e:
                 logger.error(f"HTTP get_collection error: {e}")
@@ -469,10 +469,17 @@ class UnifiedServer:
                 decoded_collection_id = unquote(collection_id)
                 
                 files = await collection_service.list_files_in_collection(decoded_collection_id)
+                # Transform files to include filename field for backward compatibility
+                files_data = []
+                for f in files:
+                    file_dict = f.model_dump()
+                    file_dict["filename"] = file_dict.get("name", file_dict.get("path", ""))
+                    files_data.append(file_dict)
+                
                 return {
                     "success": True,
                     "data": {
-                        "files": [f.model_dump() for f in files],
+                        "files": files_data,
                         "folders": [],  # Placeholder - implement if needed
                         "total_files": len(files),
                         "total_folders": 0
@@ -521,7 +528,11 @@ class UnifiedServer:
                 return {
                     "success": True,
                     "data": {
-                        "content": file_info.content
+                        "content": file_info.content,
+                        "filename": decoded_filename,
+                        "path": file_info.path,
+                        "created_at": file_info.created_at,
+                        "updated_at": file_info.updated_at
                     }
                 }
             except Exception as e:
@@ -610,7 +621,10 @@ class UnifiedServer:
                 
                 return {
                     "success": True,
-                    "filename": filename,
+                    "file": {
+                        "filename": filename,
+                        "collection_id": decoded_collection_id
+                    },
                     "url": url,
                     "folder": folder,
                     "content_length": len(content_result.content),
@@ -621,7 +635,13 @@ class UnifiedServer:
                 raise  # Re-raise HTTPExceptions without wrapping
             except Exception as e:
                 logger.error(f"HTTP crawl_single_page_to_collection error: {e}")
-                raise HTTPException(status_code=500, detail=str(e))
+                error_str = str(e)
+                
+                # Handle specific error cases
+                if "does not exist" in error_str or "not found" in error_str.lower():
+                    raise HTTPException(status_code=404, detail=error_str)
+                else:
+                    raise HTTPException(status_code=500, detail=error_str)
         
         # ===== VECTOR SYNC ENDPOINTS =====
         
