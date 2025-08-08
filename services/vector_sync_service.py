@@ -187,12 +187,18 @@ class VectorSyncService(IVectorSyncService):
             
             # Use cached sync manager or create new one - REUSE THE SAME INSTANCE!
             cache_key = f"sync_{collection_name}"
-            if cache_key not in self._sync_manager_cache:
-                self._sync_manager_cache[cache_key] = IntelligentSyncManager(
+            sync_manager = self._sync_manager_cache.get(cache_key)
+            if sync_manager is None:
+                # Create database-only collection manager
+                from tools.knowledge_base.database_collection_adapter import DatabaseCollectionAdapter
+                db_collection_manager = DatabaseCollectionAdapter("vector_sync.db")
+                
+                sync_manager = IntelligentSyncManager(
                     vector_store=self.vector_store,
-                    collection_manager=self.collection_service.collection_manager if self.collection_service else None
+                    collection_manager=db_collection_manager,
+                    persistent_db_path="vector_sync.db"  # Add persistent storage
                 )
-            sync_manager = self._sync_manager_cache[cache_key]
+                self._sync_manager_cache.set(cache_key, sync_manager)
             
             vector_sync_api = VectorSyncAPI(
                 sync_manager=sync_manager,

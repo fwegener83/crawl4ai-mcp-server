@@ -574,6 +574,10 @@ class LimitedCache:
             return self.cache[key]
         return None
     
+    def __contains__(self, key):
+        """Support 'in' operator for cache membership testing."""
+        return key in self.cache
+    
     def set(self, key, value):
         """Set item in cache with size limit."""
         if key in self.cache:
