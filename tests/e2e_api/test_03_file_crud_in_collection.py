@@ -210,11 +210,11 @@ async def test_file_operations_with_invalid_collection(client: httpx.AsyncClient
         "filename": filename,
         "content": "Test content"
     })
-    assert create_response.status_code == 500  # API returns 500 for collection not found
+    assert create_response.status_code == 404  # RESTful: 404 for collection not found
     
-    # Test list files in non-existent collection
+    # Test list files in non-existent collection  
     list_response = await client.get(f"/api/file-collections/{fake_collection_id}/files")
-    assert list_response.status_code == 500  # API returns 500 for collection not found
+    assert list_response.status_code == 404  # RESTful: 404 for collection not found
 
 
 @pytest.mark.asyncio

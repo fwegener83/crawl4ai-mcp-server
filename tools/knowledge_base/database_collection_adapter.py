@@ -57,6 +57,13 @@ class DatabaseCollectionAdapter:
     def list_files_in_collection(self, collection_name: str) -> Dict[str, Any]:
         """List files in collection - database version."""
         try:
+            # First check if collection exists - CRITICAL for proper error handling
+            if not self.db_manager.collection_exists(collection_name):
+                return {
+                    "success": False, 
+                    "error": f"Collection '{collection_name}' not found"
+                }
+            
             files = self.db_manager.list_collection_files(collection_name)
             
             # Transform to expected format
@@ -116,6 +123,14 @@ class DatabaseCollectionAdapter:
     def list_collections(self) -> List[Dict[str, Any]]:
         """List all collections from database."""
         return self.db_manager.list_collections()
+    
+    def delete_collection(self, name: str) -> Dict[str, Any]:
+        """Delete collection from database."""
+        return self.db_manager.delete_collection(name)
+    
+    def delete_file(self, collection_name: str, filename: str, folder: str = "") -> Dict[str, Any]:
+        """Delete file from database."""
+        return self.db_manager.delete_file(collection_name, filename, folder)
     
     # Compatibility methods for existing interface
     @property

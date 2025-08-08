@@ -24,6 +24,9 @@ logger = logging.getLogger(__name__)
 class DatabaseCollectionManager:
     """Manages collections and files exclusively in SQLite database."""
     
+    # Allowed file extensions for security (same as original collection manager)
+    ALLOWED_EXTENSIONS = {'.md', '.txt', '.json'}
+    
     # Enhanced database schema for database-only file storage
     DATABASE_SCHEMA = """
     -- Collections table with basic metadata
@@ -107,6 +110,12 @@ class DatabaseCollectionManager:
         print(f"DEBUG DB: DatabaseCollectionManager initialized with absolute path: {self.db_path}")
         logger.info(f"DatabaseCollectionManager initialized with database: {self.db_path}")
     
+    def _validate_file_extension(self, filename: str) -> bool:
+        """Check if file extension is allowed (same as original collection manager)."""
+        from pathlib import Path
+        file_path = Path(filename)
+        return file_path.suffix.lower() in self.ALLOWED_EXTENSIONS
+    
     def _init_database(self):
         """Initialize database with enhanced schema."""
         with sqlite3.connect(self.db_path) as conn:
@@ -161,6 +170,20 @@ class DatabaseCollectionManager:
         file_size = len(content.encode('utf-8'))
         
         try:
+            # Validate file extension first
+            if not self._validate_file_extension(filename):
+                return {
+                    "success": False,
+                    "error": f"File extension not allowed. Allowed: {', '.join(self.ALLOWED_EXTENSIONS)}"
+                }
+            
+            # Check if collection exists - CRITICAL for proper error handling
+            if not self.collection_exists(collection_name):
+                return {
+                    "success": False,
+                    "error": f"Collection '{collection_name}' not found"
+                }
+            
             with self.get_connection() as conn:
                 cursor = conn.execute("""
                     INSERT OR REPLACE INTO collection_files 
@@ -198,6 +221,13 @@ class DatabaseCollectionManager:
     def get_file_content(self, collection_name: str, file_id: int) -> Dict[str, Any]:
         """Get file content directly from database."""
         try:
+            # First check if collection exists - CRITICAL for proper error handling
+            if not self.collection_exists(collection_name):
+                return {
+                    "success": False,
+                    "error": f"Collection '{collection_name}' not found"
+                }
+            
             with self.get_connection() as conn:
                 row = conn.execute("""
                     SELECT filename, folder, content, content_hash, size, created_at, updated_at
@@ -224,6 +254,13 @@ class DatabaseCollectionManager:
     def get_file_by_path(self, collection_name: str, filename: str, folder: str = '') -> Dict[str, Any]:
         """Get file content by path (filename and folder)."""
         try:
+            # First check if collection exists - CRITICAL for proper error handling
+            if not self.collection_exists(collection_name):
+                return {
+                    "success": False,
+                    "error": f"Collection '{collection_name}' not found"
+                }
+            
             with self.get_connection() as conn:
                 row = conn.execute("""
                     SELECT id, filename, folder, content, content_hash, size, created_at, updated_at
@@ -252,6 +289,11 @@ class DatabaseCollectionManager:
     def list_collection_files(self, collection_name: str) -> List[Dict[str, Any]]:
         """List all files in collection from database."""
         try:
+            # First check if collection exists - CRITICAL for proper error handling
+            if not self.collection_exists(collection_name):
+                logger.warning(f"Attempted to list files in non-existent collection: {collection_name}")
+                return []  # Return empty list for non-existent collections in list operations
+            
             with self.get_connection() as conn:
                 rows = conn.execute("""
                     SELECT id, filename, folder, content_hash, size, created_at, updated_at
@@ -316,6 +358,75 @@ class DatabaseCollectionManager:
         except Exception as e:
             logger.error(f"Error listing collections: {e}")
             return []
+    
+    def delete_collection(self, collection_name: str) -> Dict[str, Any]:
+        """Delete a collection and all its files from database."""
+        try:
+            with self.get_connection() as conn:
+                # First count files for reporting
+                file_count = conn.execute("""
+                    SELECT COUNT(*) FROM collection_files WHERE collection_name = ?
+                """, (collection_name,)).fetchone()[0]
+                
+                # Delete files (will cascade due to foreign key, but explicit is better)
+                conn.execute("""
+                    DELETE FROM collection_files WHERE collection_name = ?
+                """, (collection_name,))
+                
+                # Delete collection
+                cursor = conn.execute("""
+                    DELETE FROM collections WHERE name = ?
+                """, (collection_name,))
+                
+                conn.commit()
+                
+                if cursor.rowcount == 0:
+                    return {
+                        "success": False,
+                        "error": f"Collection '{collection_name}' not found"
+                    }
+                
+                return {
+                    "success": True,
+                    "deleted_files": file_count,
+                    "message": f"Collection '{collection_name}' and {file_count} files deleted successfully"
+                }
+        except Exception as e:
+            logger.error(f"Error deleting collection '{collection_name}': {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    def delete_file(self, collection_name: str, filename: str, folder: str = "") -> Dict[str, Any]:
+        """Delete a specific file from a collection."""
+        try:
+            with self.get_connection() as conn:
+                # Delete the file
+                cursor = conn.execute("""
+                    DELETE FROM collection_files 
+                    WHERE collection_name = ? AND filename = ? AND folder = ?
+                """, (collection_name, filename, folder))
+                
+                conn.commit()
+                
+                if cursor.rowcount == 0:
+                    return {
+                        "success": False,
+                        "error": f"File '{filename}' not found in collection '{collection_name}'"
+                    }
+                
+                file_path = f"{folder}/{filename}" if folder else filename
+                return {
+                    "success": True,
+                    "message": f"File '{file_path}' deleted successfully from collection '{collection_name}'"
+                }
+        except Exception as e:
+            logger.error(f"Error deleting file {filename} from collection {collection_name}: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
 
 
 class PersistentSyncManager:

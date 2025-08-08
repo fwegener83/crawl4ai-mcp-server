@@ -143,7 +143,7 @@ async def test_delete_nonexistent_collection(client: httpx.AsyncClient):
     """Test deleting a non-existent collection returns proper error."""
     fake_name = f"nonexistent_{uuid.uuid4().hex[:6]}"
     response = await client.delete(f"/api/file-collections/{fake_name}")
-    assert response.status_code == 500  # API currently returns 500 for not found
+    assert response.status_code == 404  # RESTful: 404 for collection not found
 
 
 @pytest.mark.asyncio

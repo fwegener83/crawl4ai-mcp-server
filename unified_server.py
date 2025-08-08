@@ -457,7 +457,11 @@ class UnifiedServer:
                 return result
             except Exception as e:
                 logger.error(f"HTTP delete_collection error: {e}")
-                raise HTTPException(status_code=500, detail=str(e))
+                # RESTful error handling - 404 for collection not found
+                if "not found" in str(e).lower() or "does not exist" in str(e).lower():
+                    raise HTTPException(status_code=404, detail=str(e))
+                else:
+                    raise HTTPException(status_code=500, detail=str(e))
         
         # ===== FILE MANAGEMENT ENDPOINTS =====
         
@@ -487,7 +491,11 @@ class UnifiedServer:
                 }
             except Exception as e:
                 logger.error(f"HTTP list_files_in_collection error: {e}")
-                raise HTTPException(status_code=500, detail=str(e))
+                # RESTful error handling - 404 for collection not found
+                if "not found" in str(e).lower() or "does not exist" in str(e).lower():
+                    raise HTTPException(status_code=404, detail=str(e))
+                else:
+                    raise HTTPException(status_code=500, detail=str(e))
         
         @app.post("/api/file-collections/{collection_id}/files")
         async def save_file_to_collection_endpoint(collection_id: str, request: dict):
@@ -514,7 +522,11 @@ class UnifiedServer:
                 raise
             except Exception as e:
                 logger.error(f"HTTP save_file_to_collection error: {e}")
-                raise HTTPException(status_code=500, detail=str(e))
+                # RESTful error handling - 404 for collection not found
+                if "not found" in str(e).lower() or "does not exist" in str(e).lower():
+                    raise HTTPException(status_code=404, detail=str(e))
+                else:
+                    raise HTTPException(status_code=500, detail=str(e))
         
         @app.get("/api/file-collections/{collection_id}/files/{filename}")
         async def read_file_from_collection_endpoint(collection_id: str, filename: str, folder: str = ""):
@@ -574,7 +586,11 @@ class UnifiedServer:
                 return {"success": True}
             except Exception as e:
                 logger.error(f"HTTP delete_file_from_collection error: {e}")
-                raise HTTPException(status_code=500, detail=str(e))
+                # RESTful error handling - 404 for collection or file not found
+                if "not found" in str(e).lower() or "does not exist" in str(e).lower():
+                    raise HTTPException(status_code=404, detail=str(e))
+                else:
+                    raise HTTPException(status_code=500, detail=str(e))
         
         @app.post("/api/crawl/single/{collection_id}")
         async def crawl_single_page_to_collection(collection_id: str, request: dict):
