@@ -390,11 +390,16 @@ class VectorSyncAPI:
             import time
             start_time = time.time()
             
-            # Perform vector search
+            # Perform vector search with collection filtering
+            filter_dict = None
+            if request.collection_name:
+                filter_dict = {'collection_name': request.collection_name}
+                
             results = self.vector_store.similarity_search(
                 query=request.query,
                 k=request.limit,
-                score_threshold=request.similarity_threshold
+                score_threshold=request.similarity_threshold,
+                filter=filter_dict
             )
             
             query_time = time.time() - start_time
@@ -405,13 +410,9 @@ class VectorSyncAPI:
                 # Extract metadata
                 metadata = result.get('metadata', {})
                 
-                # Filter by collection if specified
-                if request.collection_name and metadata.get('collection_name') != request.collection_name:
-                    continue
-                
                 enhanced_result = {
                     'content': result.get('content', ''),
-                    'score': result.get('score', 0.0),
+                    'similarity_score': result.get('score', 0.0),  # Changed from 'score' to 'similarity_score'
                     'chunk_id': result.get('id', ''),
                     'collection_name': metadata.get('collection_name', ''),
                     'source_file': metadata.get('source_file', ''),
@@ -422,6 +423,7 @@ class VectorSyncAPI:
                     'programming_language': metadata.get('programming_language'),
                     'word_count': metadata.get('word_count', 0),
                     'created_at': metadata.get('created_at'),
+                    'metadata': metadata,  # Add full metadata as expected by tests
                     'file_location': {
                         'collection': metadata.get('collection_name', ''),
                         'file_path': metadata.get('source_file', ''),

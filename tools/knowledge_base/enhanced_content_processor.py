@@ -269,8 +269,15 @@ class EnhancedContentProcessor:
                 }
             )
             
+            # Generate unique chunk ID including collection info
+            chunk_id = self.baseline_processor._generate_chunk_id(
+                chunk_text, i,
+                collection_name=source_metadata.get('collection_name') if source_metadata else None,
+                file_path=source_metadata.get('file_path') if source_metadata else None
+            )
+            
             enhanced_chunks.append({
-                'id': self.baseline_processor._generate_chunk_id(chunk_text, i),
+                'id': chunk_id,
                 'content': chunk_text,
                 'metadata': metadata
             })

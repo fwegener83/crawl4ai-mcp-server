@@ -79,6 +79,10 @@ class VectorSyncService(IVectorSyncService):
             if not self.vector_store:
                 self.vector_store = VectorStore()
             
+            # DEBUG: Log the VectorStore instance ID to verify it's shared
+            print(f"DEBUG SYNC: VectorStore instance id: {id(self.vector_store)}")
+            print(f"DEBUG SYNC: VectorStore DB path: {self.vector_store.db_path if hasattr(self.vector_store, 'db_path') else 'no db_path'}")
+            
             # Use cached sync manager or create new one
             cache_key = f"sync_{collection_name}"
             if cache_key not in self._sync_manager_cache:
@@ -102,7 +106,9 @@ class VectorSyncService(IVectorSyncService):
             )
             
             # Perform sync operation
+            print(f"DEBUG: Starting vector sync for collection '{collection_name}'")
             result = await vector_sync_api.sync_collection(collection_name, sync_request)
+            print(f"DEBUG: Vector sync completed with result: {result}")
             
             # Handle both string and object responses
             if isinstance(result, str):
@@ -269,7 +275,7 @@ class VectorSyncService(IVectorSyncService):
             logger.error(f"Error listing sync statuses: {str(e)}")
             return []
     
-    async def search_vectors(self, query: str, collection_name: Optional[str] = None, limit: int = 10) -> List[VectorSearchResult]:
+    async def search_vectors(self, query: str, collection_name: Optional[str] = None, limit: int = 10, similarity_threshold: float = 0.7) -> List[VectorSearchResult]:
         """
         Search vectors using semantic similarity.
         
@@ -282,9 +288,11 @@ class VectorSyncService(IVectorSyncService):
             List of VectorSearchResult objects
         """
         if not self.vector_available:
+            print(f"DEBUG: Vector service not available, returning empty results")
             return []
         
         try:
+            print(f"DEBUG: VectorSyncService.search_vectors called with query='{query}', collection='{collection_name}', limit={limit}")
             logger.info(f"Searching vectors with query: {query}")
             
             # Import vector sync tools
@@ -292,18 +300,41 @@ class VectorSyncService(IVectorSyncService):
             from tools.knowledge_base.intelligent_sync_manager import IntelligentSyncManager
             from tools.knowledge_base.vector_store import VectorStore
             
-            # Initialize components if not provided
+            # CRITICAL FIX: Reuse the SAME VectorStore instance that was used for sync
+            # Initialize components if not provided, but ensure we use cached instances
             if not self.vector_store:
                 self.vector_store = VectorStore()
             
-            sync_manager = IntelligentSyncManager(
-                vector_store=self.vector_store,
-                collection_manager=self.collection_service.collection_manager if self.collection_service else None
-            )
+            # DEBUG: Log the VectorStore instance ID to verify it's shared
+            print(f"DEBUG SEARCH: VectorStore instance id: {id(self.vector_store)}")
+            print(f"DEBUG SEARCH: VectorStore DB path: {self.vector_store.db_path if hasattr(self.vector_store, 'db_path') else 'no db_path'}")
             
+            # CRITICAL FIX: Use the EXACT SAME cache key pattern as sync operations
+            # This ensures sync and search operations share the same ChromaDB connection
+            if collection_name:
+                # For specific collection searches, use the same key as sync operations
+                cache_key = f"sync_{collection_name}"
+                if cache_key not in self._sync_manager_cache:
+                    self._sync_manager_cache[cache_key] = IntelligentSyncManager(
+                        vector_store=self.vector_store,  # Use the SAME instance
+                        collection_manager=self.collection_service.collection_manager if self.collection_service else None
+                    )
+                sync_manager = self._sync_manager_cache[cache_key]
+            else:
+                # For global searches (no specific collection), create a dedicated global manager
+                # but still use the same VectorStore instance
+                cache_key = f"sync_global"
+                if cache_key not in self._sync_manager_cache:
+                    self._sync_manager_cache[cache_key] = IntelligentSyncManager(
+                        vector_store=self.vector_store,  # Use the SAME instance
+                        collection_manager=self.collection_service.collection_manager if self.collection_service else None
+                    )
+                sync_manager = self._sync_manager_cache[cache_key]
+            
+            # Use the same vector_store instance for VectorSyncAPI
             vector_sync_api = VectorSyncAPI(
                 sync_manager=sync_manager,
-                vector_store=self.vector_store,
+                vector_store=self.vector_store,  # Use the SAME instance
                 collection_manager=self.collection_service.collection_manager if self.collection_service else None
             )
             
@@ -312,10 +343,11 @@ class VectorSyncService(IVectorSyncService):
             search_request = VectorSearchRequest(
                 query=query,
                 collection_name=collection_name,
-                limit=limit
+                limit=limit,
+                similarity_threshold=similarity_threshold
             )
             
-            # Perform vector search
+            # Perform vector search using the shared instance
             result = await vector_sync_api.search_vectors(search_request)
             
             # Handle both string and object responses
@@ -334,7 +366,7 @@ class VectorSyncService(IVectorSyncService):
                     search_result = VectorSearchResult(
                         content=result_item.get("content", ""),
                         metadata=result_item.get("metadata", {}),
-                        score=result_item.get("score", 0.0),
+                        score=result_item.get("similarity_score", result_item.get("score", 0.0)),  # Handle both field names
                         collection_name=result_item.get("collection_name", collection_name or ""),
                         file_path=result_item.get("source_file", result_item.get("file_path", ""))
                     )

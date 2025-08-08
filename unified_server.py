@@ -822,13 +822,21 @@ class UnifiedServer:
                         }
                     )
                 
-                results = await vector_service.search_vectors(query, collection_name, limit)
-                # Filter by similarity threshold
-                filtered_results = [r for r in results if r.score >= similarity_threshold]
+                results = await vector_service.search_vectors(query, collection_name, limit, similarity_threshold)
+                # No need for additional filtering since similarity_threshold is handled by the vector search itself
+                filtered_results = results
+                
+                # Transform results to include similarity_score field as expected by tests
+                transformed_results = []
+                for result in filtered_results:
+                    result_dict = result.model_dump()
+                    # Add similarity_score field mapping from score
+                    result_dict["similarity_score"] = result_dict.get("score", 0.0)
+                    transformed_results.append(result_dict)
                 
                 return {
                     "success": True,
-                    "results": [result.model_dump() for result in filtered_results]
+                    "results": transformed_results
                 }
             except HTTPException:
                 raise  # Re-raise HTTPExceptions without wrapping

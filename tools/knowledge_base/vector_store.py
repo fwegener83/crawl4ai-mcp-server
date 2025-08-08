@@ -152,22 +152,33 @@ class VectorStore:
             self.get_or_create_collection()
         
         try:
+            print(f"DEBUG VECTORSTORE: About to add {len(documents)} documents")
+            print(f"DEBUG VECTORSTORE: Sample metadata: {metadatas[0] if metadatas else 'None'}")
+            print(f"DEBUG VECTORSTORE: Collection name: {self.collection_name}")
+            
             if embeddings:
-                self.collection.add(
+                result = self.collection.add(
                     documents=documents,
                     metadatas=metadatas,
                     ids=ids,
                     embeddings=embeddings
                 )
             else:
-                self.collection.add(
+                result = self.collection.add(
                     documents=documents,
                     metadatas=metadatas,
                     ids=ids
                 )
             
+            print(f"DEBUG VECTORSTORE: ChromaDB add() result: {result}")
+            
+            # Immediate verification
+            count_after = self.collection.count()
+            print(f"DEBUG VECTORSTORE: Collection count after add: {count_after}")
+            
             logger.info(f"Added {len(documents)} documents to collection")
         except Exception as e:
+            print(f"DEBUG VECTORSTORE: ADD ERROR: {str(e)}")
             logger.error(f"Failed to add documents: {str(e)}")
             raise
     
