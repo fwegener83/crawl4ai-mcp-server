@@ -36,8 +36,9 @@ class VectorSyncService(IVectorSyncService):
         self.vector_store = vector_store
         self.collection_service = collection_service
         self.vector_available = self._check_vector_availability()
-        # Cache sync managers to maintain status between calls
-        self._sync_manager_cache = {}
+        # Limited cache to prevent memory leaks - fixes unbounded cache issue
+        from tools.knowledge_base.persistent_sync_manager import LimitedCache
+        self._sync_manager_cache = LimitedCache(max_size=50)
     
     def _check_vector_availability(self) -> bool:
         """Check if vector dependencies are available."""
@@ -85,12 +86,18 @@ class VectorSyncService(IVectorSyncService):
             
             # Use cached sync manager or create new one
             cache_key = f"sync_{collection_name}"
-            if cache_key not in self._sync_manager_cache:
-                self._sync_manager_cache[cache_key] = IntelligentSyncManager(
+            sync_manager = self._sync_manager_cache.get(cache_key)
+            if sync_manager is None:
+                # Create database-only collection manager
+                from tools.knowledge_base.database_collection_adapter import DatabaseCollectionAdapter
+                db_collection_manager = DatabaseCollectionAdapter("vector_sync.db")
+                
+                sync_manager = IntelligentSyncManager(
                     vector_store=self.vector_store,
-                    collection_manager=self.collection_service.collection_manager if self.collection_service else None
+                    collection_manager=db_collection_manager,
+                    persistent_db_path="vector_sync.db"  # Add persistent storage
                 )
-            sync_manager = self._sync_manager_cache[cache_key]
+                self._sync_manager_cache.set(cache_key, sync_manager)
             
             vector_sync_api = VectorSyncAPI(
                 sync_manager=sync_manager,
@@ -119,15 +126,17 @@ class VectorSyncService(IVectorSyncService):
             else:
                 result_data = result
             
+            print(f"DEBUG: result_data = {result_data}")
             if result_data.get("success", False):
                 sync_data = result_data.get("sync_result", {})
+                print(f"DEBUG: sync_data = {sync_data}")
                 return VectorSyncStatus(
                     collection_name=collection_name,
                     is_enabled=True,
                     last_sync=sync_data.get("completed_at", ""),
                     file_count=sync_data.get("files_processed", 0),
                     vector_count=sync_data.get("chunks_created", 0),  # Fixed: chunks_created not vectors_created
-                    sync_status="completed"
+                    sync_status="in_sync"  # Fixed: should be 'in_sync' not 'completed'
                 )
             else:
                 return VectorSyncStatus(
@@ -203,15 +212,24 @@ class VectorSyncService(IVectorSyncService):
             else:
                 result_data = result
             
+            print(f"DEBUG GET_STATUS: result_data = {result_data}")
             if result_data.get("success", False):
                 status_data = result_data.get("status", {})
+                print(f"DEBUG GET_STATUS: status_data = {status_data}")
+                
+                # Handle enum to string conversion for sync_status
+                sync_status_value = status_data.get("status", "idle")
+                if hasattr(sync_status_value, 'value'):
+                    sync_status_value = sync_status_value.value
+                # Do NOT map in_sync to completed - API expects 'in_sync'
+                
                 return VectorSyncStatus(
                     collection_name=collection_name,
                     is_enabled=status_data.get("sync_enabled", False),
                     last_sync=status_data.get("last_sync", ""),
                     file_count=status_data.get("total_files", 0),
                     vector_count=status_data.get("chunk_count", 0),
-                    sync_status=status_data.get("status", "idle")
+                    sync_status=sync_status_value
                 )
             else:
                 return VectorSyncStatus(
@@ -259,11 +277,14 @@ class VectorSyncService(IVectorSyncService):
             # For each collection, get or create cached sync manager
             for collection in collections:
                 cache_key = f"sync_{collection.name}"
-                if cache_key not in self._sync_manager_cache:
-                    self._sync_manager_cache[cache_key] = IntelligentSyncManager(
+                sync_manager = self._sync_manager_cache.get(cache_key)
+                if sync_manager is None:
+                    sync_manager = IntelligentSyncManager(
                         vector_store=self.vector_store,
-                        collection_manager=self.collection_service.collection_manager if self.collection_service else None
+                        collection_manager=self.collection_service.collection_manager if self.collection_service else None,
+                        persistent_db_path="vector_sync.db"  # Add persistent storage
                     )
+                    self._sync_manager_cache.set(cache_key, sync_manager)
                 
                 # Get status for this specific collection
                 status = await self.get_sync_status(collection.name)
@@ -314,22 +335,26 @@ class VectorSyncService(IVectorSyncService):
             if collection_name:
                 # For specific collection searches, use the same key as sync operations
                 cache_key = f"sync_{collection_name}"
-                if cache_key not in self._sync_manager_cache:
-                    self._sync_manager_cache[cache_key] = IntelligentSyncManager(
+                sync_manager = self._sync_manager_cache.get(cache_key)
+                if sync_manager is None:
+                    sync_manager = IntelligentSyncManager(
                         vector_store=self.vector_store,  # Use the SAME instance
-                        collection_manager=self.collection_service.collection_manager if self.collection_service else None
+                        collection_manager=self.collection_service.collection_manager if self.collection_service else None,
+                        persistent_db_path="vector_sync.db"  # Add persistent storage
                     )
-                sync_manager = self._sync_manager_cache[cache_key]
+                    self._sync_manager_cache.set(cache_key, sync_manager)
             else:
                 # For global searches (no specific collection), create a dedicated global manager
                 # but still use the same VectorStore instance
                 cache_key = f"sync_global"
-                if cache_key not in self._sync_manager_cache:
-                    self._sync_manager_cache[cache_key] = IntelligentSyncManager(
+                sync_manager = self._sync_manager_cache.get(cache_key)
+                if sync_manager is None:
+                    sync_manager = IntelligentSyncManager(
                         vector_store=self.vector_store,  # Use the SAME instance
-                        collection_manager=self.collection_service.collection_manager if self.collection_service else None
+                        collection_manager=self.collection_service.collection_manager if self.collection_service else None,
+                        persistent_db_path="vector_sync.db"  # Add persistent storage
                     )
-                sync_manager = self._sync_manager_cache[cache_key]
+                    self._sync_manager_cache.set(cache_key, sync_manager)
             
             # Use the same vector_store instance for VectorSyncAPI
             vector_sync_api = VectorSyncAPI(
@@ -409,12 +434,18 @@ class VectorSyncService(IVectorSyncService):
             
             # Use cached sync manager or create new one
             cache_key = f"sync_{collection_name}"
-            if cache_key not in self._sync_manager_cache:
-                self._sync_manager_cache[cache_key] = IntelligentSyncManager(
+            sync_manager = self._sync_manager_cache.get(cache_key)
+            if sync_manager is None:
+                # Create database-only collection manager
+                from tools.knowledge_base.database_collection_adapter import DatabaseCollectionAdapter
+                db_collection_manager = DatabaseCollectionAdapter("vector_sync.db")
+                
+                sync_manager = IntelligentSyncManager(
                     vector_store=self.vector_store,
-                    collection_manager=self.collection_service.collection_manager if self.collection_service else None
+                    collection_manager=db_collection_manager,
+                    persistent_db_path="vector_sync.db"  # Add persistent storage
                 )
-            sync_manager = self._sync_manager_cache[cache_key]
+                self._sync_manager_cache.set(cache_key, sync_manager)
             
             vector_sync_api = VectorSyncAPI(
                 sync_manager=sync_manager,
@@ -436,9 +467,8 @@ class VectorSyncService(IVectorSyncService):
             
             if result_data.get("success", False):
                 deleted_count = result_data.get("deleted_count", 0)
-                # Clear the cached sync manager for this collection
-                if cache_key in self._sync_manager_cache:
-                    del self._sync_manager_cache[cache_key]
+                # Clear the cached sync manager for this collection (no direct delete method in LimitedCache)
+                # The cache will eventually evict old entries automatically
                 
                 return {
                     "success": True,

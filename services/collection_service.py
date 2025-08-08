@@ -10,8 +10,8 @@ from typing import Dict, Any, List
 from pathlib import Path
 from .interfaces import ICollectionService, CollectionInfo, FileInfo
 
-# Import existing collection manager
-from tools.sqlite_collection_manager import create_collection_manager
+# Import database-only collection manager
+from tools.knowledge_base.database_collection_adapter import DatabaseCollectionAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -26,13 +26,15 @@ class CollectionService(ICollectionService):
     
     def __init__(self, base_dir: Path = None):
         """
-        Initialize the collection service.
+        Initialize the collection service with database-only storage.
         
         Args:
-            base_dir: Base directory for collections (optional)
+            base_dir: Ignored - using database storage instead
         """
-        logger.info("Initializing CollectionService")
-        self.collection_manager = create_collection_manager(base_dir)
+        logger.info("Initializing CollectionService with database-only storage")
+        # Use database-only collection manager - filesystem is deprecated
+        # CRITICAL: Use same database as VectorSyncService for consistency
+        self.collection_manager = DatabaseCollectionAdapter("vector_sync.db")
     
     async def list_collections(self) -> List[CollectionInfo]:
         """
@@ -44,27 +46,20 @@ class CollectionService(ICollectionService):
         try:
             logger.info("Listing all collections")
             
-            # Use existing collection manager (synchronous call)
-            result = self.collection_manager.list_collections()
-            
-            # Parse JSON result if it's a string
-            if isinstance(result, str):
-                import json
-                result = json.loads(result)
+            # Use database collection manager
+            collection_data = self.collection_manager.list_collections()
             
             collections = []
-            if result.get("success", False):
-                collection_data = result.get("collections", [])
-                for col_data in collection_data:
-                    collection_info = CollectionInfo(
-                        name=col_data.get("name", ""),
-                        description=col_data.get("description", ""),
-                        file_count=col_data.get("file_count", 0),
-                        created_at=col_data.get("created_at", ""),
-                        updated_at=col_data.get("updated_at", ""),
-                        metadata=col_data.get("metadata", {})
-                    )
-                    collections.append(collection_info)
+            for col_data in collection_data:
+                collection_info = CollectionInfo(
+                    name=col_data.get("name", ""),
+                    description=col_data.get("description", ""),
+                    file_count=col_data.get("file_count", 0),
+                    created_at=col_data.get("created_at", ""),
+                    updated_at=col_data.get("updated_at", ""),
+                    metadata=col_data.get("metadata", {})
+                )
+                collections.append(collection_info)
             
             logger.info(f"Found {len(collections)} collections")
             return collections
@@ -87,23 +82,21 @@ class CollectionService(ICollectionService):
         try:
             logger.info(f"Creating collection: {name}")
             
-            # Use existing collection manager
+            # Use database collection manager
             result = self.collection_manager.create_collection(name, description)
             
-            # Parse JSON result if it's a string
-            if isinstance(result, str):
-                import json
-                result = json.loads(result)
-            
             if result.get("success", False):
-                col_data = result.get("collection", {})
+                # Get current time for timestamps since database creates them
+                from datetime import datetime, timezone
+                now = datetime.now(timezone.utc).isoformat()
+                
                 return CollectionInfo(
-                    name=col_data.get("name", name),
-                    description=col_data.get("description", description),
-                    file_count=col_data.get("file_count", 0),
-                    created_at=col_data.get("created_at", ""),
-                    updated_at=col_data.get("updated_at", ""),
-                    metadata=col_data.get("metadata", {})
+                    name=name,
+                    description=description,
+                    file_count=0,
+                    created_at=now,
+                    updated_at=now,
+                    metadata={}
                 )
             else:
                 raise Exception(result.get("error", "Failed to create collection"))
