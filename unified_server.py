@@ -680,15 +680,15 @@ class UnifiedServer:
                     )
                 raise  # Re-raise other exceptions
         
-        @app.post("/api/vector-sync/collections/{collection_name}/sync")
-        async def sync_collection(collection_name: str, request: dict = None):
+        @app.post("/api/vector-sync/collections/{collection_id}/sync")
+        async def sync_collection(collection_id: str, request: dict = None):
             """Synchronize a collection with the vector database."""
             try:
                 # Validate collection exists first
-                await _validate_collection_exists(collection_name)
+                await _validate_collection_exists(collection_id)
                 
                 config = request or {}
-                status = await vector_service.sync_collection(collection_name, config)
+                status = await vector_service.sync_collection(collection_id, config)
                 
                 # Check if vector dependencies are available
                 if not vector_service.vector_available:
@@ -712,7 +712,7 @@ class UnifiedServer:
                             "error": {
                                 "code": "SYNC_FAILED",
                                 "message": status.error_message,
-                                "details": {"collection_name": collection_name}
+                                "details": {"collection_name": collection_id}
                             }
                         }
                     )
@@ -729,14 +729,14 @@ class UnifiedServer:
                 logger.error(f"HTTP sync_collection error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
         
-        @app.get("/api/vector-sync/collections/{collection_name}/status")
-        async def get_sync_status(collection_name: str):
+        @app.get("/api/vector-sync/collections/{collection_id}/status")
+        async def get_sync_status(collection_id: str):
             """Get synchronization status for a collection."""
             try:
                 # Validate collection exists first
-                await _validate_collection_exists(collection_name)
+                await _validate_collection_exists(collection_id)
                 
-                status = await vector_service.get_sync_status(collection_name)
+                status = await vector_service.get_sync_status(collection_id)
                 
                 # Check if vector dependencies are available
                 if not vector_service.vector_available:
@@ -862,12 +862,12 @@ class UnifiedServer:
         
         # ===== ADDITIONAL VECTOR SYNC ENDPOINTS =====
         
-        @app.delete("/api/vector-sync/collections/{collection_name}/vectors")
-        async def delete_collection_vectors(collection_name: str):
+        @app.delete("/api/vector-sync/collections/{collection_id}/vectors")
+        async def delete_collection_vectors(collection_id: str):
             """Delete all vectors for a collection."""
             try:
                 # Validate collection exists first
-                await _validate_collection_exists(collection_name)
+                await _validate_collection_exists(collection_id)
                 
                 # Check if vector service is available
                 if not vector_service.vector_available:
@@ -883,8 +883,8 @@ class UnifiedServer:
                     )
                 
                 # Delete vectors (implement in vector service)
-                result = await vector_service.delete_collection_vectors(collection_name)
-                return {"success": True, "message": f"Deleted vectors for collection '{collection_name}'", "deleted_count": result.get("deleted_count", 0)}
+                result = await vector_service.delete_collection_vectors(collection_id)
+                return {"success": True, "message": f"Deleted vectors for collection '{collection_id}'", "deleted_count": result.get("deleted_count", 0)}
                 
             except HTTPException:
                 raise

@@ -39,6 +39,7 @@ class LinkPreview(BaseModel):
 
 class CollectionInfo(BaseModel):
     """Information about a file collection."""
+    id: str  # Collection identifier (same as name for uniqueness)
     name: str
     description: str
     file_count: int

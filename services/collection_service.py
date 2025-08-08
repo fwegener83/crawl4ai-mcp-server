@@ -51,6 +51,7 @@ class CollectionService(ICollectionService):
             collections = []
             for col_data in collection_data:
                 collection_info = CollectionInfo(
+                    id=col_data.get("name", ""),  # Use name as unique identifier
                     name=col_data.get("name", ""),
                     description=col_data.get("description", ""),
                     file_count=col_data.get("file_count", 0),
@@ -90,6 +91,7 @@ class CollectionService(ICollectionService):
                 now = datetime.now(timezone.utc).isoformat()
                 
                 return CollectionInfo(
+                    id=name,  # Use name as unique identifier
                     name=name,
                     description=description,
                     file_count=0,
@@ -128,6 +130,7 @@ class CollectionService(ICollectionService):
             if result.get("success", False):
                 col_data = result.get("collection", {})
                 return CollectionInfo(
+                    id=col_data.get("name", name),  # Use name as unique identifier
                     name=col_data.get("name", name),
                     description=col_data.get("description", ""),
                     file_count=col_data.get("file_count", 0),

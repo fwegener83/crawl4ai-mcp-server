@@ -6,7 +6,17 @@ Die Vector Sync API wurde grundlegend überarbeitet für bessere REST-Konformit�
 
 ## 🚨 Breaking Changes
 
-### 1. HTTP Status Codes geändert
+### 1. Collection ID Konsistenz eingeführt
+**Vorher**: Gemischte Verwendung von `collection_name` und `collection_id` in verschiedenen Endpoints
+**Jetzt**: **Einheitlich `collection_id` überall** - `name` dient als eindeutige ID
+
+| Endpoint-Typ | Vorher | Jetzt | Action Required |
+|--------------|--------|-------|-----------------|
+| File Collections | `collection_id` | `collection_id` ✅ | Keine Änderung |
+| Vector Sync | `collection_name` | **`collection_id`** | **Frontend URLs anpassen** |
+| Response Format | Nur `name` | **`id` + `name`** | **Response-Parsing erweitern** |
+
+### 2. HTTP Status Codes geändert
 **Vorher**: Alle Responses waren 200, Fehler in `success: false`
 **Jetzt**: RESTful Status Codes
 
@@ -14,10 +24,11 @@ Die Vector Sync API wurde grundlegend überarbeitet für bessere REST-Konformit�
 |----------|-----|-----|-----------------|
 | Collection nicht gefunden | 200 + `success: false` | **404** | Error-Handling anpassen |
 | Ungültige Parameter | 200 + `success: false` | **400** | Validation-Errors abfangen |
+| Ungültige Dateierweiterung | 200 + `success: false` | **500** | File-Upload Validation |
 | RAG nicht verfügbar | 200 + `success: false` | **503** | Service-Unavailable behandeln |
 | Sync-Fehler | 200 + `success: false` | **500** | Server-Errors unterscheiden |
 
-### 2. Error Response Format geändert
+### 3. Error Response Format geändert
 **Vorher:**
 ```json
 {
@@ -41,7 +52,7 @@ Die Vector Sync API wurde grundlegend überarbeitet für bessere REST-Konformit�
 }
 ```
 
-### 3. Endpoints entfernt
+### 4. Endpoints entfernt
 **Diese Endpoints existieren nicht mehr:**
 - ❌ `POST /api/vector-sync/collections/{name}/enable`
 - ❌ `POST /api/vector-sync/collections/{name}/disable`
@@ -52,15 +63,60 @@ Die Vector Sync API wurde grundlegend überarbeitet für bessere REST-Konformit�
 
 ### 1. APIService.ts anpassen
 
+#### A) Collection Response Format erweitern
+```typescript
+// NEU: Collections haben jetzt ein 'id' Feld
+interface Collection {
+  id: string;          // Eindeutige ID (gleich wie name)
+  name: string;        // Collection Name  
+  description: string;
+  file_count: number;
+  created_at: string;
+  updated_at: string;
+  metadata: object;
+}
+
+// Alle Collection-API Calls geben jetzt 'id' zurück:
+const collection = await apiService.createCollection(name, description);
+console.log(collection.id); // Funktioniert jetzt!
+```
+
+#### B) Vector Sync URLs anpassen
+```typescript
+// ÄNDERN: Alle Vector-Sync URLs verwenden jetzt collection_id
+// Vorher: /api/vector-sync/collections/{collection_name}/sync
+// Jetzt:  /api/vector-sync/collections/{collection_id}/sync
+
+async syncCollection(collectionId: string, options?: SyncOptions) {
+  const response = await fetch(`/api/vector-sync/collections/${collectionId}/sync`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(options || {})
+  });
+  // ...rest unchanged
+}
+
+async getCollectionSyncStatus(collectionId: string) {
+  return fetch(`/api/vector-sync/collections/${collectionId}/status`);
+}
+
+async deleteCollectionVectors(collectionId: string) {
+  return fetch(`/api/vector-sync/collections/${collectionId}/vectors`, {
+    method: 'DELETE'
+  });
+}
+```
+
+#### C) Error-Handling erweitern
 ```typescript
 // ENTFERNEN: Diese Methoden nicht mehr verfügbar
 // async enableCollectionSync(collectionName: string)
 // async disableCollectionSync(collectionName: string)
 
-// ANPASSEN: Error-Handling für alle vector-sync Methoden
-async syncCollection(collectionName: string, options?: SyncOptions) {
+// ANPASSEN: Error-Handling für alle APIs (nicht nur vector-sync)
+async syncCollection(collectionId: string, options?: SyncOptions) {
   try {
-    const response = await fetch(`/api/vector-sync/collections/${collectionName}/sync`, {
+    const response = await fetch(`/api/vector-sync/collections/${collectionId}/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(options || {})
@@ -91,6 +147,35 @@ async syncCollection(collectionName: string, options?: SyncOptions) {
 }
 ```
 
+// NEU: Auch File-Upload Errors abfangen
+async createFileInCollection(collectionId: string, filename: string, content: string) {
+  try {
+    const response = await fetch(`/api/file-collections/${collectionId}/files`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename, content })
+    });
+    
+    if (!response.ok) {
+      switch (response.status) {
+        case 404:
+          throw new CollectionNotFoundError('Collection not found');
+        case 500:
+          const error = await response.json();
+          if (error.detail?.includes('extension not allowed')) {
+            throw new InvalidFileExtensionError('Invalid file extension. Only .md, .txt, .json allowed');
+          }
+          throw new APIError('Server error');
+      }
+    }
+    
+    return await response.json();
+  } catch (error) {
+    throw error;
+  }
+}
+```
+
 ### 2. Error-Klassen definieren
 
 ```typescript
@@ -115,6 +200,13 @@ export class SyncFailedError extends Error {
     this.name = 'SyncFailedError';
   }
 }
+
+export class InvalidFileExtensionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidFileExtensionError';
+  }
+}
 ```
 
 ### 3. UI-Komponenten anpassen
@@ -133,10 +225,11 @@ export class SyncFailedError extends Error {
 
 #### Error-Handling in Components
 ```tsx
-const handleSync = async (collectionName: string) => {
+// ÄNDERN: Parameter von collectionName zu collectionId
+const handleSync = async (collectionId: string) => {
   try {
     setLoading(true);
-    await apiService.syncCollection(collectionName);
+    await apiService.syncCollection(collectionId);
     setSuccess('Sync completed successfully');
   } catch (error) {
     if (error instanceof CollectionNotFoundError) {
@@ -145,6 +238,8 @@ const handleSync = async (collectionName: string) => {
       setError('Vector search is not available. Please install RAG dependencies.');
     } else if (error instanceof SyncFailedError) {
       setError(`Sync failed: ${error.message}`);
+    } else if (error instanceof InvalidFileExtensionError) {
+      setError(`File upload failed: ${error.message}`);
     } else {
       setError('An unexpected error occurred');
     }
@@ -193,11 +288,25 @@ const getSyncStatus = (collection: Collection) => {
 ## 📝 Neue API-Dokumentation
 
 ### Verfügbare Endpoints (nach Änderungen)
-- `POST /api/vector-sync/collections/{name}/sync` - Manual sync trigger
-- `GET /api/vector-sync/collections/{name}/status` - Get sync status
+#### Collection Management (konsistente collection_id)
+- `GET /api/file-collections` - List all collections
+- `POST /api/file-collections` - Create collection → **Response enthält jetzt `id` Feld**
+- `GET /api/file-collections/{collection_id}` - Get collection info
+- `DELETE /api/file-collections/{collection_id}` - Delete collection
+
+#### File Management (RESTful Status Codes)
+- `GET /api/file-collections/{collection_id}/files` - List files (404 if collection not found)
+- `POST /api/file-collections/{collection_id}/files` - Create file (404/500 errors)
+- `GET /api/file-collections/{collection_id}/files/{filename}` - Get file (404 errors)
+- `PUT /api/file-collections/{collection_id}/files/{filename}` - Update file (404 errors)
+- `DELETE /api/file-collections/{collection_id}/files/{filename}` - Delete file (404 errors)
+
+#### Vector Sync (URL Parameter geändert zu collection_id)
+- `POST /api/vector-sync/collections/{collection_id}/sync` - Manual sync trigger
+- `GET /api/vector-sync/collections/{collection_id}/status` - Get sync status
 - `GET /api/vector-sync/collections/statuses` - Get all statuses  
 - `POST /api/vector-sync/search` - Semantic search
-- `DELETE /api/vector-sync/collections/{name}/vectors` - Delete all vectors
+- `DELETE /api/vector-sync/collections/{collection_id}/vectors` - Delete all vectors
 
 ### Error Codes
 - `COLLECTION_NOT_FOUND` (404) - Collection existiert nicht
@@ -209,9 +318,31 @@ const getSyncStatus = (collection: Collection) => {
 
 ## 🚀 Migration-Strategie
 
-1. **Phase 1**: Error-Handling anpassen (kritisch)
-2. **Phase 2**: Enable/Disable UI entfernen  
-3. **Phase 3**: Success-Messages anpassen
-4. **Phase 4**: Testing und Bugfixes
+### Priorisierung der Änderungen:
 
-**Zeitaufwand**: ~2-3 Stunden für vollständige Anpassung
+1. **Phase 1 (KRITISCH)**: Collection ID Konsistenz
+   - [ ] Collection Interface um `id` Feld erweitern
+   - [ ] Vector-Sync URLs auf `collection_id` umstellen
+   - [ ] API-Calls entsprechend anpassen
+   - **Ohne diese Änderungen funktioniert Vector Sync nicht mehr!**
+
+2. **Phase 2 (HOCH)**: RESTful Error-Handling
+   - [ ] Status-Code-basiertes Error-Handling implementieren
+   - [ ] File-Upload Validation für Extensions hinzufügen
+   - [ ] Error-Klassen definieren und verwenden
+
+3. **Phase 3 (MITTEL)**: UI-Verbesserungen
+   - [ ] Enable/Disable UI entfernen  
+   - [ ] Success-Messages anpassen
+   - [ ] Error-Messages verbessern
+
+4. **Phase 4 (NIEDRIG)**: Testing und Bugfixes
+   - [ ] Manuelle Tests der neuen Error-Handling
+   - [ ] Regression-Tests für Collection ID Änderungen
+
+**Zeitaufwand**: 
+- **Phase 1**: ~2-3 Stunden (kritisch)
+- **Phase 2**: ~1-2 Stunden  
+- **Phase 3+4**: ~1-2 Stunden
+
+**Total**: ~4-7 Stunden für vollständige Migration
