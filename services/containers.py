@@ -7,7 +7,7 @@ pattern from dependency-injector with proper configuration management.
 """
 import os
 import logging
-from pathlib import Path
+# Path import removed - no filesystem dependencies in database-only architecture
 from dependency_injector import containers, providers
 
 from .web_crawling_service import WebCrawlingService
@@ -28,10 +28,10 @@ class Container(containers.DeclarativeContainer):
     # Configuration provider for environment variables
     config = providers.Configuration()
     
-    # Shared singletons for state consistency
+    # Shared singletons for state consistency - database-only, no filesystem dependencies
     collection_service = providers.Singleton(
-        CollectionService,
-        base_dir=config.collections.base_dir.as_(lambda x: Path(x) if x else None)
+        CollectionService
+        # No base_dir needed - uses database-only storage (vector_sync.db)
     )
     
     # Vector sync service (optional, graceful degradation)
@@ -61,11 +61,8 @@ def create_container() -> Container:
     
     container = Container()
     
-    # Load configuration from environment variables
-    container.config.collections.base_dir.from_env(
-        "COLLECTIONS_BASE_DIR",
-        default="./collections"
-    )
+    # Database-only configuration - no filesystem directories needed
+    # COLLECTIONS_BASE_DIR is obsolete - using vector_sync.db database storage
     
     # Additional configuration can be added here
     container.config.vector.db_path.from_env(

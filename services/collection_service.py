@@ -7,7 +7,7 @@ and focuses purely on collection business logic.
 """
 import logging
 from typing import Dict, Any, List
-from pathlib import Path
+# pathlib.Path removed - no filesystem dependencies in database-only architecture
 from .interfaces import ICollectionService, CollectionInfo, FileInfo
 
 # Import database-only collection manager
@@ -24,12 +24,11 @@ class CollectionService(ICollectionService):
     protocol-agnostic interface for business logic.
     """
     
-    def __init__(self, base_dir: Path = None):
+    def __init__(self):
         """
         Initialize the collection service with database-only storage.
         
-        Args:
-            base_dir: Ignored - using database storage instead
+        No filesystem dependencies - all data stored in vector_sync.db
         """
         logger.info("Initializing CollectionService with database-only storage")
         # Use database-only collection manager - filesystem is deprecated

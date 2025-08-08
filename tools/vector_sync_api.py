@@ -18,7 +18,8 @@ from .knowledge_base.vector_sync_schemas import (
     VectorSyncStatus, SyncConfiguration, SyncResult, SyncStatus
 )
 from .knowledge_base.vector_store import VectorStore
-from .collection_manager import CollectionFileManager
+# CollectionFileManager removed - using database-only DatabaseCollectionAdapter
+from .knowledge_base.database_collection_adapter import DatabaseCollectionAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +79,7 @@ class VectorSyncAPI:
         self,
         sync_manager: IntelligentSyncManager,
         vector_store: VectorStore,
-        collection_manager: CollectionFileManager
+        collection_manager: DatabaseCollectionAdapter
     ):
         """Initialize the API handler.
         
