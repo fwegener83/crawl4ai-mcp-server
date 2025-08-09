@@ -134,50 +134,63 @@ class UnifiedServer:
         async def list_file_collections() -> str:
             """List all file collections."""
             try:
-                collections = await collection_service.list_collections()
-                return {
+                from application_layer.collection_management import list_collections_use_case
+                collections = await list_collections_use_case(collection_service)
+                return json.dumps({
                     "success": True,
                     "collections": [col.model_dump() for col in collections]
-                }
+                })
             except Exception as e:
                 logger.error(f"MCP list_file_collections error: {e}")
-                return {"success": False, "error": str(e)}
+                return json.dumps({"success": False, "error": str(e)})
         
         @mcp_server.tool()
         async def create_collection(name: str, description: str = "") -> str:
             """Create a new file collection."""
             try:
-                collection = await collection_service.create_collection(name, description)
-                return {
+                from application_layer.collection_management import create_collection_use_case, ValidationError
+                collection = await create_collection_use_case(collection_service, name, description)
+                return json.dumps({
                     "success": True,
                     "collection": collection.model_dump()
-                }
+                })
+            except ValidationError as e:
+                logger.error(f"MCP create_collection validation error: {e}")
+                return json.dumps({"success": False, "error": e.message, "code": e.code})
             except Exception as e:
                 logger.error(f"MCP create_collection error: {e}")
-                return {"success": False, "error": str(e)}
+                return json.dumps({"success": False, "error": str(e)})
         
         @mcp_server.tool()
         async def get_collection_info(collection_name: str) -> str:
             """Get information about a specific collection."""
             try:
-                collection = await collection_service.get_collection(collection_name)
-                return {
+                from application_layer.collection_management import get_collection_use_case, ValidationError
+                collection = await get_collection_use_case(collection_service, collection_name)
+                return json.dumps({
                     "success": True,
                     "collection": collection.model_dump()
-                }
+                })
+            except ValidationError as e:
+                logger.error(f"MCP get_collection_info validation error: {e}")
+                return json.dumps({"success": False, "error": e.message, "code": e.code})
             except Exception as e:
                 logger.error(f"MCP get_collection_info error: {e}")
-                return {"success": False, "error": str(e)}
+                return json.dumps({"success": False, "error": str(e)})
         
         @mcp_server.tool()
         async def delete_file_collection(collection_name: str) -> str:
             """Delete a file collection."""
             try:
-                result = await collection_service.delete_collection(collection_name)
-                return result
+                from application_layer.collection_management import delete_collection_use_case, ValidationError
+                result = await delete_collection_use_case(collection_service, collection_name)
+                return json.dumps(result)  # Use-case already returns proper format
+            except ValidationError as e:
+                logger.error(f"MCP delete_file_collection validation error: {e}")
+                return json.dumps({"success": False, "error": e.message, "code": e.code})
             except Exception as e:
                 logger.error(f"MCP delete_file_collection error: {e}")
-                return {"success": False, "error": str(e)}
+                return json.dumps({"success": False, "error": str(e)})
         
         @mcp_server.tool()
         async def save_to_collection(
@@ -411,7 +424,8 @@ class UnifiedServer:
         async def list_collections():
             """List all file collections."""
             try:
-                collections = await collection_service.list_collections()
+                from application_layer.collection_management import list_collections_use_case
+                collections = await list_collections_use_case(collection_service)
                 return {
                     "success": True,
                     "collections": [col.model_dump() for col in collections]
@@ -424,19 +438,18 @@ class UnifiedServer:
         async def create_collection_endpoint(request: dict):
             """Create a new file collection."""
             try:
+                from application_layer.collection_management import create_collection_use_case, ValidationError
                 name = request.get("name")
                 description = request.get("description", "")
                 
-                if not name:
-                    raise HTTPException(status_code=400, detail="Collection name is required")
-                
-                collection = await collection_service.create_collection(name, description)
+                collection = await create_collection_use_case(collection_service, name, description)
                 return {
                     "success": True,
                     "data": collection.model_dump()
                 }
-            except HTTPException:
-                raise  # Re-raise HTTPExceptions without wrapping
+            except ValidationError as e:
+                logger.error(f"HTTP create_collection validation error: {e}")
+                raise HTTPException(status_code=400, detail=e.message)
             except Exception as e:
                 logger.error(f"HTTP create_collection error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
@@ -445,11 +458,15 @@ class UnifiedServer:
         async def get_collection(collection_id: str):
             """Get information about a specific collection."""
             try:
-                collection = await collection_service.get_collection(collection_id)
+                from application_layer.collection_management import get_collection_use_case, ValidationError
+                collection = await get_collection_use_case(collection_service, collection_id)
                 return {
                     "success": True,
                     "data": collection.model_dump()
                 }
+            except ValidationError as e:
+                logger.error(f"HTTP get_collection validation error: {e}")
+                raise HTTPException(status_code=400, detail=e.message)
             except Exception as e:
                 logger.error(f"HTTP get_collection error: {e}")
                 raise HTTPException(status_code=404, detail=str(e))
@@ -458,8 +475,12 @@ class UnifiedServer:
         async def delete_collection(collection_id: str):
             """Delete a file collection."""
             try:
-                result = await collection_service.delete_collection(collection_id)
+                from application_layer.collection_management import delete_collection_use_case, ValidationError
+                result = await delete_collection_use_case(collection_service, collection_id)
                 return result
+            except ValidationError as e:
+                logger.error(f"HTTP delete_collection validation error: {e}")
+                raise HTTPException(status_code=400, detail=e.message)
             except Exception as e:
                 logger.error(f"HTTP delete_collection error: {e}")
                 # RESTful error handling - 404 for collection not found
