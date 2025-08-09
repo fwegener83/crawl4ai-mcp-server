@@ -80,13 +80,20 @@ class UnifiedServer:
         async def web_content_extract(url: str) -> str:
             """Extract content from a single web page."""
             try:
-                result = await web_service.extract_content(url)
+                from application_layer.web_crawling import extract_content_use_case, ValidationError
+                result = await extract_content_use_case(web_service, url)
                 if result.error:
-                    return f"Error extracting content: {result.error}"
-                return result.content
+                    return json.dumps({"success": False, "error": result.error})
+                return json.dumps({
+                    "success": True,
+                    "content": result.content,
+                    "metadata": result.metadata
+                })
+            except ValidationError as e:
+                return json.dumps({"success": False, "error": e.message, "code": e.code})
             except Exception as e:
                 logger.error(f"MCP web_content_extract error: {e}")
-                return f"Error extracting content: {str(e)}"
+                return json.dumps({"success": False, "error": str(e)})
         
         @mcp_server.tool()
         async def domain_deep_crawl_tool(
@@ -100,33 +107,42 @@ class UnifiedServer:
         ) -> str:
             """Perform deep crawling of a domain."""
             try:
-                config = DeepCrawlConfig(
-                    domain_url=domain_url,
-                    max_depth=max_depth,
-                    max_pages=max_pages,
-                    crawl_strategy=crawl_strategy,
-                    include_external=include_external,
-                    url_patterns=url_patterns,
-                    exclude_patterns=exclude_patterns
+                from application_layer.web_crawling import deep_crawl_use_case, ValidationError
+                results = await deep_crawl_use_case(
+                    web_service,
+                    domain_url,
+                    max_depth,
+                    max_pages,
+                    crawl_strategy,
+                    include_external,
+                    url_patterns,
+                    exclude_patterns
                 )
-                results = await web_service.deep_crawl(config)
-                return {
+                return json.dumps({
                     "success": True,
                     "pages": [result.model_dump() for result in results]
-                }
+                })
+            except ValidationError as e:
+                return json.dumps({"success": False, "error": e.message, "code": e.code})
             except Exception as e:
                 logger.error(f"MCP domain_deep_crawl error: {e}")
-                return {"success": False, "error": str(e)}
+                return json.dumps({"success": False, "error": str(e)})
         
         @mcp_server.tool()
         async def domain_link_preview_tool(domain_url: str, include_external: bool = False) -> str:
             """Preview available links on a domain."""
             try:
-                result = await web_service.preview_links(domain_url, include_external)
-                return result.model_dump_json()
+                from application_layer.web_crawling import link_preview_use_case, ValidationError
+                result = await link_preview_use_case(web_service, domain_url, include_external)
+                return json.dumps({
+                    "success": True,
+                    "data": result.model_dump()
+                })
+            except ValidationError as e:
+                return json.dumps({"success": False, "error": e.message, "code": e.code})
             except Exception as e:
                 logger.error(f"MCP domain_link_preview error: {e}")
-                return LinkPreview(domain=domain_url, links=[], metadata={"error": str(e)}).model_dump_json()
+                return json.dumps({"success": False, "error": str(e), "data": {"domain": domain_url, "links": [], "metadata": {"error": str(e)}}})
         
         # ===== COLLECTION MANAGEMENT TOOLS =====
         
@@ -201,14 +217,17 @@ class UnifiedServer:
         ) -> str:
             """Save content to a file in a collection."""
             try:
-                file_info = await collection_service.save_file(collection_name, filename, content, folder)
-                return {
+                from application_layer.file_management import save_file_use_case, ValidationError
+                file_info = await save_file_use_case(collection_service, collection_name, filename, content, folder)
+                return json.dumps({
                     "success": True,
                     "file": file_info.model_dump()
-                }
+                })
+            except ValidationError as e:
+                return json.dumps({"success": False, "error": e.message, "code": e.code})
             except Exception as e:
                 logger.error(f"MCP save_to_collection error: {e}")
-                return {"success": False, "error": str(e)}
+                return json.dumps({"success": False, "error": str(e)})
         
         @mcp_server.tool()
         async def read_from_collection(
@@ -218,14 +237,93 @@ class UnifiedServer:
         ) -> str:
             """Read content from a file in a collection."""
             try:
-                file_info = await collection_service.get_file(collection_name, filename, folder)
-                return {
+                from application_layer.file_management import get_file_use_case, ValidationError
+                file_info = await get_file_use_case(collection_service, collection_name, filename, folder)
+                return json.dumps({
                     "success": True,
                     "file": file_info.model_dump()
-                }
+                })
+            except ValidationError as e:
+                return json.dumps({"success": False, "error": e.message, "code": e.code})
             except Exception as e:
                 logger.error(f"MCP read_from_collection error: {e}")
-                return {"success": False, "error": str(e)}
+                return json.dumps({"success": False, "error": str(e)})
+        
+        @mcp_server.tool()
+        async def update_file_in_collection(
+            collection_name: str,
+            filename: str,
+            content: str,
+            folder: str = ""
+        ) -> str:
+            """Update content of a file in a collection."""
+            try:
+                from application_layer.file_management import update_file_use_case, ValidationError
+                file_info = await update_file_use_case(collection_service, collection_name, filename, content, folder)
+                return json.dumps({
+                    "success": True,
+                    "file": file_info.model_dump()
+                })
+            except ValidationError as e:
+                return json.dumps({"success": False, "error": e.message, "code": e.code})
+            except Exception as e:
+                logger.error(f"MCP update_file_in_collection error: {e}")
+                return json.dumps({"success": False, "error": str(e)})
+        
+        @mcp_server.tool()
+        async def delete_file_from_collection(
+            collection_name: str,
+            filename: str,
+            folder: str = ""
+        ) -> str:
+            """Delete a file from a collection."""
+            try:
+                from application_layer.file_management import delete_file_use_case, ValidationError
+                result = await delete_file_use_case(collection_service, collection_name, filename, folder)
+                return json.dumps(result)
+            except ValidationError as e:
+                return json.dumps({"success": False, "error": e.message, "code": e.code})
+            except Exception as e:
+                logger.error(f"MCP delete_file_from_collection error: {e}")
+                return json.dumps({"success": False, "error": str(e)})
+        
+        @mcp_server.tool()
+        async def list_files_in_collection(collection_name: str) -> str:
+            """List all files in a collection."""
+            try:
+                from application_layer.file_management import list_files_use_case, ValidationError
+                files = await list_files_use_case(collection_service, collection_name)
+                return json.dumps({
+                    "success": True,
+                    "files": [file_info.model_dump() for file_info in files]
+                })
+            except ValidationError as e:
+                return json.dumps({"success": False, "error": e.message, "code": e.code})
+            except Exception as e:
+                logger.error(f"MCP list_files_in_collection error: {e}")
+                return json.dumps({"success": False, "error": str(e)})
+        
+        @mcp_server.tool()
+        async def crawl_single_page_to_collection(
+            collection_name: str,
+            url: str,
+            folder: str = ""
+        ) -> str:
+            """Crawl a single page and save content to a collection."""
+            try:
+                from application_layer.crawl_integration import crawl_single_page_to_collection_use_case, ValidationError
+                file_info = await crawl_single_page_to_collection_use_case(
+                    web_service, collection_service, collection_name, url, folder
+                )
+                return json.dumps({
+                    "success": True,
+                    "file": file_info.model_dump()
+                })
+            except ValidationError as e:
+                return json.dumps({"success": False, "error": e.message, "code": e.code})
+            except Exception as e:
+                logger.error(f"MCP crawl_single_page_to_collection error: {e}")
+                return json.dumps({"success": False, "error": str(e)})
         
         # ===== VECTOR SYNC TOOLS =====
         
@@ -348,17 +446,18 @@ class UnifiedServer:
         async def extract_content(request: dict):
             """Extract content from a single web page."""
             try:
-                url = request.get("url")
-                if not url:
-                    raise HTTPException(status_code=400, detail="URL is required")
+                from application_layer.web_crawling import extract_content_use_case, ValidationError
                 
-                result = await web_service.extract_content(url)
+                url = request.get("url")
+                result = await extract_content_use_case(web_service, url)
                 return {
                     "success": result.error is None,
                     "content": result.content,
                     "metadata": result.metadata,
                     "error": result.error
                 }
+            except ValidationError as e:
+                raise HTTPException(status_code=400, detail=f"{e.code}: {e.message}")
             except HTTPException:
                 raise  # Re-raise HTTPExceptions without wrapping
             except Exception as e:
@@ -369,8 +468,27 @@ class UnifiedServer:
         async def deep_crawl(request: dict):
             """Perform deep crawling of a domain."""
             try:
-                config = DeepCrawlConfig(**request)
-                results = await web_service.deep_crawl(config)
+                from application_layer.web_crawling import deep_crawl_use_case, ValidationError
+                
+                # Extract parameters from request with validation in use-case
+                domain_url = request.get("domain_url")
+                max_depth = request.get("max_depth", 1)
+                max_pages = request.get("max_pages", 10)
+                crawl_strategy = request.get("crawl_strategy", "bfs")
+                include_external = request.get("include_external", False)
+                url_patterns = request.get("url_patterns")
+                exclude_patterns = request.get("exclude_patterns")
+                
+                results = await deep_crawl_use_case(
+                    web_service,
+                    domain_url,
+                    max_depth,
+                    max_pages,
+                    crawl_strategy,
+                    include_external,
+                    url_patterns,
+                    exclude_patterns
+                )
                 
                 return {
                     "success": True,
@@ -390,6 +508,8 @@ class UnifiedServer:
                         for result in results
                     ]
                 }
+            except ValidationError as e:
+                raise HTTPException(status_code=400, detail=f"{e.code}: {e.message}")
             except Exception as e:
                 logger.error(f"HTTP deep_crawl error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
@@ -398,13 +518,12 @@ class UnifiedServer:
         async def link_preview(request: dict):
             """Preview available links on a domain."""
             try:
+                from application_layer.web_crawling import link_preview_use_case, ValidationError
+                
                 domain_url = request.get("domain_url")
                 include_external = request.get("include_external", False)
                 
-                if not domain_url:
-                    raise HTTPException(status_code=400, detail="domain_url is required")
-                
-                result = await web_service.preview_links(domain_url, include_external)
+                result = await link_preview_use_case(web_service, domain_url, include_external)
                 return {
                     "success": True,
                     "domain": result.domain,
@@ -412,6 +531,8 @@ class UnifiedServer:
                     "external_links": result.external_links,
                     "metadata": result.metadata
                 }
+            except ValidationError as e:
+                raise HTTPException(status_code=400, detail=f"{e.code}: {e.message}")
             except HTTPException:
                 raise  # Re-raise HTTPExceptions without wrapping
             except Exception as e:
@@ -492,13 +613,12 @@ class UnifiedServer:
         # ===== FILE MANAGEMENT ENDPOINTS =====
         
         @app.get("/api/file-collections/{collection_id}/files")
-        async def list_files_in_collection(collection_id: str):
+        async def list_files_in_collection_endpoint(collection_id: str):
             """List all files and folders in a collection."""
             try:
-                from urllib.parse import unquote
-                decoded_collection_id = unquote(collection_id)
+                from application_layer.file_management import list_files_use_case, ValidationError
                 
-                files = await collection_service.list_files_in_collection(decoded_collection_id)
+                files = await list_files_use_case(collection_service, collection_id)
                 # Transform files to include filename field for backward compatibility
                 files_data = []
                 for f in files:
@@ -515,6 +635,8 @@ class UnifiedServer:
                         "total_folders": 0
                     }
                 }
+            except ValidationError as e:
+                raise HTTPException(status_code=400, detail=f"{e.code}: {e.message}")
             except Exception as e:
                 logger.error(f"HTTP list_files_in_collection error: {e}")
                 # RESTful error handling - 404 for collection not found
@@ -527,23 +649,19 @@ class UnifiedServer:
         async def save_file_to_collection_endpoint(collection_id: str, request: dict):
             """Save a file to a collection."""
             try:
-                from urllib.parse import unquote
-                decoded_collection_id = unquote(collection_id)
+                from application_layer.file_management import save_file_use_case, ValidationError
                 
                 filename = request.get("filename")
                 content = request.get("content")
                 folder = request.get("folder", "")
                 
-                if not filename:
-                    raise HTTPException(status_code=400, detail="Filename is required")
-                if not content:
-                    raise HTTPException(status_code=400, detail="Content is required")
-                
-                file_info = await collection_service.save_file(decoded_collection_id, filename, content, folder)
+                file_info = await save_file_use_case(collection_service, collection_id, filename, content, folder)
                 return {
                     "success": True,
                     "data": file_info.model_dump()
                 }
+            except ValidationError as e:
+                raise HTTPException(status_code=400, detail=f"{e.code}: {e.message}")
             except HTTPException:
                 raise
             except Exception as e:
@@ -558,21 +676,21 @@ class UnifiedServer:
         async def read_file_from_collection_endpoint(collection_id: str, filename: str, folder: str = ""):
             """Read a file from a collection."""
             try:
-                from urllib.parse import unquote
-                decoded_collection_id = unquote(collection_id)
-                decoded_filename = unquote(filename)
+                from application_layer.file_management import get_file_use_case, ValidationError
                 
-                file_info = await collection_service.get_file(decoded_collection_id, decoded_filename, folder)
+                file_info = await get_file_use_case(collection_service, collection_id, filename, folder)
                 return {
                     "success": True,
                     "data": {
                         "content": file_info.content,
-                        "filename": decoded_filename,
+                        "filename": file_info.name,
                         "path": file_info.path,
                         "created_at": file_info.created_at,
                         "updated_at": file_info.updated_at
                     }
                 }
+            except ValidationError as e:
+                raise HTTPException(status_code=400, detail=f"{e.code}: {e.message}")
             except Exception as e:
                 logger.error(f"HTTP read_file_from_collection error: {e}")
                 raise HTTPException(status_code=404, detail=str(e))
@@ -581,19 +699,17 @@ class UnifiedServer:
         async def update_file_in_collection_endpoint(collection_id: str, filename: str, request: dict, folder: str = ""):
             """Update a file in a collection."""
             try:
-                from urllib.parse import unquote
-                decoded_collection_id = unquote(collection_id)
-                decoded_filename = unquote(filename)
+                from application_layer.file_management import update_file_use_case, ValidationError
                 
                 content = request.get("content")
-                if not content:
-                    raise HTTPException(status_code=400, detail="Content is required")
                 
-                file_info = await collection_service.save_file(decoded_collection_id, decoded_filename, content, folder)
+                file_info = await update_file_use_case(collection_service, collection_id, filename, content, folder)
                 return {
                     "success": True,
                     "data": file_info.model_dump()
                 }
+            except ValidationError as e:
+                raise HTTPException(status_code=400, detail=f"{e.code}: {e.message}")
             except HTTPException:
                 raise
             except Exception as e:
@@ -604,12 +720,12 @@ class UnifiedServer:
         async def delete_file_from_collection_endpoint(collection_id: str, filename: str, folder: str = ""):
             """Delete a file from a collection."""
             try:
-                from urllib.parse import unquote
-                decoded_collection_id = unquote(collection_id)
-                decoded_filename = unquote(filename)
+                from application_layer.file_management import delete_file_use_case, ValidationError
                 
-                await collection_service.delete_file(decoded_collection_id, decoded_filename, folder)
-                return {"success": True}
+                result = await delete_file_use_case(collection_service, collection_id, filename, folder)
+                return result
+            except ValidationError as e:
+                raise HTTPException(status_code=400, detail=f"{e.code}: {e.message}")
             except Exception as e:
                 logger.error(f"HTTP delete_file_from_collection error: {e}")
                 # RESTful error handling - 404 for collection or file not found
@@ -622,7 +738,8 @@ class UnifiedServer:
         async def crawl_single_page_to_collection(collection_id: str, request: dict):
             """Crawl a single page and save to collection."""
             try:
-                from urllib.parse import unquote, urlparse
+                from application_layer.crawl_integration import crawl_single_page_to_collection_use_case, ValidationError
+                from urllib.parse import unquote
                 
                 # URL decode the collection_id to handle names with spaces
                 decoded_collection_id = unquote(collection_id)
@@ -631,48 +748,25 @@ class UnifiedServer:
                 url = request.get("url")
                 folder = request.get("folder", "")
                 
-                if not url:
-                    raise HTTPException(status_code=400, detail="URL is required")
-                
-                # Extract content from URL using web service
-                content_result = await web_service.extract_content(url)
-                
-                if content_result.error:
-                    raise HTTPException(status_code=400, detail=f"Failed to crawl URL: {content_result.error}")
-                
-                # Generate filename from URL
-                parsed_url = urlparse(url)
-                domain = parsed_url.netloc.replace("www.", "")
-                path_parts = [p for p in parsed_url.path.split("/") if p]
-                if path_parts:
-                    filename = f"{domain}_{path_parts[-1]}.md"
-                else:
-                    filename = f"{domain}_index.md"
-                
-                # Clean filename
-                import re
-                filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
-                
-                # Save to collection using collection service
-                file_info = await collection_service.save_file(
-                    decoded_collection_id, 
-                    filename, 
-                    content_result.content, 
-                    folder
+                # Use shared use-case for crawling and saving
+                file_info = await crawl_single_page_to_collection_use_case(
+                    web_service, collection_service, decoded_collection_id, url, folder
                 )
                 
                 return {
                     "success": True,
                     "file": {
-                        "filename": filename,
+                        "filename": file_info.name,
                         "collection_id": decoded_collection_id
                     },
                     "url": url,
                     "folder": folder,
-                    "content_length": len(content_result.content),
-                    "message": f"Successfully saved content from {url} to {decoded_collection_id}/{folder if folder else ''}{filename}"
+                    "content_length": file_info.size,
+                    "message": f"Successfully saved content from {url} to {decoded_collection_id}/{folder if folder else ''}{file_info.name}"
                 }
                 
+            except ValidationError as e:
+                raise HTTPException(status_code=400, detail=f"{e.code}: {e.message}")
             except HTTPException:
                 raise  # Re-raise HTTPExceptions without wrapping
             except Exception as e:
