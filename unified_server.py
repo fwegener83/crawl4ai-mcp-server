@@ -261,13 +261,18 @@ class UnifiedServer:
         ) -> str:
             """Search vectors using semantic similarity."""
             try:
-                results = await vector_service.search_vectors(query, collection_name, limit)
-                # Filter by similarity threshold if needed
-                filtered_results = [r for r in results if r.score >= similarity_threshold]
+                # Import and use the shared use-case function
+                from application_layer.vector_search import search_vectors_use_case
+                
+                # Use shared use-case function (same as API)
+                results = await search_vectors_use_case(
+                    vector_service, collection_service,
+                    query, collection_name, limit, similarity_threshold
+                )
                 
                 return json.dumps({
                     "success": True,
-                    "results": [result.model_dump() for result in filtered_results]
+                    "results": results  # Results already transformed with similarity_score
                 })
             except Exception as e:
                 logger.error(f"MCP search_collection_vectors error: {e}")
