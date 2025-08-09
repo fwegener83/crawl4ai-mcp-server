@@ -778,15 +778,31 @@ class UnifiedServer:
         async def search_vectors(request: dict):
             """Search vectors using semantic similarity."""
             try:
+                # Import the shared use-case function
+                from application_layer.vector_search import search_vectors_use_case, ValidationError
+                
+                # Extract parameters from request
                 query = request.get("query")
                 collection_name = request.get("collection_name")
                 limit = request.get("limit", 10)
                 similarity_threshold = request.get("similarity_threshold", 0.7)
                 
-                # Validate required parameters
-                if not query:
+                # Use shared use-case function
+                results = await search_vectors_use_case(
+                    vector_service, collection_service,
+                    query, collection_name, limit, similarity_threshold
+                )
+                
+                return {
+                    "success": True,
+                    "results": results
+                }
+                
+            except ValidationError as ve:
+                # Map ValidationError to HTTPException with exact same format as before
+                if ve.code == "MISSING_QUERY":
                     raise HTTPException(
-                        status_code=400, 
+                        status_code=400,
                         detail={
                             "error": {
                                 "code": "MISSING_QUERY",
@@ -795,9 +811,7 @@ class UnifiedServer:
                             }
                         }
                     )
-                
-                # Validate parameter ranges
-                if limit < 1:
+                elif ve.code == "INVALID_LIMIT":
                     raise HTTPException(
                         status_code=400,
                         detail={
@@ -808,8 +822,7 @@ class UnifiedServer:
                             }
                         }
                     )
-                
-                if similarity_threshold < 0 or similarity_threshold > 1:
+                elif ve.code == "INVALID_THRESHOLD":
                     raise HTTPException(
                         status_code=400,
                         detail={
@@ -820,45 +833,43 @@ class UnifiedServer:
                             }
                         }
                     )
+                else:
+                    # Generic validation error mapping
+                    raise HTTPException(status_code=400, detail=str(ve))
+                    
+            except RuntimeError as re:
+                # Map RuntimeError (service unavailable) to 503
+                raise HTTPException(
+                    status_code=503,
+                    detail={
+                        "error": {
+                            "code": "SERVICE_UNAVAILABLE",
+                            "message": "Vector search service is not available - RAG dependencies not installed", 
+                            "details": {"service": "vector_search"}
+                        }
+                    }
+                )
                 
-                # If specific collection is requested, validate it exists
-                if collection_name:
-                    await _validate_collection_exists(collection_name)
-                
-                # Check if vector service is available
-                if not vector_service.vector_available:
+            except Exception as e:
+                # Handle collection not found and other service errors
+                error_msg = str(e).lower()
+                if "not found" in error_msg or "does not exist" in error_msg:
+                    # Extract collection name for proper error response
+                    collection_name_for_error = collection_name or "unknown"
                     raise HTTPException(
-                        status_code=503,
+                        status_code=404,
                         detail={
                             "error": {
-                                "code": "SERVICE_UNAVAILABLE", 
-                                "message": "Vector search service is not available - RAG dependencies not installed",
-                                "details": {"service": "vector_search"}
+                                "code": "COLLECTION_NOT_FOUND",
+                                "message": f"Collection '{collection_name_for_error}' does not exist",
+                                "details": {"collection_name": collection_name_for_error}
                             }
                         }
                     )
-                
-                results = await vector_service.search_vectors(query, collection_name, limit, similarity_threshold)
-                # No need for additional filtering since similarity_threshold is handled by the vector search itself
-                filtered_results = results
-                
-                # Transform results to include similarity_score field as expected by tests
-                transformed_results = []
-                for result in filtered_results:
-                    result_dict = result.model_dump()
-                    # Add similarity_score field mapping from score
-                    result_dict["similarity_score"] = result_dict.get("score", 0.0)
-                    transformed_results.append(result_dict)
-                
-                return {
-                    "success": True,
-                    "results": transformed_results
-                }
-            except HTTPException:
-                raise  # Re-raise HTTPExceptions without wrapping
-            except Exception as e:
-                logger.error(f"HTTP search_vectors error: {e}")
-                raise HTTPException(status_code=500, detail=str(e))
+                else:
+                    # Generic error handling
+                    logger.error(f"HTTP search_vectors error: {e}")
+                    raise HTTPException(status_code=500, detail=str(e))
         
         # ===== ADDITIONAL VECTOR SYNC ENDPOINTS =====
         
