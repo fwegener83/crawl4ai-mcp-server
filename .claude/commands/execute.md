@@ -94,6 +94,16 @@ Execute tasks based on the comprehensive plan's full-stack task breakdown:
 - Update overall completion percentage
 - Log any architectural decisions, integration patterns, or contract changes
 
+### Architecture Decision Tracking (Execution Phase)
+
+If, during execution, a new architectural decision arises that is not already documented in an ADR:
+- Create a new ADR file using the `.claude/templates/ADR_TEMPLATE.md` template
+  - Filename: `docs/adr/ADR_{date}_{short-title}.md`
+  - Status: Proposed
+  - Fill Context, Decision, Alternatives, Consequences
+  - Leave "Implementation Outcome" empty
+- If an existing Proposed ADR is abandoned due to changes, update its status to Rejected and add a short note in "Implementation Outcome".
+
 ### Full-Stack Commit Message Strategy
 
 **Conventional Commits for Full-Stack Development:**

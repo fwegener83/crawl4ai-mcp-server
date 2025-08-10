@@ -132,6 +132,19 @@ find . -name "*.json" -o -name "*.yaml" -o -name "*.toml" | grep -E "(config|env
    - Security testing considerations
    - Accessibility testing needs
 
+## Architecture Decision Recording (Planning Phase)
+
+During the planning phase, identify all significant architectural decisions early.  
+For each decision:
+
+1. Create a new ADR file using the template `.claude/templates/ADR_TEMPLATE.md`
+   - Filename: `docs/adr/ADR_{date}_{short-title}.md`
+   - Status: Proposed
+   - Fill in Context, Decision, Alternatives, Consequences
+   - Leave "Implementation Outcome" empty until the feature is finalized
+2. Scope: One ADR per decision. Multiple unrelated decisions → multiple ADR files.
+3. Reference all created ADRs in the plan document under a dedicated "Architecture Decisions" section.
+
 ## Phase 2: INTELLIGENT COMPLEXITY ASSESSMENT
 
 ### Step 1: Multi-Dimensional Complexity Analysis

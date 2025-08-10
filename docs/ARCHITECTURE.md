@@ -762,86 +762,86 @@ end note
 
 ## Persistierung
 
+### Professional User Directory Configuration
+
+Das System implementiert eine **professionelle Benutzerdatenverzeichnis-Architektur** nach Unix/macOS-Konventionen:
+
+```text
+~/.context42/
+├── databases/
+│   ├── vector_sync.db          # SQLite für Collections & Sync Status
+│   └── chromadb/               # ChromaDB Vector Store
+│       └── crawl4ai_documents/
+├── config/
+│   ├── default.env            # Standard-Konfiguration
+│   └── user.env               # Benutzer-Overrides  
+├── logs/
+│   └── crawl4ai-mcp.log       # Zentralisiertes Logging
+└── cache/
+    └── crawling/              # Optional: Crawling Cache
+```
+
+**Konfigurationshierarchie:**
+
+1. Environment Variables (höchste Priorität)
+2. `~/.context42/config/user.env`
+3. `~/.context42/config/default.env`
+4. Code-Defaults (niedrigste Priorität)
+
+**Automatische Migration:** Bestehende Daten (`./vector_sync.db`, `./rag_db/`) werden automatisch nach `~/.context42/databases/` migriert.
+
 ### Datenbank und Speicher Architektur
 
 ```puml
 @startuml Data Persistence
 !theme plain
 
-package "File Collections" {
-  [Collections Directory] as CollDir
-  [Markdown Files] as MD
-  [JSON Files] as JSON
-  [Text Files] as TXT
-}
-
-package "Metadata Storage" {
-  database "SQLite Database" as DB {
-    table "file_mappings" {
-      * file_path: TEXT
-      * file_hash: TEXT  
-      * collection_name: TEXT
-      * last_modified: TIMESTAMP
-      * metadata: JSON
+package "User Directory (~/.context42/)" {
+  package "databases/" {
+    database "vector_sync.db" as DB {
+      table "collections"
+      table "collection_files" 
+      table "vector_sync_status"
+      table "vector_file_mappings"
     }
     
-    table "sync_statuses" {
-      * collection_name: TEXT
-      * sync_status: TEXT
-      * vector_count: INTEGER
-      * last_sync: TIMESTAMP
-      * sync_version: INTEGER
+    database "chromadb/" as Vector {
+      collection "crawl4ai_documents" {
+        * id: UUID
+        * embedding: VECTOR
+        * metadata: JSON
+        * document: TEXT
+      }
     }
   }
-}
-
-package "Vector Storage" {
-  database "ChromaDB" as Vector {
-    collection "crawl4ai_documents" {
-      * id: UUID
-      * embedding: VECTOR
-      * metadata: JSON
-      * document: TEXT
-    }
+  
+  package "config/" {
+    file "default.env"
+    file "user.env"
+  }
+  
+  package "logs/" {
+    file "crawl4ai-mcp.log"
   }
 }
-
-package "Configuration" {
-  [Environment Variables] as ENV
-  [CLAUDE.md] as Config
-}
-
-CollDir --> DB : "metadata tracking"
-MD --> DB : "file hashes"
-JSON --> DB : "modification times"
-TXT --> DB : "collection mapping"
-
-DB --> Vector : "sync status coordination"
-Vector --> DB : "vector count updates"
-
-ENV --> CollDir : "collections_dir path"
-ENV --> DB : "database path"  
-ENV --> Vector : "vector DB path"
-Config --> ENV : "project configuration"
 
 note right of DB
-  **SQLite Features:**
-  • Atomic transactions
-  • File integrity tracking
-  • Sync status persistence
-  • Metadata indexing
+  **SQLite Tables:**
+  • collections: Collection metadata
+  • collection_files: File content (database-only)
+  • vector_sync_status: Sync tracking
+  • vector_file_mappings: File-to-vector mapping
 end note
 
 note right of Vector
   **ChromaDB Features:**
   • Semantic embeddings
   • Similarity search
-  • Metadata filtering
-  • Optional dependency
+  • Metadata filtering  
+  • Collection isolation
 end note
 
 @enduml
-```
 
 ### Daten-Modell Relationships
 

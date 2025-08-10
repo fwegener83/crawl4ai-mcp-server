@@ -54,6 +54,7 @@ The vector sync API endpoints follow RESTful conventions with consistent error h
 ## Essential Commands
 
 ### Backend Development
+
 ```bash
 # Start MCP server
 uv run python server.py
@@ -73,6 +74,7 @@ python3 -c "from tools.knowledge_base.dependencies import is_rag_available; prin
 ```
 
 ### Frontend Development
+
 ```bash
 cd frontend
 
@@ -161,9 +163,19 @@ File collections are the primary focus for the frontend interface, providing a f
 - 100% test success rate is required before any commit
 - Test failures indicate real problems that must be fixed, not ignored
 
+### Documentation and Architecture Decisions
+
+- **Architecture Decision Records (ADRs)**: Stored in `docs/adr/` following the template in `.claude/template/ADR_TEMPLATE.md`
+- **Changelog Management**: All changes documented in `CHANGELOG.md` with semantic versioning
+- **Automated Workflows**: Use `.claude/commands/` for structured development:
+  - `execute.md`: Full-stack implementation with automatic ADR creation
+  - `finalize-feature.md`: PR completion with ADR finalization and changelog updates
+- **Documentation Cross-References**: ADRs link to changelog entries, architecture details in `docs/ARCHITECTURE.md`
+
 ## Important Configuration
 
 ### Environment Variables
+
 ```bash
 # RAG Configuration (optional)
 RAG_DB_PATH=./rag_db              # ChromaDB storage path
@@ -177,7 +189,9 @@ CRAWL4AI_TIMEOUT=30
 ```
 
 ### Claude Desktop Integration
+
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
 ```json
 {
   "mcpServers": {
@@ -196,4 +210,11 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 - `frontend/src/`: React application source
 - `tests/`: Python test suite
 - `frontend/src/e2e/`: Playwright E2E tests
-- Collections stored in `./collections/` directory by default
+- `docs/adr/`: Architecture Decision Records
+- `~/.context42/databases/`: SQLite collections database and ChromaDB vectors
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
