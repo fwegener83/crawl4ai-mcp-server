@@ -107,7 +107,7 @@ class DatabaseCollectionManager:
         """Initialize database collection manager with given path."""
         self.db_path = os.path.abspath(db_path)  # Make path absolute
         self._init_database()
-        print(f"DEBUG DB: DatabaseCollectionManager initialized with absolute path: {self.db_path}")
+        logger.debug(f"DatabaseCollectionManager initialized with absolute path: {self.db_path}")
         logger.info(f"DatabaseCollectionManager initialized with database: {self.db_path}")
     
     def _validate_file_extension(self, filename: str) -> bool:
@@ -436,13 +436,14 @@ class PersistentSyncManager:
         """Initialize persistent sync manager with database path."""
         self.db_path = os.path.abspath(db_path)  # Make path absolute
         self.db_manager = DatabaseCollectionManager(self.db_path)
-        print(f"DEBUG PERSIST: PersistentSyncManager initialized with absolute path: {self.db_path}")
+        logger.debug(f"PersistentSyncManager initialized with absolute path: {self.db_path}")
         logger.info(f"PersistentSyncManager initialized with database: {self.db_path}")
     
     @contextmanager
     def get_connection(self):
         """Get database connection."""
-        return self.db_manager.get_connection()
+        with self.db_manager.get_connection() as conn:
+            yield conn
     
     def save_sync_status(self, status: VectorSyncStatus) -> bool:
         """Save sync status to database."""
@@ -472,7 +473,7 @@ class PersistentSyncManager:
                     json.dumps(status.warnings)
                 ))
                 conn.commit()
-                print(f"DEBUG PERSIST: Saved sync status for collection '{status.collection_name}' - status: {status.status}, chunk_count: {status.chunk_count}")
+                logger.debug(f"Saved sync status for collection '{status.collection_name}' - status: {status.status}, chunk_count: {status.chunk_count}")
                 logger.debug(f"Saved sync status for collection '{status.collection_name}'")
                 return True
         except Exception as e:

@@ -13,6 +13,8 @@ from dependency_injector import containers, providers
 from .web_crawling_service import WebCrawlingService
 from .collection_service import CollectionService
 from .vector_sync_service import VectorSyncService
+# Import centralized configuration
+from config.paths import Context42Config
 
 logger = logging.getLogger(__name__)
 
@@ -64,10 +66,15 @@ def create_container() -> Container:
     # Database-only configuration - no filesystem directories needed
     # COLLECTIONS_BASE_DIR is obsolete - using vector_sync.db database storage
     
-    # Additional configuration can be added here
+    # Configuration with Context42 defaults
     container.config.vector.db_path.from_env(
-        "RAG_DB_PATH", 
-        default="./rag_db"
+        "VECTOR_DB_PATH", 
+        default=str(Context42Config.get_vector_db_path())
+    )
+    
+    container.config.collections.db_path.from_env(
+        "COLLECTIONS_DB_PATH",
+        default=str(Context42Config.get_collections_db_path())
     )
     
     container.config.crawling.timeout.from_env(

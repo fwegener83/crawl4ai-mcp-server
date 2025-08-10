@@ -10,6 +10,8 @@ This service is optional and only operates when vector dependencies are availabl
 import logging
 from typing import Dict, Any, List, Optional
 from .interfaces import IVectorSyncService, VectorSyncStatus, VectorSearchResult
+# Import centralized configuration
+from config.paths import Context42Config
 
 logger = logging.getLogger(__name__)
 
@@ -32,10 +34,20 @@ class VectorSyncService(IVectorSyncService):
             vector_store: Optional vector store instance
             collection_service: Optional collection service for file operations
         """
-        logger.info("Initializing VectorSyncService")
+        logger.info("Initializing VectorSyncService with ~/.context42/ configuration")
+        
+        # Ensure directory structure exists for vector operations
+        Context42Config.ensure_directory_structure()
+        Context42Config.migrate_legacy_data()
+        
         self.vector_store = vector_store
         self.collection_service = collection_service
         self.vector_available = self._check_vector_availability()
+        
+        # Get centralized database path
+        self.collections_db_path = str(Context42Config.get_collections_db_path())
+        logger.info(f"Using collections database: {self.collections_db_path}")
+        
         # Limited cache to prevent memory leaks - fixes unbounded cache issue
         from tools.knowledge_base.persistent_sync_manager import LimitedCache
         self._sync_manager_cache = LimitedCache(max_size=50)
@@ -78,24 +90,26 @@ class VectorSyncService(IVectorSyncService):
             
             # Initialize components if not provided
             if not self.vector_store:
-                self.vector_store = VectorStore()
+                # Use centralized vector database path
+                vector_db_path = str(Context42Config.get_vector_db_path())
+                self.vector_store = VectorStore(persist_directory=vector_db_path)
             
             # DEBUG: Log the VectorStore instance ID to verify it's shared
-            print(f"DEBUG SYNC: VectorStore instance id: {id(self.vector_store)}")
-            print(f"DEBUG SYNC: VectorStore DB path: {self.vector_store.db_path if hasattr(self.vector_store, 'db_path') else 'no db_path'}")
+            logger.debug(f"VectorStore instance id: {id(self.vector_store)}")
+            logger.debug(f"VectorStore DB path: {self.vector_store.persist_directory if hasattr(self.vector_store, 'persist_directory') else 'no persist_directory'}")
             
             # Use cached sync manager or create new one
             cache_key = f"sync_{collection_name}"
             sync_manager = self._sync_manager_cache.get(cache_key)
             if sync_manager is None:
-                # Create database-only collection manager
+                # Create database-only collection manager with centralized path
                 from tools.knowledge_base.database_collection_adapter import DatabaseCollectionAdapter
-                db_collection_manager = DatabaseCollectionAdapter("vector_sync.db")
+                db_collection_manager = DatabaseCollectionAdapter(self.collections_db_path)
                 
                 sync_manager = IntelligentSyncManager(
                     vector_store=self.vector_store,
                     collection_manager=db_collection_manager,
-                    persistent_db_path="vector_sync.db"  # Add persistent storage
+                    persistent_db_path=self.collections_db_path  # Use centralized path
                 )
                 self._sync_manager_cache.set(cache_key, sync_manager)
             
@@ -113,9 +127,9 @@ class VectorSyncService(IVectorSyncService):
             )
             
             # Perform sync operation
-            print(f"DEBUG: Starting vector sync for collection '{collection_name}'")
+            logger.debug(f"Starting vector sync for collection '{collection_name}'")
             result = await vector_sync_api.sync_collection(collection_name, sync_request)
-            print(f"DEBUG: Vector sync completed with result: {result}")
+            logger.debug(f"Vector sync completed with result type: {type(result)}")
             
             # Handle both string and object responses
             if isinstance(result, str):
@@ -126,10 +140,10 @@ class VectorSyncService(IVectorSyncService):
             else:
                 result_data = result
             
-            print(f"DEBUG: result_data = {result_data}")
+            logger.debug(f"Parsed result_data keys: {list(result_data.keys()) if isinstance(result_data, dict) else 'not a dict'}")
             if result_data.get("success", False):
                 sync_data = result_data.get("sync_result", {})
-                print(f"DEBUG: sync_data = {sync_data}")
+                logger.debug(f"Extracted sync_data keys: {list(sync_data.keys()) if isinstance(sync_data, dict) else 'not a dict'}")
                 return VectorSyncStatus(
                     collection_name=collection_name,
                     is_enabled=True,
@@ -189,14 +203,14 @@ class VectorSyncService(IVectorSyncService):
             cache_key = f"sync_{collection_name}"
             sync_manager = self._sync_manager_cache.get(cache_key)
             if sync_manager is None:
-                # Create database-only collection manager
+                # Create database-only collection manager with centralized path
                 from tools.knowledge_base.database_collection_adapter import DatabaseCollectionAdapter
-                db_collection_manager = DatabaseCollectionAdapter("vector_sync.db")
+                db_collection_manager = DatabaseCollectionAdapter(self.collections_db_path)
                 
                 sync_manager = IntelligentSyncManager(
                     vector_store=self.vector_store,
                     collection_manager=db_collection_manager,
-                    persistent_db_path="vector_sync.db"  # Add persistent storage
+                    persistent_db_path=self.collections_db_path  # Use centralized path
                 )
                 self._sync_manager_cache.set(cache_key, sync_manager)
             
@@ -218,10 +232,10 @@ class VectorSyncService(IVectorSyncService):
             else:
                 result_data = result
             
-            print(f"DEBUG GET_STATUS: result_data = {result_data}")
+            logger.debug(f"Get status result_data keys: {list(result_data.keys()) if isinstance(result_data, dict) else 'not a dict'}")
             if result_data.get("success", False):
                 status_data = result_data.get("status", {})
-                print(f"DEBUG GET_STATUS: status_data = {status_data}")
+                logger.debug(f"Extracted status_data keys: {list(status_data.keys()) if isinstance(status_data, dict) else 'not a dict'}")
                 
                 # Handle enum to string conversion for sync_status
                 sync_status_value = status_data.get("status", "idle")
@@ -288,7 +302,7 @@ class VectorSyncService(IVectorSyncService):
                     sync_manager = IntelligentSyncManager(
                         vector_store=self.vector_store,
                         collection_manager=self.collection_service.collection_manager if self.collection_service else None,
-                        persistent_db_path="vector_sync.db"  # Add persistent storage
+                        persistent_db_path=self.collections_db_path  # Use centralized path
                     )
                     self._sync_manager_cache.set(cache_key, sync_manager)
                 
@@ -315,11 +329,11 @@ class VectorSyncService(IVectorSyncService):
             List of VectorSearchResult objects
         """
         if not self.vector_available:
-            print(f"DEBUG: Vector service not available, returning empty results")
+            logger.debug("Vector service not available, returning empty results")
             return []
         
         try:
-            print(f"DEBUG: VectorSyncService.search_vectors called with query='{query}', collection='{collection_name}', limit={limit}")
+            logger.debug(f"VectorSyncService.search_vectors called with query='{query}', collection='{collection_name}', limit={limit}")
             logger.info(f"Searching vectors with query: {query}")
             
             # Import vector sync tools
@@ -333,8 +347,8 @@ class VectorSyncService(IVectorSyncService):
                 self.vector_store = VectorStore()
             
             # DEBUG: Log the VectorStore instance ID to verify it's shared
-            print(f"DEBUG SEARCH: VectorStore instance id: {id(self.vector_store)}")
-            print(f"DEBUG SEARCH: VectorStore DB path: {self.vector_store.db_path if hasattr(self.vector_store, 'db_path') else 'no db_path'}")
+            logger.debug(f"Search VectorStore instance id: {id(self.vector_store)}")
+            logger.debug(f"Search VectorStore DB path: {getattr(self.vector_store, 'persist_directory', 'no persist_directory')}")
             
             # CRITICAL FIX: Use the EXACT SAME cache key pattern as sync operations
             # This ensures sync and search operations share the same ChromaDB connection
@@ -346,7 +360,7 @@ class VectorSyncService(IVectorSyncService):
                     sync_manager = IntelligentSyncManager(
                         vector_store=self.vector_store,  # Use the SAME instance
                         collection_manager=self.collection_service.collection_manager if self.collection_service else None,
-                        persistent_db_path="vector_sync.db"  # Add persistent storage
+                        persistent_db_path=self.collections_db_path  # Use centralized path
                     )
                     self._sync_manager_cache.set(cache_key, sync_manager)
             else:
@@ -358,7 +372,7 @@ class VectorSyncService(IVectorSyncService):
                     sync_manager = IntelligentSyncManager(
                         vector_store=self.vector_store,  # Use the SAME instance
                         collection_manager=self.collection_service.collection_manager if self.collection_service else None,
-                        persistent_db_path="vector_sync.db"  # Add persistent storage
+                        persistent_db_path=self.collections_db_path  # Use centralized path
                     )
                     self._sync_manager_cache.set(cache_key, sync_manager)
             
@@ -442,14 +456,14 @@ class VectorSyncService(IVectorSyncService):
             cache_key = f"sync_{collection_name}"
             sync_manager = self._sync_manager_cache.get(cache_key)
             if sync_manager is None:
-                # Create database-only collection manager
+                # Create database-only collection manager with centralized path
                 from tools.knowledge_base.database_collection_adapter import DatabaseCollectionAdapter
-                db_collection_manager = DatabaseCollectionAdapter("vector_sync.db")
+                db_collection_manager = DatabaseCollectionAdapter(self.collections_db_path)
                 
                 sync_manager = IntelligentSyncManager(
                     vector_store=self.vector_store,
                     collection_manager=db_collection_manager,
-                    persistent_db_path="vector_sync.db"  # Add persistent storage
+                    persistent_db_path=self.collections_db_path  # Use centralized path
                 )
                 self._sync_manager_cache.set(cache_key, sync_manager)
             

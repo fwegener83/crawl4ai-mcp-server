@@ -12,6 +12,8 @@ from .interfaces import ICollectionService, CollectionInfo, FileInfo
 
 # Import database-only collection manager
 from tools.knowledge_base.database_collection_adapter import DatabaseCollectionAdapter
+# Import centralized configuration
+from config.paths import Context42Config
 
 logger = logging.getLogger(__name__)
 
@@ -28,12 +30,21 @@ class CollectionService(ICollectionService):
         """
         Initialize the collection service with database-only storage.
         
-        No filesystem dependencies - all data stored in vector_sync.db
+        Uses ~/.context42/ directory structure with automatic migration.
+        No filesystem dependencies - all data stored in SQLite database.
         """
-        logger.info("Initializing CollectionService with database-only storage")
-        # Use database-only collection manager - filesystem is deprecated
+        logger.info("Initializing CollectionService with ~/.context42/ configuration")
+        
+        # Ensure directory structure exists and migrate legacy data
+        Context42Config.ensure_directory_structure()
+        Context42Config.migrate_legacy_data()
+        
+        # Use centralized configuration for database path
+        db_path = Context42Config.get_collections_db_path()
+        logger.info(f"Using collections database: {db_path}")
+        
         # CRITICAL: Use same database as VectorSyncService for consistency
-        self.collection_manager = DatabaseCollectionAdapter("vector_sync.db")
+        self.collection_manager = DatabaseCollectionAdapter(str(db_path))
     
     async def list_collections(self) -> List[CollectionInfo]:
         """
