@@ -95,6 +95,16 @@ class TestExtractContentUseCase:
         mock_web_service.extract_content.assert_not_called()
     
     @pytest.mark.asyncio
+    async def test_extract_content_invalid_url_format(self, mock_web_service):
+        """Test validation error when URL format is invalid."""
+        # Act & Assert
+        with pytest.raises(ValidationError) as exc_info:
+            await extract_content_use_case(mock_web_service, "not-a-valid-url")
+        
+        assert exc_info.value.code == "INVALID_URL_FORMAT"
+        mock_web_service.extract_content.assert_not_called()
+    
+    @pytest.mark.asyncio
     async def test_extract_content_none_url(self, mock_web_service):
         """Test validation error when URL is None."""
         # Act & Assert

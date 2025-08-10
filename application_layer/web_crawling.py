@@ -48,6 +48,10 @@ async def extract_content_use_case(
     # Normalize URL
     url = url.strip()
     
+    # Basic URL format validation
+    if not (url.startswith('http://') or url.startswith('https://')):
+        raise ValidationError("INVALID_URL_FORMAT", "URL must start with http:// or https://")
+    
     # Execute content extraction
     result = await web_service.extract_content(url)
     

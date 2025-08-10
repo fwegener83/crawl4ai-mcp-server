@@ -153,35 +153,56 @@ find . -name "*.json" -o -name "*.yaml" -o -name "*.toml" | grep -E "(config|env
 
 **Total Complexity Score: {sum}/15**
 
-### Step 2: Adaptive Test Strategy Selection
+### Step 2: Test-First Strategy Selection
 
-**Based on total complexity score, determine comprehensive test approach:**
+**CRITICAL: All testing must happen IMMEDIATELY during implementation, not at the end!**
 
-**Score 1-5 (Simple):** Essential Full-Stack Testing
-- **Backend Tests**: Core API functionality, basic data validation
-- **Frontend Tests**: Component rendering, basic user interactions
-- **Integration Tests**: Happy path API integration, basic E2E
-- **Coverage Target**: 85%
+**Test-First Principles:**
+- Write tests BEFORE implementing functionality
+- Test each component/function/endpoint as it's built
+- Never defer testing to later phases
+- Continuous integration with immediate feedback
 
-**Score 6-10 (Moderate):** Balanced Full-Stack Strategy  
-- **Backend Tests**: Comprehensive API coverage, business logic validation
-- **Frontend Tests**: Component interactions, state management, user workflows
-- **Integration Tests**: API contract validation, error scenarios, authentication flows
-- **E2E Tests**: Main user journeys, cross-browser testing
-- **Coverage Target**: 90%
+**Based on total complexity score, determine test-first approach:**
 
-**Score 11-15 (Complex):** Comprehensive Full-Stack Quality Assurance
-- **Backend Tests**: Complete coverage with edge cases, performance testing
-- **Frontend Tests**: Advanced component testing, accessibility validation
-- **Integration Tests**: Full API contract testing, complex data flow validation
-- **E2E Tests**: All user journeys, error flows, performance testing
-- **Security Tests**: Authentication, authorization, data validation
-- **Performance Tests**: Backend API performance, frontend bundle optimization
-- **Coverage Target**: 95%
+**Score 1-5 (Simple):** Essential Test-First Development
+- **Backend**: Write unit tests for each function/endpoint before implementation
+- **Frontend**: Component tests written alongside component development
+- **Integration**: API contract tests before API implementation
+- **Coverage Target**: 85% achieved incrementally
+
+**Score 6-10 (Moderate):** Comprehensive Test-First Strategy  
+- **Backend**: Unit + integration tests before each API/service implementation
+- **Frontend**: Component + interaction tests during component development
+- **Integration**: API contract + error scenario tests parallel to implementation
+- **E2E**: Critical path tests as features are completed
+- **Coverage Target**: 90% achieved incrementally
+
+**Score 11-15 (Complex):** Advanced Test-First Development
+- **Backend**: Full TDD with unit/integration/performance tests before implementation
+- **Frontend**: Component/interaction/accessibility tests during development
+- **Integration**: Complete API contract testing during implementation
+- **E2E**: Comprehensive user journey testing as features complete
+- **Security**: Security tests implemented with each security-relevant feature
+- **Coverage Target**: 95% achieved incrementally
+
+**ANTI-PATTERN TO AVOID:**
+- Never create separate "testing phases" - this leads to late discovery of issues
+- Never defer testing until implementation is "complete"
+- Never batch test-writing at the end
 
 ### Step 3: Full-Stack Task Generation
 
-**Generate phase-based tasks appropriate to complexity:**
+**Generate test-first tasks appropriate to complexity:**
+
+**MANDATORY PATTERN for all tasks:**
+1. **WRITE TESTS** → 2. **IMPLEMENT** → 3. **VERIFY** → 4. **REFACTOR IF NEEDED**
+
+**Avoid unnecessary complexity:**
+- Skip over-engineered abstractions unless genuinely needed
+- Eliminate redundant processes and documentation phases  
+- Focus on essential functionality, not nice-to-have features
+- Question every "framework" or "pattern" - use simple solutions first
 
 ## Planning Document Generation
 
@@ -302,13 +323,15 @@ Save complete plan as: `.planning/PLAN_{SUFFIX}.md`
 
 ## Implementation Roadmap
 
-### Development Sequence
-1. **Foundation & Test Infrastructure**: Backend and frontend test setup, CI/CD preparation
-2. **Backend Core Development**: API endpoints, data models, business logic (test-first)
-3. **Frontend Core Development**: Components, user interactions, state management (test-first)  
-4. **Integration Layer**: API integration, authentication, error handling
-5. **User Experience**: Styling, accessibility, responsive design, performance optimization
-6. **Full-Stack Quality Assurance**: End-to-end testing, security validation, performance optimization
+### Development Sequence (Test-First Mandatory)
+1. **Test Infrastructure Setup**: Backend and frontend test frameworks, CI/CD with immediate feedback
+2. **Test-Driven Backend Development**: Write tests → implement API endpoints/data models/business logic → verify
+3. **Test-Driven Frontend Development**: Write component tests → implement components/interactions/state → verify  
+4. **Test-Driven Integration**: Write integration tests → implement API integration/auth/error handling → verify
+5. **Test-Driven UX Enhancement**: Write UX tests → implement styling/accessibility/responsive design → verify
+6. **Continuous Quality Validation**: Ongoing E2E testing, security validation, performance monitoring (NOT a separate phase)
+
+**KEY PRINCIPLE**: Each numbered item includes immediate testing - never move to next item until current item is fully tested and working.
 
 ### Risk Mitigation
 {Identified risks and mitigation strategies based on complexity analysis}
@@ -330,12 +353,14 @@ Save complete plan as: `.planning/PLAN_{SUFFIX}.md`
 ```
 
 **The execution will:**
-- Follow task sequence with appropriate testing at each phase
-- Implement test-first development across the entire stack
-- Validate quality gates at each step
-- Track progress with comprehensive metrics
-- Ensure all success criteria are met
-- Maintain focus on full-stack integration
+- Implement strict test-first development (write tests before implementation)
+- Never defer testing to later phases - test each component immediately
+- Validate quality gates continuously, not at project end
+- Track test coverage and functionality together, not separately
+- Ensure immediate feedback loop for all development
+- Maintain focus on incremental, tested full-stack integration
+
+**CRITICAL EXECUTION RULE: If you find yourself writing implementation code without tests, STOP immediately and write tests first.**
 
 ## Quality Validation
 

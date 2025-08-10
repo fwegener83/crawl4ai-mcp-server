@@ -450,14 +450,39 @@ class UnifiedServer:
                 
                 url = request.get("url")
                 result = await extract_content_use_case(web_service, url)
+                
+                # RESTful response: success returns 200 with data, errors raise HTTPException
+                if result.error:
+                    raise HTTPException(
+                        status_code=500, 
+                        detail={
+                            "error": {
+                                "code": "EXTRACTION_FAILED",
+                                "message": f"Failed to extract content: {result.error}",
+                                "details": {"url": url}
+                            }
+                        }
+                    )
+                
                 return {
-                    "success": result.error is None,
-                    "content": result.content,
-                    "metadata": result.metadata,
-                    "error": result.error
+                    "success": True,
+                    "data": {
+                        "content": result.content,
+                        "metadata": result.metadata,
+                        "url": result.url
+                    }
                 }
             except ValidationError as e:
-                raise HTTPException(status_code=400, detail=f"{e.code}: {e.message}")
+                raise HTTPException(
+                    status_code=400, 
+                    detail={
+                        "error": {
+                            "code": e.code,
+                            "message": e.message,
+                            "details": e.details
+                        }
+                    }
+                )
             except HTTPException:
                 raise  # Re-raise HTTPExceptions without wrapping
             except Exception as e:
@@ -753,16 +778,19 @@ class UnifiedServer:
                     web_service, collection_service, decoded_collection_id, url, folder
                 )
                 
+                # Use the file path/name from FileInfo, fallback to name if path is different
+                actual_filename = file_info.path if file_info.path else file_info.name
+                
                 return {
                     "success": True,
                     "file": {
-                        "filename": file_info.name,
+                        "filename": actual_filename,
                         "collection_id": decoded_collection_id
                     },
                     "url": url,
                     "folder": folder,
                     "content_length": file_info.size,
-                    "message": f"Successfully saved content from {url} to {decoded_collection_id}/{folder if folder else ''}{file_info.name}"
+                    "message": f"Successfully saved content from {url} to {decoded_collection_id}/{folder if folder else ''}{actual_filename}"
                 }
                 
             except ValidationError as e:

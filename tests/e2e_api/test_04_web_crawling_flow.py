@@ -30,7 +30,7 @@ async def test_collection_for_crawling(client: httpx.AsyncClient, cleanup_collec
 @pytest.mark.asyncio
 async def test_single_page_extract(client: httpx.AsyncClient):
     """Test single page content extraction."""
-    test_url = "https://example.com"
+    test_url = "https://httpbin.org/html"  # Use test-friendly URL
     
     response = await client.post("/api/extract", json={
         "url": test_url,
@@ -39,14 +39,16 @@ async def test_single_page_extract(client: httpx.AsyncClient):
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is True
-    assert "content" in data
-    assert "metadata" in data
+    assert "data" in data
+    assert "content" in data["data"]
+    assert "metadata" in data["data"]
     
     # Check content is extracted
-    if not data["content"]:
+    content = data["data"]["content"]
+    if not content:
         print(f"[DEBUG] Extracted content is empty! Full response: {data}")
-    assert len(data["content"]) > 0
-    assert "Example Domain" in data["content"]  # Should contain this from example.com
+    assert len(content) > 0
+    assert "Herman Melville" in content or "Moby" in content  # Content from httpbin.org/html
 
 
 @pytest.mark.asyncio
