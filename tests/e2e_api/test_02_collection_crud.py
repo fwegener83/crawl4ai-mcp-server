@@ -11,9 +11,10 @@ import uuid
 
 
 @pytest.mark.asyncio
-async def test_create_collection(client: httpx.AsyncClient):
+async def test_create_collection(client: httpx.AsyncClient, cleanup_collections):
     """Test creating a new collection."""
     collection_name = f"test_col_{uuid.uuid4().hex[:6]}"
+    cleanup_collections(collection_name)  # Track for cleanup
     
     response = await client.post("/api/file-collections", json={
         "name": collection_name,
@@ -97,9 +98,10 @@ async def test_delete_collection(client: httpx.AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_full_collection_crud_flow(client: httpx.AsyncClient):
+async def test_full_collection_crud_flow(client: httpx.AsyncClient, cleanup_collections):
     """Test complete CRUD flow for collections."""
     collection_name = f"crud_flow_{uuid.uuid4().hex[:6]}"
+    cleanup_collections(collection_name)  # Track for cleanup
     
     # CREATE
     create_response = await client.post("/api/file-collections", json={

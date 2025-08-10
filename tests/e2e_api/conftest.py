@@ -122,18 +122,42 @@ async def test_collection_name() -> str:
 
 @pytest_asyncio.fixture
 async def cleanup_collections():
-    """Fixture to track and cleanup test collections."""
+    """
+    Fixture to track and cleanup test collections.
+    
+    Cleanups both:
+    1. File collections (SQLite database)
+    2. Vector data (ChromaDB)
+    """
     collections_to_cleanup = []
     
     def track_collection(collection_name: str):
-        collections_to_cleanup.append(collection_name)
+        """Track a collection for cleanup at test end."""
+        if collection_name not in collections_to_cleanup:
+            collections_to_cleanup.append(collection_name)
     
     yield track_collection
     
-    # Cleanup after test
+    # Cleanup after test - both file collections and vector data
     async with httpx.AsyncClient(base_url=BASE_URL, timeout=TEST_TIMEOUT) as client:
         for collection_name in collections_to_cleanup:
             try:
-                await client.delete(f"/api/file-collections/{collection_name}")
-            except Exception:
-                pass  # Ignore cleanup errors
+                # 1. Delete vector data first (if exists)
+                try:
+                    vector_response = await client.delete(f"/api/vector-sync/collections/{collection_name}/vectors")
+                    if vector_response.status_code in [200, 404]:
+                        print(f"✅ Cleaned vector data for: {collection_name}")
+                except Exception:
+                    pass  # Vector cleanup is optional
+                
+                # 2. Delete file collection (this cascades to sync status)
+                collection_response = await client.delete(f"/api/file-collections/{collection_name}")
+                if collection_response.status_code in [200, 404]:
+                    print(f"✅ Cleaned collection: {collection_name}")
+                    
+            except Exception as e:
+                print(f"⚠️ Cleanup error for {collection_name}: {e}")
+                # Continue with other collections
+
+
+# Removed automatic cleanup - tests must clean up explicitly
