@@ -1,0 +1,116 @@
+@baseUrl = http://localhost:5173
+@collection_id = my-collection
+@filename = example.md
+@collection_name = my-collection
+
+### HEALTH
+GET {{baseUrl}}/api/health
+
+### STATUS
+GET {{baseUrl}}/api/status
+
+### EXTRACT CONTENT
+POST {{baseUrl}}/api/extract
+Content-Type: application/json
+
+{
+  "url": "https://example.com"
+}
+
+
+### DEEP CRAWL
+POST {{baseUrl}}/api/deep-crawl
+Content-Type: application/json
+
+{
+  "base_url": "https://example.com",
+  "depth": 2,
+  "max_pages": 10
+}
+
+### LINK PREVIEW
+POST {{baseUrl}}/api/link-preview
+Content-Type: application/json
+
+{
+  "domain_url": "https://example.com",
+  "include_external": false
+}
+
+### LIST FILE COLLECTIONS
+GET {{baseUrl}}/api/file-collections
+
+### CREATE FILE COLLECTION
+POST {{baseUrl}}/api/file-collections
+Content-Type: application/json
+
+{
+  "name": "{{collection_name}}",
+  "description": "Test collection"
+}
+
+### GET FILE COLLECTION
+@collection_id = crawl4ai
+GET {{baseUrl}}/api/file-collections/{{collection_id}}
+
+### DELETE FILE COLLECTION
+DELETE {{baseUrl}}/api/file-collections/{{collection_id}}
+
+### LIST FILES IN COLLECTION
+GET {{baseUrl}}/api/file-collections/{{collection_id}}/files
+
+### SAVE FILE TO COLLECTION
+POST {{baseUrl}}/api/file-collections/{{collection_id}}/files
+Content-Type: application/json
+
+{
+  "filename": "{{filename}}",
+  "content": "# Hello World",
+  "folder": ""
+}
+
+### READ FILE FROM COLLECTION
+GET {{baseUrl}}/api/file-collections/{{collection_id}}/files/{{filename}}
+
+### UPDATE FILE IN COLLECTION
+PUT {{baseUrl}}/api/file-collections/{{collection_id}}/files/{{filename}}
+Content-Type: application/json
+
+{
+  "content": "# Updated content"
+}
+
+### DELETE FILE FROM COLLECTION
+DELETE {{baseUrl}}/api/file-collections/{{collection_id}}/files/{{filename}}
+
+### CRAWL SINGLE PAGE TO COLLECTION
+POST {{baseUrl}}/api/crawl/single/{{collection_id}}
+Content-Type: application/json
+
+{
+  "url": "https://example.com",
+  "folder": ""
+}
+
+### VECTOR SYNC: SYNC COLLECTION
+@collection_name = Crawl4Ai
+POST {{baseUrl}}/api/vector-sync/collections/{{collection_name}}/sync
+Content-Type: application/json
+
+{
+  "config_key": "value"
+}
+
+### VECTOR SYNC: GET SYNC STATUS
+GET {{baseUrl}}/api/vector-sync/collections/{{collection_name}}/status
+
+### VECTOR SYNC: SEARCH
+POST {{baseUrl}}/api/vector-sync/search
+Content-Type: application/json
+
+{
+  "query": "What is crawl4ai",
+  "collection_name": "{{collection_name}}",
+  "limit": 10,
+  "similarity_threshold": 0.1
+}
