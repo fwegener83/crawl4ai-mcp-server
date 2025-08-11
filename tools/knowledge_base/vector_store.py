@@ -152,10 +152,6 @@ class VectorStore:
             self.get_or_create_collection()
         
         try:
-            print(f"DEBUG VECTORSTORE: About to add {len(documents)} documents")
-            print(f"DEBUG VECTORSTORE: Sample metadata: {metadatas[0] if metadatas else 'None'}")
-            print(f"DEBUG VECTORSTORE: Collection name: {self.collection_name}")
-            
             if embeddings:
                 result = self.collection.add(
                     documents=documents,
@@ -170,15 +166,16 @@ class VectorStore:
                     ids=ids
                 )
             
-            print(f"DEBUG VECTORSTORE: ChromaDB add() result: {result}")
-            
-            # Immediate verification
-            count_after = self.collection.count()
-            print(f"DEBUG VECTORSTORE: Collection count after add: {count_after}")
+            # CRITICAL FIX: Force ChromaDB persistence/flush after adding documents
+            try:
+                # Some ChromaDB versions need explicit persistence
+                if hasattr(self.client, 'persist'):
+                    self.client.persist()
+            except Exception:
+                pass  # Persistence may not be supported in all ChromaDB versions
             
             logger.info(f"Added {len(documents)} documents to collection")
         except Exception as e:
-            print(f"DEBUG VECTORSTORE: ADD ERROR: {str(e)}")
             logger.error(f"Failed to add documents: {str(e)}")
             raise
     
@@ -326,6 +323,7 @@ class VectorStore:
             self.get_or_create_collection()
         
         try:
+            # Perform the filtered query
             results = self.collection.query(
                 query_texts=[query],
                 n_results=k,
@@ -338,7 +336,8 @@ class VectorStore:
                 for i, doc in enumerate(results['documents'][0]):
                     metadata = results['metadatas'][0][i] if results['metadatas'] and results['metadatas'][0] else {}
                     distance = results['distances'][0][i] if results['distances'] and results['distances'][0] else 0.0
-                    score = 1.0 - distance  # Convert distance to similarity score
+                    # ChromaDB can return negative cosine distances, handle appropriately
+                    score = max(0.0, 1.0 - distance)  # Ensure non-negative scores
                     
                     # Apply score threshold
                     if score >= score_threshold:

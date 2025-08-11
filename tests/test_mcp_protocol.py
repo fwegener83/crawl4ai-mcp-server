@@ -168,7 +168,10 @@ class TestMCPProtocolCompliance:
             
             content_item = result.content[0]
             assert content_item.type == 'text'
-            assert "validation error" in content_item.text.lower()
+            # Parse the JSON response from the unified MCP tool
+            response_data = json.loads(content_item.text)
+            assert response_data["success"] is False
+            assert "url must start with http" in response_data["error"].lower()
     
     @pytest.mark.asyncio
     async def test_mcp_missing_parameter_handling(self):
@@ -277,7 +280,10 @@ class TestMCPProtocolCompliance:
                     
                     content_item = result.content[0]
                     assert content_item.type == 'text'
-                    assert content_item.text == "Concurrent test content"
+                    # Parse the JSON response from the unified MCP tool
+                    response_data = json.loads(content_item.text)
+                    assert response_data["success"] is True
+                    assert response_data["content"] == "Concurrent test content"
     
     @pytest.mark.asyncio
     async def test_mcp_large_content_handling(self):
@@ -311,8 +317,11 @@ class TestMCPProtocolCompliance:
                 
                 content_item = result.content[0]
                 assert content_item.type == 'text'
-                assert content_item.text == large_content
-                assert len(content_item.text) > 10000
+                # Parse the JSON response from the unified MCP tool
+                response_data = json.loads(content_item.text)
+                assert response_data["success"] is True
+                assert response_data["content"] == large_content
+                assert len(response_data["content"]) > 10000
 
 
 class TestMCPMessageFormats:
@@ -388,12 +397,15 @@ class TestMCPMessageFormats:
                 
                 content_item = result.content[0]
                 assert content_item.type == 'text'
-                assert content_item.text == unicode_content
+                # Parse the JSON response from the unified MCP tool
+                response_data = json.loads(content_item.text)
+                assert response_data["success"] is True
+                assert response_data["content"] == unicode_content
                 
                 # Test that Unicode is properly encoded/decoded
-                assert "🌍" in content_item.text
-                assert "你好世界" in content_item.text
-                assert "café" in content_item.text
+                assert "🌍" in response_data["content"]
+                assert "你好世界" in response_data["content"]
+                assert "café" in response_data["content"]
     
     @pytest.mark.asyncio
     async def test_mcp_empty_content_handling(self):
@@ -421,7 +433,10 @@ class TestMCPMessageFormats:
                 
                 content_item = result.content[0]
                 assert content_item.type == 'text'
-                assert content_item.text == ""
+                # Parse the JSON response from the unified MCP tool
+                response_data = json.loads(content_item.text)
+                assert response_data["success"] is True
+                assert response_data["content"] == ""
 
 
 class TestMCPServerBehavior:
@@ -453,7 +468,10 @@ class TestMCPServerBehavior:
                     })
                     
                     # Both results should be independent and identical
-                    assert result1.content[0].text == result2.content[0].text
+                    # Parse JSON responses to compare content
+                    response1 = json.loads(result1.content[0].text)
+                    response2 = json.loads(result2.content[0].text)
+                    assert response1["content"] == response2["content"]
                     assert result1.isError == result2.isError
     
     @pytest.mark.asyncio
@@ -481,7 +499,10 @@ class TestMCPServerBehavior:
             })
             
             assert result1.isError is False  # Error returned as content
-            assert "validation error" in result1.content[0].text.lower()
+            # Parse the JSON response from the unified MCP tool
+            response_data = json.loads(result1.content[0].text)
+            assert response_data["success"] is False
+            assert "url must start with http" in response_data["error"].lower()
             
             # Then test that server recovers for next request
             mock_result = MagicMock()
@@ -499,4 +520,7 @@ class TestMCPServerBehavior:
                 
                 # Server should have recovered
                 assert result2.isError is False
-                assert result2.content[0].text == "Recovery test"
+                # Parse the JSON response from the unified MCP tool
+                response_data = json.loads(result2.content[0].text)
+                assert response_data["success"] is True
+                assert response_data["content"] == "Recovery test"

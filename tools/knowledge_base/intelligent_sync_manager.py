@@ -525,8 +525,13 @@ class IntelligentSyncManager:
                 
                 metadata_dict = serialize_for_vector_db(metadata_dict)
                 
+                # CRITICAL FIX: Make chunk IDs collection-specific to prevent ChromaDB overwrites
+                # ChromaDB uses IDs as unique keys - same ID overwrites existing data
+                original_id = chunk['id']
+                collection_specific_id = f"{collection_name}_{original_id}"
+                
                 vector_chunks.append({
-                    'id': chunk['id'],
+                    'id': collection_specific_id,
                     'content': chunk['content'],
                     'metadata': metadata_dict
                 })
@@ -542,31 +547,11 @@ class IntelligentSyncManager:
                     logger.warning(f"Could not delete old chunks for {file_path}: {str(e)}")
             
             # Add new chunks to vector store
-            print(f"DEBUG SYNC: About to store {len(vector_chunks)} chunks for collection '{collection_name}'")
-            for i, chunk in enumerate(vector_chunks):
-                print(f"DEBUG SYNC: Chunk {i} metadata: {chunk['metadata']}")
-            
             self.vector_store.add_documents(
                 [chunk['content'] for chunk in vector_chunks],
                 metadatas=[chunk['metadata'] for chunk in vector_chunks],
                 ids=[chunk['id'] for chunk in vector_chunks]
             )
-            
-            print(f"DEBUG SYNC: Successfully stored {len(vector_chunks)} chunks in ChromaDB")
-            
-            # IMMEDIATE TEST: Check if we can find what we just stored
-            try:
-                immediate_search = self.vector_store.similarity_search(
-                    query="artificial intelligence",
-                    k=10,
-                    score_threshold=0.0,
-                    filter={'collection_name': collection_name}
-                )
-                print(f"DEBUG SYNC: IMMEDIATE search for collection '{collection_name}' found {len(immediate_search)} results")
-                for i, result in enumerate(immediate_search):
-                    print(f"  -> Result {i}: {result.get('metadata', {}).get('collection_name')}")
-            except Exception as e:
-                print(f"DEBUG SYNC: IMMEDIATE search error: {e}")
             
             result['chunks_created'] = len(vector_chunks)
             

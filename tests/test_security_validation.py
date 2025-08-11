@@ -385,9 +385,14 @@ class TestSecurityCompliance:
                 assert result.isError is False
                 content = result.content[0].text
                 
+                # Parse the JSON response from the unified MCP tool
+                import json
+                response_data = json.loads(content)
+                assert response_data["success"] is True
+                
                 # Content should be returned as-is (markdown format)
-                # but should not be executed in any context
-                assert content == malicious_content
+                # but should not be executed in any context  
+                assert response_data["content"] == malicious_content
                 
                 # Ensure it's marked as text content
                 assert result.content[0].type == 'text'

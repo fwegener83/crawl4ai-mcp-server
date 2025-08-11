@@ -218,3 +218,4 @@ Do what has been asked; nothing more, nothing less.
 NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
 NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+- Wertvolles wissen in spezifischen Bereichen soll in spezifischen subfolder/claude.md files gespeichert werden. Bspw. sollen wertvolle Dinge zum Thema Tests in tests/claude.md gepeichert werden.

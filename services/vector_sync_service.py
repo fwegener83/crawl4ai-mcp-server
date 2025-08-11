@@ -81,7 +81,8 @@ class VectorSyncService(IVectorSyncService):
             )
         
         try:
-            logger.info(f"Syncing collection to vectors: {collection_name}")
+            logger.info(f"=== SYNC OPERATION: collection_name='{collection_name}' ===")
+            print(f"DEBUG VECTOR_SERVICE: SYNC collection_name='{collection_name}' type={type(collection_name)}")
             
             # Import vector sync tools
             from tools.vector_sync_api import VectorSyncAPI
@@ -333,8 +334,9 @@ class VectorSyncService(IVectorSyncService):
             return []
         
         try:
+            logger.info(f"=== SEARCH OPERATION: collection_name='{collection_name}' query='{query}' ===")
+            print(f"DEBUG VECTOR_SERVICE: SEARCH collection_name='{collection_name}' type={type(collection_name)}")
             logger.debug(f"VectorSyncService.search_vectors called with query='{query}', collection='{collection_name}', limit={limit}")
-            logger.info(f"Searching vectors with query: {query}")
             
             # Import vector sync tools
             from tools.vector_sync_api import VectorSyncAPI
