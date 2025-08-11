@@ -274,12 +274,12 @@ class IVectorSyncService(ABC):
     """
     
     @abstractmethod
-    async def sync_collection(self, collection_name: str, config: Optional[Dict[str, Any]] = None) -> VectorSyncStatus:
+    async def sync_collection(self, collection_id: str, config: Optional[Dict[str, Any]] = None) -> VectorSyncStatus:
         """
         Synchronize a collection with the vector database.
         
         Args:
-            collection_name: Name of the collection to sync
+            collection_id: ID of the collection to sync
             config: Optional sync configuration
             
         Returns:
@@ -288,12 +288,12 @@ class IVectorSyncService(ABC):
         pass
     
     @abstractmethod
-    async def get_sync_status(self, collection_name: str) -> VectorSyncStatus:
+    async def get_sync_status(self, collection_id: str) -> VectorSyncStatus:
         """
         Get synchronization status for a collection.
         
         Args:
-            collection_name: Name of the collection
+            collection_id: ID of the collection
             
         Returns:
             VectorSyncStatus with current status
@@ -313,13 +313,13 @@ class IVectorSyncService(ABC):
     
     
     @abstractmethod
-    async def search_vectors(self, query: str, collection_name: Optional[str] = None, limit: int = 10) -> List[VectorSearchResult]:
+    async def search_vectors(self, query: str, collection_id: Optional[str] = None, limit: int = 10) -> List[VectorSearchResult]:
         """
         Search vectors using semantic similarity.
         
         Args:
             query: Search query text
-            collection_name: Optional collection to search in
+            collection_id: Optional collection to search in
             limit: Maximum number of results
             
         Returns:
@@ -329,12 +329,12 @@ class IVectorSyncService(ABC):
     
     
     @abstractmethod
-    async def delete_collection_vectors(self, collection_name: str) -> Dict[str, Any]:
+    async def delete_collection_vectors(self, collection_id: str) -> Dict[str, Any]:
         """
         Delete all vectors associated with a collection.
         
         Args:
-            collection_name: Name of the collection
+            collection_id: ID of the collection
             
         Returns:
             Dictionary with deletion results including count

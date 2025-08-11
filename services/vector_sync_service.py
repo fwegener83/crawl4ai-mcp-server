@@ -61,12 +61,12 @@ class VectorSyncService(IVectorSyncService):
             logger.warning("Vector dependencies not available")
             return False
     
-    async def sync_collection(self, collection_name: str, config: Optional[Dict[str, Any]] = None) -> VectorSyncStatus:
+    async def sync_collection(self, collection_id: str, config: Optional[Dict[str, Any]] = None) -> VectorSyncStatus:
         """
         Synchronize a collection with the vector database.
         
         Args:
-            collection_name: Name of the collection to sync
+            collection_id: ID of the collection to sync
             config: Optional sync configuration
             
         Returns:
@@ -74,15 +74,15 @@ class VectorSyncService(IVectorSyncService):
         """
         if not self.vector_available:
             return VectorSyncStatus(
-                collection_name=collection_name,
+                collection_name=collection_id,
                 is_enabled=False,
                 sync_status="error",
                 error_message="Vector dependencies not available"
             )
         
         try:
-            logger.info(f"=== SYNC OPERATION: collection_name='{collection_name}' ===")
-            print(f"DEBUG VECTOR_SERVICE: SYNC collection_name='{collection_name}' type={type(collection_name)}")
+            logger.info(f"=== SYNC OPERATION: collection_id='{collection_id}' ====")
+            print(f"DEBUG VECTOR_SERVICE: SYNC collection_id='{collection_id}' type={type(collection_id)}")
             
             # Import vector sync tools
             from tools.vector_sync_api import VectorSyncAPI
@@ -100,7 +100,7 @@ class VectorSyncService(IVectorSyncService):
             logger.debug(f"VectorStore DB path: {self.vector_store.persist_directory if hasattr(self.vector_store, 'persist_directory') else 'no persist_directory'}")
             
             # Use cached sync manager or create new one
-            cache_key = f"sync_{collection_name}"
+            cache_key = f"sync_{collection_id}"
             sync_manager = self._sync_manager_cache.get(cache_key)
             if sync_manager is None:
                 # Create database-only collection manager with centralized path
@@ -128,8 +128,8 @@ class VectorSyncService(IVectorSyncService):
             )
             
             # Perform sync operation
-            logger.debug(f"Starting vector sync for collection '{collection_name}'")
-            result = await vector_sync_api.sync_collection(collection_name, sync_request)
+            logger.debug(f"Starting vector sync for collection '{collection_id}'")
+            result = await vector_sync_api.sync_collection(collection_id, sync_request)
             logger.debug(f"Vector sync completed with result type: {type(result)}")
             
             # Handle both string and object responses
@@ -146,7 +146,7 @@ class VectorSyncService(IVectorSyncService):
                 sync_data = result_data.get("sync_result", {})
                 logger.debug(f"Extracted sync_data keys: {list(sync_data.keys()) if isinstance(sync_data, dict) else 'not a dict'}")
                 return VectorSyncStatus(
-                    collection_name=collection_name,
+                    collection_name=collection_id,
                     is_enabled=True,
                     last_sync=sync_data.get("completed_at", ""),
                     file_count=sync_data.get("files_processed", 0),
@@ -155,41 +155,41 @@ class VectorSyncService(IVectorSyncService):
                 )
             else:
                 return VectorSyncStatus(
-                    collection_name=collection_name,
+                    collection_name=collection_id,
                     is_enabled=False,
                     sync_status="error",
                     error_message=result_data.get("error", "Sync failed")
                 )
                 
         except Exception as e:
-            logger.error(f"Error syncing collection {collection_name}: {str(e)}")
+            logger.error(f"Error syncing collection {collection_id}: {str(e)}")
             return VectorSyncStatus(
-                collection_name=collection_name,
+                collection_name=collection_id,
                 is_enabled=False,
                 sync_status="error",
                 error_message=str(e)
             )
     
-    async def get_sync_status(self, collection_name: str) -> VectorSyncStatus:
+    async def get_sync_status(self, collection_id: str) -> VectorSyncStatus:
         """
         Get synchronization status for a collection.
         
         Args:
-            collection_name: Name of the collection
+            collection_id: ID of the collection
             
         Returns:
             VectorSyncStatus with current status
         """
         if not self.vector_available:
             return VectorSyncStatus(
-                collection_name=collection_name,
+                collection_name=collection_id,
                 is_enabled=False,
                 sync_status="error",
                 error_message="Vector dependencies not available"
             )
         
         try:
-            logger.info(f"Getting sync status for collection: {collection_name}")
+            logger.info(f"Getting sync status for collection: {collection_id}")
             
             # Import vector sync tools
             from tools.vector_sync_api import VectorSyncAPI
@@ -201,7 +201,7 @@ class VectorSyncService(IVectorSyncService):
                 self.vector_store = VectorStore()
             
             # Use cached sync manager or create new one - REUSE THE SAME INSTANCE!
-            cache_key = f"sync_{collection_name}"
+            cache_key = f"sync_{collection_id}"
             sync_manager = self._sync_manager_cache.get(cache_key)
             if sync_manager is None:
                 # Create database-only collection manager with centralized path
@@ -222,7 +222,7 @@ class VectorSyncService(IVectorSyncService):
             )
             
             # Get sync status
-            result = await vector_sync_api.get_collection_sync_status(collection_name)
+            result = await vector_sync_api.get_collection_sync_status(collection_id)
             
             # Handle both string and object responses
             if isinstance(result, str):
@@ -245,7 +245,7 @@ class VectorSyncService(IVectorSyncService):
                 # Do NOT map in_sync to completed - API expects 'in_sync'
                 
                 return VectorSyncStatus(
-                    collection_name=collection_name,
+                    collection_name=collection_id,
                     is_enabled=status_data.get("sync_enabled", False),
                     last_sync=status_data.get("last_sync", ""),
                     file_count=status_data.get("total_files", 0),
@@ -254,16 +254,16 @@ class VectorSyncService(IVectorSyncService):
                 )
             else:
                 return VectorSyncStatus(
-                    collection_name=collection_name,
+                    collection_name=collection_id,
                     is_enabled=False,
                     sync_status="error",
                     error_message=result_data.get("error", "Failed to get status")
                 )
                 
         except Exception as e:
-            logger.error(f"Error getting sync status for {collection_name}: {str(e)}")
+            logger.error(f"Error getting sync status for {collection_id}: {str(e)}")
             return VectorSyncStatus(
-                collection_name=collection_name,
+                collection_name=collection_id,
                 is_enabled=False,
                 sync_status="error",
                 error_message=str(e)
@@ -317,13 +317,13 @@ class VectorSyncService(IVectorSyncService):
             logger.error(f"Error listing sync statuses: {str(e)}")
             return []
     
-    async def search_vectors(self, query: str, collection_name: Optional[str] = None, limit: int = 10, similarity_threshold: float = 0.7) -> List[VectorSearchResult]:
+    async def search_vectors(self, query: str, collection_id: Optional[str] = None, limit: int = 10, similarity_threshold: float = 0.7) -> List[VectorSearchResult]:
         """
         Search vectors using semantic similarity.
         
         Args:
             query: Search query text
-            collection_name: Optional collection to search in
+            collection_id: Optional collection to search in
             limit: Maximum number of results
             
         Returns:
@@ -334,9 +334,9 @@ class VectorSyncService(IVectorSyncService):
             return []
         
         try:
-            logger.info(f"=== SEARCH OPERATION: collection_name='{collection_name}' query='{query}' ===")
-            print(f"DEBUG VECTOR_SERVICE: SEARCH collection_name='{collection_name}' type={type(collection_name)}")
-            logger.debug(f"VectorSyncService.search_vectors called with query='{query}', collection='{collection_name}', limit={limit}")
+            logger.info(f"=== SEARCH OPERATION: collection_id='{collection_id}' query='{query}' ===")
+            print(f"DEBUG VECTOR_SERVICE: SEARCH collection_id='{collection_id}' type={type(collection_id)}")
+            logger.debug(f"VectorSyncService.search_vectors called with query='{query}', collection='{collection_id}', limit={limit}")
             
             # Import vector sync tools
             from tools.vector_sync_api import VectorSyncAPI
@@ -354,9 +354,9 @@ class VectorSyncService(IVectorSyncService):
             
             # CRITICAL FIX: Use the EXACT SAME cache key pattern as sync operations
             # This ensures sync and search operations share the same ChromaDB connection
-            if collection_name:
+            if collection_id:
                 # For specific collection searches, use the same key as sync operations
-                cache_key = f"sync_{collection_name}"
+                cache_key = f"sync_{collection_id}"
                 sync_manager = self._sync_manager_cache.get(cache_key)
                 if sync_manager is None:
                     sync_manager = IntelligentSyncManager(
@@ -389,7 +389,7 @@ class VectorSyncService(IVectorSyncService):
             from tools.vector_sync_api import VectorSearchRequest
             search_request = VectorSearchRequest(
                 query=query,
-                collection_name=collection_name,
+                collection_name=collection_id,
                 limit=limit,
                 similarity_threshold=similarity_threshold
             )
@@ -414,7 +414,7 @@ class VectorSyncService(IVectorSyncService):
                         content=result_item.get("content", ""),
                         metadata=result_item.get("metadata", {}),
                         score=result_item.get("similarity_score", result_item.get("score", 0.0)),  # Handle both field names
-                        collection_name=result_item.get("collection_name", collection_name or ""),
+                        collection_name=result_item.get("collection_name", collection_id or ""),
                         file_path=result_item.get("source_file", result_item.get("file_path", ""))
                     )
                     search_results.append(search_result)
@@ -425,12 +425,12 @@ class VectorSyncService(IVectorSyncService):
             logger.error(f"Error searching vectors with query '{query}': {str(e)}")
             return []
     
-    async def delete_collection_vectors(self, collection_name: str) -> Dict[str, Any]:
+    async def delete_collection_vectors(self, collection_id: str) -> Dict[str, Any]:
         """
         Delete all vectors associated with a collection.
         
         Args:
-            collection_name: Name of the collection
+            collection_id: ID of the collection
             
         Returns:
             Dictionary with deletion results including count
@@ -443,7 +443,7 @@ class VectorSyncService(IVectorSyncService):
             }
         
         try:
-            logger.info(f"Deleting vectors for collection: {collection_name}")
+            logger.info(f"Deleting vectors for collection: {collection_id}")
             
             # Import vector sync tools
             from tools.vector_sync_api import VectorSyncAPI
@@ -455,7 +455,7 @@ class VectorSyncService(IVectorSyncService):
                 self.vector_store = VectorStore()
             
             # Use cached sync manager or create new one
-            cache_key = f"sync_{collection_name}"
+            cache_key = f"sync_{collection_id}"
             sync_manager = self._sync_manager_cache.get(cache_key)
             if sync_manager is None:
                 # Create database-only collection manager with centralized path
@@ -476,7 +476,7 @@ class VectorSyncService(IVectorSyncService):
             )
             
             # Delete vectors for collection
-            result = await vector_sync_api.delete_collection_vectors(collection_name)
+            result = await vector_sync_api.delete_collection_vectors(collection_id)
             
             # Handle both string and object responses
             if isinstance(result, str):
@@ -495,7 +495,7 @@ class VectorSyncService(IVectorSyncService):
                 return {
                     "success": True,
                     "deleted_count": deleted_count,
-                    "message": f"Deleted {deleted_count} vectors for collection '{collection_name}'"
+                    "message": f"Deleted {deleted_count} vectors for collection '{collection_id}'"
                 }
             else:
                 return {
@@ -505,7 +505,7 @@ class VectorSyncService(IVectorSyncService):
                 }
                 
         except Exception as e:
-            logger.error(f"Error deleting vectors for collection {collection_name}: {str(e)}")
+            logger.error(f"Error deleting vectors for collection {collection_id}: {str(e)}")
             return {
                 "success": False,
                 "error": str(e),
