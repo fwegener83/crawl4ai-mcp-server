@@ -111,7 +111,12 @@ class TestMCPProtocolCompliance:
                 assert hasattr(content_item, 'type')
                 assert hasattr(content_item, 'text')
                 assert content_item.type == 'text'
-                assert content_item.text == "# Test Content"
+                
+                # Parse the JSON response from the unified MCP tool
+                response_data = json.loads(content_item.text)
+                assert response_data["success"] is True
+                assert response_data["content"] == "# Test Content"
+                assert "metadata" in response_data
     
     @pytest.mark.asyncio
     async def test_mcp_error_response_format(self):
