@@ -8,7 +8,30 @@ import type {
   CrawlToCollectionRequest,
   CrawlResult
 } from '../types/api';
+import {
+  CollectionNotFoundError,
+  ServiceUnavailableError,
+  SyncFailedError,
+  InvalidFileExtensionError,
+} from '../types/api';
 import type { FileNode, FolderNode } from '../contexts/CollectionContext';
+
+// Helper function to create user-friendly error messages
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof CollectionNotFoundError) {
+    return 'Collection not found - it may have been deleted';
+  } else if (error instanceof ServiceUnavailableError) {
+    return 'Vector search is not available. Please install RAG dependencies.';
+  } else if (error instanceof SyncFailedError) {
+    return `Sync failed: ${error.message}`;
+  } else if (error instanceof InvalidFileExtensionError) {
+    return `File upload failed: ${error.message}`;
+  } else if (error instanceof Error) {
+    return error.message;
+  } else {
+    return 'An unexpected error occurred';
+  }
+};
 
 export function useCollectionOperations() {
   const { state, dispatch } = useCollection();
@@ -22,8 +45,7 @@ export function useCollectionOperations() {
       const collections = await APIService.listFileCollections();
       dispatch({ type: 'SET_COLLECTIONS', payload: collections });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load collections';
-      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      dispatch({ type: 'SET_ERROR', payload: getErrorMessage(error) });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { key: 'collections', value: false } });
     }
@@ -38,8 +60,7 @@ export function useCollectionOperations() {
       dispatch({ type: 'CLOSE_MODAL', payload: 'newCollection' });
       return newCollection;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to create collection';
-      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      dispatch({ type: 'SET_ERROR', payload: getErrorMessage(error) });
       throw error;
     }
   }, [dispatch]);
@@ -52,8 +73,7 @@ export function useCollectionOperations() {
       dispatch({ type: 'REMOVE_COLLECTION', payload: collectionId });
       dispatch({ type: 'CLOSE_DELETE_CONFIRMATION' });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete collection';
-      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      dispatch({ type: 'SET_ERROR', payload: getErrorMessage(error) });
       throw error;
     }
   }, [dispatch]);
@@ -94,8 +114,7 @@ export function useCollectionOperations() {
         
         dispatch({ type: 'SET_FILES', payload: { files, folders } });
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to load collection files';
-        dispatch({ type: 'SET_ERROR', payload: errorMessage });
+        dispatch({ type: 'SET_ERROR', payload: getErrorMessage(error) });
       } finally {
         dispatch({ type: 'SET_LOADING', payload: { key: 'files', value: false } });
       }
@@ -122,8 +141,7 @@ export function useCollectionOperations() {
       
       return fileMetadata;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save file';
-      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      dispatch({ type: 'SET_ERROR', payload: getErrorMessage(error) });
       throw error;
     } finally {
       dispatch({ type: 'SET_SAVING', payload: false });
@@ -149,8 +167,7 @@ export function useCollectionOperations() {
       // Update with the actual content
       dispatch({ type: 'OPEN_FILE', payload: { path: filePath, content } });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to open file';
-      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      dispatch({ type: 'SET_ERROR', payload: getErrorMessage(error) });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { key: 'files', value: false } });
     }
@@ -176,8 +193,7 @@ export function useCollectionOperations() {
       await APIService.updateFileInCollection(collectionId, filename, request, folder);
       dispatch({ type: 'SAVE_SUCCESS', payload: state.editor.content });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save file';
-      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      dispatch({ type: 'SET_ERROR', payload: getErrorMessage(error) });
       throw error;
     } finally {
       dispatch({ type: 'SET_SAVING', payload: false });
@@ -193,8 +209,7 @@ export function useCollectionOperations() {
       dispatch({ type: 'REMOVE_FILE', payload: filePath });
       dispatch({ type: 'CLOSE_DELETE_CONFIRMATION' });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete file';
-      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      dispatch({ type: 'SET_ERROR', payload: getErrorMessage(error) });
       throw error;
     }
   }, [dispatch]);
@@ -236,8 +251,7 @@ export function useCollectionOperations() {
       dispatch({ type: 'CLOSE_MODAL', payload: 'addPage' });
       return result;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to crawl page';
-      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      dispatch({ type: 'SET_ERROR', payload: getErrorMessage(error) });
       throw error;
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { key: 'crawling', value: false } });
@@ -298,7 +312,7 @@ ${result.content}`;
           savedCount++;
           console.log(`Successfully saved: "${filename}"`);
         } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          const errorMsg = getErrorMessage(error);
           errors.push(`Failed to save "${result.title || result.url}": ${errorMsg}`);
         }
       }
@@ -349,8 +363,7 @@ ${result.content}`;
       
       return { savedCount, errors };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save pages to collection';
-      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      dispatch({ type: 'SET_ERROR', payload: getErrorMessage(error) });
       throw error;
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { key: 'crawling', value: false } });

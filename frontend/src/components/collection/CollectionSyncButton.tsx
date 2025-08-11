@@ -32,7 +32,7 @@ import {
 import type { VectorSyncStatus, SyncCollectionRequest } from '../../types/api';
 
 interface CollectionSyncButtonProps {
-  collectionName: string;
+  collectionId: string;
   syncStatus?: VectorSyncStatus;
   onSync: (request: SyncCollectionRequest) => Promise<void>;
   onDeleteVectors?: () => Promise<void>;
@@ -42,7 +42,7 @@ interface CollectionSyncButtonProps {
 }
 
 export const CollectionSyncButton: React.FC<CollectionSyncButtonProps> = ({
-  collectionName,
+  collectionId,
   syncStatus,
   onSync,
   onDeleteVectors,
@@ -342,7 +342,7 @@ export const CollectionSyncButton: React.FC<CollectionSyncButtonProps> = ({
         <DialogTitle>Delete Vector Data</DialogTitle>
         <DialogContent>
           <Alert severity="warning" sx={{ mb: 2 }}>
-            This will permanently delete all vector embeddings for collection "{collectionName}".
+            This will permanently delete all vector embeddings for collection "{collectionId}".
           </Alert>
           <Typography>
             Are you sure you want to delete all vector data for this collection? 

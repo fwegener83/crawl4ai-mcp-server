@@ -41,6 +41,35 @@ export interface APIError {
   details?: unknown;
 }
 
+// Specific Error Classes for HTTP Status Code Handling
+export class CollectionNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'CollectionNotFoundError';
+  }
+}
+
+export class ServiceUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ServiceUnavailableError';
+  }
+}
+
+export class SyncFailedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SyncFailedError';
+  }
+}
+
+export class InvalidFileExtensionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidFileExtensionError';
+  }
+}
+
 // Loading States
 export type LoadingState = 'idle' | 'loading' | 'success' | 'error';
 
@@ -52,7 +81,8 @@ export interface APIResponse<T> {
 
 // File Collection Management Types
 export interface FileCollection {
-  name: string;
+  id: string;          // Unique ID (same as name for uniqueness) 
+  name: string;        // Collection name
   description: string;
   created_at: string;
   file_count: number;

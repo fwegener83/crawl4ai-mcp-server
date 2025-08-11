@@ -32,12 +32,12 @@ import { useDebounce } from '../../hooks/useDebounce';
 import type { VectorSearchResult, VectorSyncStatus } from '../../types/api';
 
 interface VectorSearchPanelProps {
-  collectionName?: string;
+  collectionId?: string;
   collectionSyncStatus?: VectorSyncStatus;
   searchResults: VectorSearchResult[];
   searchQuery: string;
   searchLoading: boolean;
-  onSearch: (query: string, collectionName?: string) => Promise<void>;
+  onSearch: (query: string, collectionId?: string) => Promise<void>;
   onResultClick: (result: VectorSearchResult) => void;
   onClearSearch: () => void;
   maxHeight?: number;
@@ -45,7 +45,7 @@ interface VectorSearchPanelProps {
 }
 
 export const VectorSearchPanel: React.FC<VectorSearchPanelProps> = ({
-  collectionName,
+  collectionId,
   collectionSyncStatus,
   searchResults,
   searchQuery,
@@ -63,11 +63,11 @@ export const VectorSearchPanel: React.FC<VectorSearchPanelProps> = ({
   // Perform search when debounced query changes
   useEffect(() => {
     if (debouncedQuery.trim()) {
-      onSearch(debouncedQuery, collectionName);
+      onSearch(debouncedQuery, collectionId);
     } else if (searchQuery) {
       onClearSearch();
     }
-  }, [debouncedQuery, collectionName, onSearch, onClearSearch, searchQuery]);
+  }, [debouncedQuery, collectionId, onSearch, onClearSearch, searchQuery]);
 
   const handleQueryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setLocalQuery(event.target.value);
@@ -182,10 +182,10 @@ export const VectorSearchPanel: React.FC<VectorSearchPanelProps> = ({
         />
 
         {/* Collection Info */}
-        {collectionName && collectionSyncStatus && !showCollectionFilter && (
+        {collectionId && collectionSyncStatus && !showCollectionFilter && (
           <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="caption" color="textSecondary">
-              Collection: {collectionName}
+              Collection: {collectionId}
             </Typography>
             <Chip
               size="small"
@@ -339,7 +339,7 @@ export const VectorSearchPanel: React.FC<VectorSearchPanelProps> = ({
         <Box sx={{ p: 1, borderTop: 1, borderColor: 'divider', bgcolor: 'grey.50' }}>
           <Typography variant="caption" color="textSecondary">
             Found {searchResults.length} results for "{localQuery}"
-            {collectionName && ` in ${collectionName}`}
+            {collectionId && ` in ${collectionId}`}
           </Typography>
         </Box>
       )}

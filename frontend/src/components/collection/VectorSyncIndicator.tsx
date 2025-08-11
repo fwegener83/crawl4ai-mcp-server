@@ -11,7 +11,7 @@ import {
 import type { VectorSyncStatus } from '../../types/api';
 
 interface VectorSyncIndicatorProps {
-  collectionName: string;
+  collectionId: string;
   syncStatus?: VectorSyncStatus;
   size?: 'small' | 'medium' | 'large';
   showText?: boolean;
@@ -20,7 +20,7 @@ interface VectorSyncIndicatorProps {
 }
 
 export const VectorSyncIndicator: React.FC<VectorSyncIndicatorProps> = ({
-  collectionName,
+  collectionId,
   syncStatus,
   size = 'medium',
   showText = false,
@@ -46,7 +46,7 @@ export const VectorSyncIndicator: React.FC<VectorSyncIndicatorProps> = ({
           icon: <CloudUploadIcon />,
           color: 'info' as const,
           text: 'Never synced',
-          tooltipTitle: `Collection "${collectionName}" has never been synced to vector store`
+          tooltipTitle: `Collection "${collectionId}" has never been synced to vector store`
         };
 
       case 'in_sync':
@@ -54,7 +54,7 @@ export const VectorSyncIndicator: React.FC<VectorSyncIndicatorProps> = ({
           icon: <CheckCircleIcon data-testid={dataTestId ? `${dataTestId}-success` : 'sync-success-indicator'} />,
           color: 'success' as const,
           text: 'In sync',
-          tooltipTitle: `Collection "${collectionName}" is up to date (Health: ${Math.round(sync_health_score * 100)}%)`
+          tooltipTitle: `Collection "${collectionId}" is up to date (Health: ${Math.round(sync_health_score * 100)}%)`
         };
 
       case 'out_of_sync':
@@ -71,7 +71,7 @@ export const VectorSyncIndicator: React.FC<VectorSyncIndicatorProps> = ({
           icon: <SyncIcon className="animate-spin" />,
           color: 'primary' as const,
           text: `Syncing... ${progressPercent}%`,
-          tooltipTitle: `Syncing collection "${collectionName}" - ${progressPercent}% complete`
+          tooltipTitle: `Syncing collection "${collectionId}" - ${progressPercent}% complete`
         };
       }
 

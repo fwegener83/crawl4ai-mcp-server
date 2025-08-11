@@ -7,6 +7,12 @@ import type {
   SyncCollectionRequest,
   VectorSearchResult 
 } from '../types/api';
+import {
+  CollectionNotFoundError,
+  ServiceUnavailableError,
+  SyncFailedError,
+  InvalidFileExtensionError,
+} from '../types/api';
 
 interface UseVectorSyncReturn {
   // State
@@ -16,21 +22,36 @@ interface UseVectorSyncReturn {
   searchLoading: boolean;
   
   // Actions
-  getSyncStatus: (collectionName: string) => VectorSyncStatus | undefined;
-  refreshSyncStatus: (collectionName: string) => Promise<void>;
+  getSyncStatus: (collectionId: string) => VectorSyncStatus | undefined;
+  refreshSyncStatus: (collectionId: string) => Promise<void>;
   refreshAllSyncStatuses: () => Promise<void>;
-  syncCollection: (collectionName: string, request?: SyncCollectionRequest) => Promise<void>;
-  enableSync: (collectionName: string) => Promise<void>;
-  disableSync: (collectionName: string) => Promise<void>;
-  deleteVectors: (collectionName: string) => Promise<void>;
-  searchVectors: (query: string, collectionName?: string) => Promise<void>;
+  syncCollection: (collectionId: string, request?: SyncCollectionRequest) => Promise<void>;
+  deleteVectors: (collectionId: string) => Promise<void>;
+  searchVectors: (query: string, collectionId?: string) => Promise<void>;
   clearSearch: () => void;
   
   // Utilities
-  canSync: (collectionName: string) => boolean;
-  needsSync: (collectionName: string) => boolean;
-  isSyncing: (collectionName: string) => boolean;
+  canSync: (collectionId: string) => boolean;
+  needsSync: (collectionId: string) => boolean;
+  isSyncing: (collectionId: string) => boolean;
 }
+
+// Helper function to create user-friendly error messages
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof CollectionNotFoundError) {
+    return 'Collection not found - it may have been deleted';
+  } else if (error instanceof ServiceUnavailableError) {
+    return 'Vector search is not available. Please install RAG dependencies.';
+  } else if (error instanceof SyncFailedError) {
+    return `Sync failed: ${error.message}`;
+  } else if (error instanceof InvalidFileExtensionError) {
+    return `File upload failed: ${error.message}`;
+  } else if (error instanceof Error) {
+    return error.message;
+  } else {
+    return 'An unexpected error occurred';
+  }
+};
 
 export const useVectorSync = (): UseVectorSyncReturn => {
   const { state, dispatch } = useCollection();
@@ -40,23 +61,23 @@ export const useVectorSync = (): UseVectorSyncReturn => {
   const pollingIntervals = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Utility functions for polling management
-  const startPolling = useCallback((collectionName: string, pollFunction: () => void, interval: number = 3000) => {
+  const startPolling = useCallback((collectionId: string, pollFunction: () => void, interval: number = 3000) => {
     // Clear any existing polling first
-    const existingInterval = pollingIntervals.current.get(collectionName);
+    const existingInterval = pollingIntervals.current.get(collectionId);
     if (existingInterval) {
       clearInterval(existingInterval);
-      pollingIntervals.current.delete(collectionName);
+      pollingIntervals.current.delete(collectionId);
     }
     
     const intervalId = setInterval(pollFunction, interval);
-    pollingIntervals.current.set(collectionName, intervalId);
+    pollingIntervals.current.set(collectionId, intervalId);
   }, []);
 
-  const stopPolling = useCallback((collectionName: string) => {
-    const intervalId = pollingIntervals.current.get(collectionName);
+  const stopPolling = useCallback((collectionId: string) => {
+    const intervalId = pollingIntervals.current.get(collectionId);
     if (intervalId) {
       clearInterval(intervalId);
-      pollingIntervals.current.delete(collectionName);
+      pollingIntervals.current.delete(collectionId);
     }
   }, []);
 
@@ -70,24 +91,24 @@ export const useVectorSync = (): UseVectorSyncReturn => {
   }, []);
 
   // Get sync status for a collection
-  const getSyncStatus = useCallback((collectionName: string): VectorSyncStatus | undefined => {
-    return vectorSync.statuses[collectionName];
+  const getSyncStatus = useCallback((collectionId: string): VectorSyncStatus | undefined => {
+    return vectorSync.statuses[collectionId];
   }, [vectorSync.statuses]);
 
   // Refresh sync status for a specific collection
-  const refreshSyncStatus = useCallback(async (collectionName: string) => {
+  const refreshSyncStatus = useCallback(async (collectionId: string) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSync', value: true } });
       
-      const status = await APIService.getCollectionSyncStatus(collectionName);
+      const status = await APIService.getCollectionSyncStatus(collectionId);
       dispatch({ 
         type: 'SET_VECTOR_SYNC_STATUS', 
-        payload: { collectionName, status } 
+        payload: { collectionName: collectionId, status } 
       });
     } catch (error) {
       dispatch({ 
         type: 'SET_ERROR', 
-        payload: error instanceof Error ? error.message : 'Failed to refresh sync status' 
+        payload: getErrorMessage(error) 
       });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSync', value: false } });
@@ -104,7 +125,7 @@ export const useVectorSync = (): UseVectorSyncReturn => {
     } catch (error) {
       dispatch({ 
         type: 'SET_ERROR', 
-        payload: error instanceof Error ? error.message : 'Failed to refresh sync statuses' 
+        payload: getErrorMessage(error) 
       });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSync', value: false } });
@@ -113,102 +134,78 @@ export const useVectorSync = (): UseVectorSyncReturn => {
 
   // Sync a collection
   const syncCollection = useCallback(async (
-    collectionName: string, 
+    collectionId: string, 
     request: SyncCollectionRequest = {}
   ) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSync', value: true } });
       
       // Set syncing status immediately
-      const currentStatus = getSyncStatus(collectionName);
+      const currentStatus = getSyncStatus(collectionId);
       if (currentStatus) {
         dispatch({
           type: 'SET_VECTOR_SYNC_STATUS',
           payload: {
-            collectionName,
+            collectionName: collectionId,
             status: { ...currentStatus, status: 'syncing', sync_progress: 0 }
           }
         });
       }
 
       // Start sync operation
-      await APIService.syncCollection(collectionName, request);
+      await APIService.syncCollection(collectionId, request);
       
       // Start real-time polling for progress updates
       const pollSyncProgress = async () => {
         try {
-          const status = await APIService.getCollectionSyncStatus(collectionName);
+          const status = await APIService.getCollectionSyncStatus(collectionId);
           dispatch({ 
             type: 'SET_VECTOR_SYNC_STATUS', 
-            payload: { collectionName, status } 
+            payload: { collectionName: collectionId, status } 
           });
           
           // Stop polling if sync is complete or failed
           if (status.status !== 'syncing') {
-            stopPolling(collectionName);
+            stopPolling(collectionId);
           }
         } catch (error) {
           console.error('Error polling sync progress:', error);
-          stopPolling(collectionName);
+          stopPolling(collectionId);
         }
       };
 
       // Start polling every 2 seconds for real-time updates
-      startPolling(collectionName, pollSyncProgress, 2000);
+      startPolling(collectionId, pollSyncProgress, 2000);
       
     } catch (error) {
       dispatch({ 
         type: 'SET_ERROR', 
-        payload: error instanceof Error ? error.message : 'Failed to sync collection' 
+        payload: getErrorMessage(error) 
       });
       
       // Reset status on error
-      await refreshSyncStatus(collectionName);
+      await refreshSyncStatus(collectionId);
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSync', value: false } });
     }
   }, [dispatch, getSyncStatus, refreshSyncStatus, startPolling, stopPolling]);
 
-  // Enable sync for a collection
-  const enableSync = useCallback(async (collectionName: string) => {
-    try {
-      await APIService.enableCollectionSync(collectionName);
-      await refreshSyncStatus(collectionName);
-    } catch (error) {
-      dispatch({ 
-        type: 'SET_ERROR', 
-        payload: error instanceof Error ? error.message : 'Failed to enable sync' 
-      });
-    }
-  }, [dispatch, refreshSyncStatus]);
-
-  // Disable sync for a collection
-  const disableSync = useCallback(async (collectionName: string) => {
-    try {
-      await APIService.disableCollectionSync(collectionName);
-      await refreshSyncStatus(collectionName);
-    } catch (error) {
-      dispatch({ 
-        type: 'SET_ERROR', 
-        payload: error instanceof Error ? error.message : 'Failed to disable sync' 
-      });
-    }
-  }, [dispatch, refreshSyncStatus]);
+  // Note: Enable/disable sync functions removed - sync is now manual trigger only
 
   // Delete vectors for a collection
-  const deleteVectors = useCallback(async (collectionName: string) => {
+  const deleteVectors = useCallback(async (collectionId: string) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSync', value: true } });
       
       // Stop any active polling for this collection
-      stopPolling(collectionName);
+      stopPolling(collectionId);
       
-      await APIService.deleteCollectionVectors(collectionName);
-      await refreshSyncStatus(collectionName);
+      await APIService.deleteCollectionVectors(collectionId);
+      await refreshSyncStatus(collectionId);
     } catch (error) {
       dispatch({ 
         type: 'SET_ERROR', 
-        payload: error instanceof Error ? error.message : 'Failed to delete vectors' 
+        payload: getErrorMessage(error) 
       });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSync', value: false } });
@@ -216,7 +213,7 @@ export const useVectorSync = (): UseVectorSyncReturn => {
   }, [dispatch, refreshSyncStatus, stopPolling]);
 
   // Search vectors
-  const searchVectors = useCallback(async (query: string, collectionName?: string) => {
+  const searchVectors = useCallback(async (query: string, collectionId?: string) => {
     if (!query.trim()) {
       dispatch({ type: 'CLEAR_VECTOR_SEARCH' });
       return;
@@ -228,7 +225,7 @@ export const useVectorSync = (): UseVectorSyncReturn => {
       
       const request: VectorSearchRequest = {
         query: query.trim(),
-        collection_name: collectionName,
+        collection_name: collectionId,
         limit: 20
       };
       
@@ -237,7 +234,7 @@ export const useVectorSync = (): UseVectorSyncReturn => {
     } catch (error) {
       dispatch({ 
         type: 'SET_ERROR', 
-        payload: error instanceof Error ? error.message : 'Failed to search vectors' 
+        payload: getErrorMessage(error) 
       });
       dispatch({ type: 'SET_VECTOR_SEARCH_RESULTS', payload: [] });
     } finally {
@@ -251,20 +248,20 @@ export const useVectorSync = (): UseVectorSyncReturn => {
   }, [dispatch]);
 
   // Utility functions
-  const canSync = useCallback((collectionName: string): boolean => {
-    const status = getSyncStatus(collectionName);
+  const canSync = useCallback((collectionId: string): boolean => {
+    const status = getSyncStatus(collectionId);
     if (!status) return false;
     return status.sync_enabled && status.status !== 'syncing';
   }, [getSyncStatus]);
 
-  const needsSync = useCallback((collectionName: string): boolean => {
-    const status = getSyncStatus(collectionName);
+  const needsSync = useCallback((collectionId: string): boolean => {
+    const status = getSyncStatus(collectionId);
     if (!status) return false;
     return status.status === 'out_of_sync' || status.status === 'never_synced';
   }, [getSyncStatus]);
 
-  const isSyncing = useCallback((collectionName: string): boolean => {
-    const status = getSyncStatus(collectionName);
+  const isSyncing = useCallback((collectionId: string): boolean => {
+    const status = getSyncStatus(collectionId);
     return status?.status === 'syncing' || false;
   }, [getSyncStatus]);
 
@@ -287,8 +284,6 @@ export const useVectorSync = (): UseVectorSyncReturn => {
     refreshSyncStatus,
     refreshAllSyncStatuses,
     syncCollection,
-    enableSync,
-    disableSync,
     deleteVectors,
     searchVectors,
     clearSearch,

@@ -242,10 +242,10 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
           <List sx={{ p: 0 }}>
             {(state.collections || []).filter(collection => collection && collection.name).map((collection) => (
               <ListItem
-                key={collection.name}
+                key={collection.id}
                 data-testid="collection-item"
-                aria-selected={state.selectedCollection === collection.name}
-                onClick={() => handleSelectCollection(collection.name)}
+                aria-selected={state.selectedCollection === collection.id}
+                onClick={() => handleSelectCollection(collection.id)}
                 sx={{
                   cursor: 'pointer',
                   borderRadius: 2,
@@ -263,7 +263,7 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
                   '&:hover .delete-button': {
                     opacity: 1
                   },
-                  ...(state.selectedCollection === collection.name && {
+                  ...(state.selectedCollection === collection.id && {
                     bgcolor: 'primary.50',
                     borderColor: 'primary.main',
                     '& .MuiListItemIcon-root': {
@@ -277,7 +277,7 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
                     <FolderIcon />
                     <Box sx={{ position: 'absolute', top: -4, right: -8 }}>
                       <VectorSyncIndicator
-                        collectionName={collection.name}
+                        collectionId={collection.name}
                         syncStatus={getSyncStatus(collection.name)}
                         size="small"
                       />
@@ -289,7 +289,7 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
                     <Typography 
                       variant="body1" 
                       fontWeight="semibold"
-                      color={state.selectedCollection === collection.name ? 'primary.main' : 'text.primary'}
+                      color={state.selectedCollection === collection.id ? 'primary.main' : 'text.primary'}
                       noWrap
                       sx={{ mb: 0.5 }}
                     >
@@ -309,7 +309,7 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
                           label={`${collection.file_count} files`}
                           size="small"
                           variant="outlined"
-                          color={state.selectedCollection === collection.name ? 'primary' : 'default'}
+                          color={state.selectedCollection === collection.id ? 'primary' : 'default'}
                         />
                         {(collection.folders || []).length > 0 && (
                           <Chip 
@@ -317,7 +317,7 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
                             label={`${(collection.folders || []).length} folders`}
                             size="small"
                             variant="outlined"
-                            color={state.selectedCollection === collection.name ? 'primary' : 'default'}
+                            color={state.selectedCollection === collection.id ? 'primary' : 'default'}
                           />
                         )}
                       </Box>
@@ -346,7 +346,7 @@ export function CollectionSidebar({ className = '' }: CollectionSidebarProps) {
                 >
                   <Tooltip title="Delete collection">
                     <IconButton
-                      onClick={(e) => handleDeleteCollection(collection.name, e)}
+                      onClick={(e) => handleDeleteCollection(collection.id, e)}
                       size="small"
                       color="error"
                       sx={{
