@@ -62,6 +62,24 @@ VECTOR_DB_PATH=${CONTEXT42_HOME}/databases/chromadb
 
 ---
 
+## [Unreleased]
+
+### Added
+- Custom command system for automated development workflows
+- Architecture Decision Records (ADRs) template and directory structure
+- Professional documentation pipeline with cross-references
+
+### Changed  
+- Enhanced CLAUDE.md with documentation workflow section
+- Updated ARCHITECTURE.md with ~/.context42/ configuration details
+- Removed legacy collections directory reference
+
+### Architecture Decisions
+- [ADR Template System](docs/adr/): Standardized ADR format for future architectural decisions
+- **Documentation Workflow**: Automated ADR creation during feature development and finalization during PR completion
+
+---
+
 ## Future Releases
 
 All future changes will be documented here using semantic versioning:
