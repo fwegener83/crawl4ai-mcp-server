@@ -85,7 +85,7 @@ export function useCollections() {
   const deleteApi = useApi<any>();
   const storeApi = useApi<any>();
   const createApi = useApi<any>();
-  const searchApi = useApi<any[]>();
+  const searchApi = useApi<any>();
 
   const refreshCollections = useCallback(async () => {
     try {

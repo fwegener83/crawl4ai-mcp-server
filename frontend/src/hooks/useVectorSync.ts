@@ -204,7 +204,7 @@ export const useVectorSync = (): UseVectorSyncReturn => {
         console.log(`🚀 COMPREHENSIVE RECOVERY: Starting polling for ${orphanedCollections.length} orphaned collections:`, 
                    orphanedCollections.map(([id]) => id));
         
-        orphanedCollections.forEach(([collectionId, status]) => {          
+        orphanedCollections.forEach(([collectionId]) => {          
           // Initialize safeguards for recovery polling
           pollingSafeguards.current.set(collectionId, { 
             startTime: Date.now(), 

@@ -322,7 +322,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       name="vectorSync.similarityThreshold"
                       label="Similarity Threshold"
                       type="number"
-                      rules={{ min: 0.1, max: 1.0, step: 0.1 }}
+                      rules={{ min: 0.1, max: 1.0 }}
+                      inputProps={{ step: 0.1 }}
                       helperText="Minimum similarity for search results (0.1-1.0)"
                       sx={{ flex: 1 }}
                     />
