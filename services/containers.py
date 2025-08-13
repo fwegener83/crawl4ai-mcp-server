@@ -13,6 +13,7 @@ from dependency_injector import containers, providers
 from .web_crawling_service import WebCrawlingService
 from .collection_service import CollectionService
 from .vector_sync_service import VectorSyncService
+from .llm_service import LLMServiceFactory
 # Import centralized configuration
 from config.paths import Context42Config
 
@@ -46,6 +47,11 @@ class Container(containers.DeclarativeContainer):
     # Web crawling service (stateless, can be Factory)
     web_crawling_service = providers.Factory(
         WebCrawlingService
+    )
+    
+    # LLM service (singleton for configuration consistency)
+    llm_service = providers.Singleton(
+        LLMServiceFactory.create_service
     )
 
 
