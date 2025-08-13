@@ -135,15 +135,19 @@ export function useCollections() {
   }, [storeApi, selectedCollection]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const searchInCollection = useCallback(async (
-    _query: string,
-    _collectionName?: string,
-    _nResults?: number,
-    _similarityThreshold?: number
+    query: string,
+    collectionName?: string,
+    nResults?: number,
+    similarityThreshold?: number
   ) => {
-    // Vector search functionality would go here
-    // This is a placeholder for now
+    const { APIService } = await import('../services/api');
     return await searchApi.execute(() =>
-      Promise.resolve([])
+      APIService.searchVectors({
+        query,
+        collection_name: collectionName || selectedCollection,
+        limit: nResults || 10,
+        similarity_threshold: similarityThreshold || 0.7
+      })
     );
   }, [searchApi, selectedCollection]);
 

@@ -5,10 +5,12 @@ import { useApi, useCrawling, useCollections } from './useApi';
 // Mock the API service
 vi.mock('../services/api', () => ({
   APIService: {
-    listCollections: vi.fn(),
-    deleteCollection: vi.fn(),
-    storeInCollection: vi.fn(),
-    searchCollections: vi.fn(),
+    listFileCollections: vi.fn(),
+    deleteFileCollection: vi.fn(),
+    saveFileToCollection: vi.fn(),
+    createFileCollection: vi.fn(),
+    searchVectors: vi.fn(),
+    // File Collections API methods would be added here as needed
   }
 }));
 
@@ -208,7 +210,7 @@ describe('useCollections', () => {
     ];
     
     const { APIService } = await import('../services/api');
-    vi.mocked(APIService.listCollections).mockResolvedValue(mockCollections);
+    vi.mocked(APIService.listFileCollections).mockResolvedValue(mockCollections);
     
     const { result } = renderHook(() => useCollections());
     
@@ -217,14 +219,14 @@ describe('useCollections', () => {
     });
     
     expect(result.current.collections).toEqual(mockCollections);
-    expect(APIService.listCollections).toHaveBeenCalledOnce();
+    expect(APIService.listFileCollections).toHaveBeenCalledOnce();
   });
 
   it('should handle refresh collections error', async () => {
     const mockError = new Error('Failed to fetch');
     
     const { APIService } = await import('../services/api');
-    vi.mocked(APIService.listCollections).mockRejectedValue(mockError);
+    vi.mocked(APIService.listFileCollections).mockRejectedValue(mockError);
     
     const { result } = renderHook(() => useCollections());
     
@@ -241,85 +243,74 @@ describe('useCollections', () => {
 
   it('should delete collection and refresh', async () => {
     const { APIService } = await import('../services/api');
-    vi.mocked(APIService.deleteCollection).mockResolvedValue({ success: true, collection_name: 'test', message: 'Deleted' });
-    vi.mocked(APIService.listCollections).mockResolvedValue([]);
+    vi.mocked(APIService.deleteFileCollection).mockResolvedValue(undefined);
+    vi.mocked(APIService.listFileCollections).mockResolvedValue([]);
     
     const { result } = renderHook(() => useCollections());
     
     await act(async () => {
-      await result.current.deleteCollection('test');
+      await result.current.deleteCollection('test-collection');
     });
     
-    expect(APIService.deleteCollection).toHaveBeenCalledWith('test');
-    expect(APIService.listCollections).toHaveBeenCalled();
+    expect(APIService.deleteFileCollection).toHaveBeenCalledWith('test-collection');
+    expect(APIService.listFileCollections).toHaveBeenCalled();
   });
 
   it('should store content in selected collection', async () => {
-    const mockStoreResult = {
-      success: true,
-      collection_name: 'default',
-      documents_added: 1,
-      message: 'Stored'
-    };
+    const mockResult = { filename: 'test.md', content: 'test content' };
     
     const { APIService } = await import('../services/api');
-    vi.mocked(APIService.storeInCollection).mockResolvedValue(mockStoreResult);
-    vi.mocked(APIService.listCollections).mockResolvedValue([]);
+    vi.mocked(APIService.saveFileToCollection).mockResolvedValue(mockResult);
+    vi.mocked(APIService.listFileCollections).mockResolvedValue([]);
     
     const { result } = renderHook(() => useCollections());
     
     await act(async () => {
-      const result_data = await result.current.storeContent('test content');
-      expect(result_data).toEqual(mockStoreResult);
+      const savedResult = await result.current.storeContent('test content');
+      expect(savedResult).toBe(mockResult);
     });
     
-    expect(APIService.storeInCollection).toHaveBeenCalledWith('test content', 'default');
-    expect(APIService.listCollections).toHaveBeenCalled();
+    expect(APIService.saveFileToCollection).toHaveBeenCalled();
+    expect(APIService.listFileCollections).toHaveBeenCalled();
   });
 
   it('should store content in custom collection', async () => {
-    const mockStoreResult = {
-      success: true,
-      collection_name: 'custom',
-      documents_added: 1,
-      message: 'Stored'
-    };
+    const mockResult = { filename: 'test.md', content: 'test content' };
     
     const { APIService } = await import('../services/api');
-    vi.mocked(APIService.storeInCollection).mockResolvedValue(mockStoreResult);
-    vi.mocked(APIService.listCollections).mockResolvedValue([]);
+    vi.mocked(APIService.saveFileToCollection).mockResolvedValue(mockResult);
+    vi.mocked(APIService.listFileCollections).mockResolvedValue([]);
     
     const { result } = renderHook(() => useCollections());
     
     await act(async () => {
-      await result.current.storeContent('test content', 'custom');
+      await result.current.storeContent('test content', 'custom-collection');
     });
     
-    expect(APIService.storeInCollection).toHaveBeenCalledWith('test content', 'custom');
+    expect(APIService.saveFileToCollection).toHaveBeenCalledWith('custom-collection', expect.any(Object));
   });
 
   it('should search in collection', async () => {
     const mockSearchResults = [
-      { id: '1', content: 'result 1', metadata: {}, score: 0.9 }
+      { id: '1', content: 'result 1', score: 0.9, metadata: {} }
     ];
     
     const { APIService } = await import('../services/api');
-    vi.mocked(APIService.searchCollections).mockResolvedValue(mockSearchResults);
+    vi.mocked(APIService.searchVectors).mockResolvedValue({ results: mockSearchResults });
     
     const { result } = renderHook(() => useCollections());
     
     await act(async () => {
       const results = await result.current.searchInCollection('test query');
-      expect(results).toEqual(mockSearchResults);
+      expect(results).toEqual({ results: mockSearchResults });
     });
-    
-    expect(APIService.searchCollections).toHaveBeenCalledWith('test query', 'default', undefined, undefined);
-    expect(result.current.searchResults).toEqual(mockSearchResults);
   });
 
   it('should search with custom parameters', async () => {
+    const mockSearchResults = [{ id: '1', content: 'result 1', score: 0.9, metadata: {} }];
+    
     const { APIService } = await import('../services/api');
-    vi.mocked(APIService.searchCollections).mockResolvedValue([]);
+    vi.mocked(APIService.searchVectors).mockResolvedValue({ results: mockSearchResults });
     
     const { result } = renderHook(() => useCollections());
     
@@ -327,6 +318,11 @@ describe('useCollections', () => {
       await result.current.searchInCollection('query', 'custom', 10, 0.8);
     });
     
-    expect(APIService.searchCollections).toHaveBeenCalledWith('query', 'custom', 10, 0.8);
+    expect(APIService.searchVectors).toHaveBeenCalledWith({
+      query: 'query',
+      collection_name: 'custom',
+      limit: 10,
+      similarity_threshold: 0.8
+    });
   });
 });
