@@ -61,8 +61,10 @@ export const VectorSyncIndicator: React.FC<VectorSyncIndicatorProps> = ({
         return {
           icon: <SyncIcon />,
           color: 'warning' as const,
-          text: `${changed_files_count} files changed`,
-          tooltipTitle: `${changed_files_count} files have changed since last sync`
+          text: changed_files_count > 0 ? `${changed_files_count} files changed` : 'Files changed',
+          tooltipTitle: changed_files_count > 0 
+            ? `${changed_files_count} files have changed since last sync`
+            : 'Some files have changed since last sync'
         };
 
       case 'syncing': {

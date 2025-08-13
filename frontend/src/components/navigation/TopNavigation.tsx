@@ -20,10 +20,7 @@ import LightModeIcon from '@mui/icons-material/LightMode';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import WebIcon from '@mui/icons-material/Web';
-import HomeIcon from '@mui/icons-material/Home';
-import LanguageIcon from '@mui/icons-material/Language';
-import TravelExploreIcon from '@mui/icons-material/TravelExplore';
-import StorageIcon from '@mui/icons-material/Storage';
+// Removed unused navigation icons
 import FolderIcon from '@mui/icons-material/Folder';
 
 export interface TopNavigationProps {
@@ -44,12 +41,7 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
   const [settingsAnchorEl, setSettingsAnchorEl] = React.useState<null | HTMLElement>(null);
 
   const navigationTabs = [
-    { id: 'home', label: 'Home', icon: <HomeIcon fontSize="small" /> },
-    { id: 'simple-crawl', label: 'Simple Crawl', icon: <LanguageIcon fontSize="small" /> },
-    { id: 'deep-crawl', label: 'Deep Crawl', icon: <TravelExploreIcon fontSize="small" /> },
-    { id: 'collections', label: 'Collections', icon: <StorageIcon fontSize="small" /> },
     { id: 'file-collections', label: 'File Collections', icon: <FolderIcon fontSize="small" /> },
-    { id: 'settings', label: 'Settings', icon: <SettingsIcon fontSize="small" /> }
   ];
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {

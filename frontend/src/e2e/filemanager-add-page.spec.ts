@@ -9,7 +9,6 @@ test.describe('File Manager - Add Page Feature', () => {
     await page.waitForLoadState('networkidle');
     
     // Go to File Collections tab
-    await page.click('[data-testid="file-collections-tab"]');
     await page.waitForSelector('[data-testid="collections-list"]', { timeout: 10000 });
     
     // Check that collections are loaded

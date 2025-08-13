@@ -1,7 +1,6 @@
 import React from 'react';
 import { useCollectionOperations } from '../../hooks/useCollectionOperations';
 import { useVectorSync } from '../../hooks/useVectorSync';
-import type { SyncCollectionRequest } from '../../types/api';
 import { CollectionSyncButton } from './CollectionSyncButton';
 import { VectorSyncIndicator } from './VectorSyncIndicator';
 import { VectorSearchPanel } from './VectorSearchPanel';
@@ -24,7 +23,6 @@ export function MainContent({ className = '' }: MainContentProps) {
   const { 
     getSyncStatus, 
     syncCollection, 
-    deleteVectors,
     searchVectors,
     searchResults: vectorSearchResults,
     searchQuery: vectorSearchQuery,
@@ -47,17 +45,12 @@ export function MainContent({ className = '' }: MainContentProps) {
   };
 
   // Vector sync handlers - bind collection name
-  const handleSyncCollection = async (request: SyncCollectionRequest) => {
+  const handleSyncCollection = async () => {
     if (state.selectedCollection) {
-      await syncCollection(state.selectedCollection, request);
+      await syncCollection(state.selectedCollection);
     }
   };
 
-  const handleDeleteVectors = async () => {
-    if (state.selectedCollection) {
-      await deleteVectors(state.selectedCollection);
-    }
-  };
 
   const toggleSearchPanel = () => {
     setSearchPanelOpen(!searchPanelOpen);
@@ -173,11 +166,11 @@ export function MainContent({ className = '' }: MainContentProps) {
                     collectionId={state.selectedCollection}
                     syncStatus={getSyncStatus(state.selectedCollection)}
                     onSync={handleSyncCollection}
-                    onDeleteVectors={handleDeleteVectors}
                     size="medium"
                   />
                 </Box>
               )}
+
               
               <IconButton
                 onClick={toggleSearchPanel}

@@ -120,7 +120,7 @@ class IntelligentSyncManager:
                 logger.warning(f"Failed to save persistent sync status for collection {collection_name}")
     
     def get_collection_sync_status(self, collection_name: str) -> VectorSyncStatus:
-        """Get current sync status for a collection."""
+        """Get current sync status for a collection with live change detection."""
         if collection_name not in self.sync_status:
             # Initialize status for new collection
             self.sync_status[collection_name] = VectorSyncStatus(
@@ -128,7 +128,28 @@ class IntelligentSyncManager:
                 sync_enabled=self.config.enabled
             )
         
-        return self.sync_status[collection_name]
+        sync_status = self.sync_status[collection_name]
+        
+        # LIVE CHANGE DETECTION: Check if files have changed since last sync
+        # Only check if collection is currently in_sync (avoid expensive checks for other states)
+        if sync_status.status == SyncStatus.IN_SYNC and sync_status.sync_enabled:
+            try:
+                # Quick change detection without full file processing
+                has_changes = self._quick_change_detection(collection_name)
+                if has_changes:
+                    logger.info(f"Live change detection: Collection '{collection_name}' has file changes - updating status to out_of_sync")
+                    sync_status.status = SyncStatus.OUT_OF_SYNC
+                    # Get actual changed files count from quick detection
+                    changed_count = self._get_changed_files_count(collection_name)
+                    sync_status.changed_files_count = changed_count
+                    
+                    # Save updated status
+                    self._save_sync_status_persistent(collection_name)
+            except Exception as e:
+                logger.warning(f"Live change detection failed for collection '{collection_name}': {e}")
+                # Don't update status on error - keep existing status
+        
+        return sync_status
     
     def list_collection_sync_statuses(self) -> Dict[str, VectorSyncStatus]:
         """Get sync status for all collections."""
@@ -295,6 +316,21 @@ class IntelligentSyncManager:
         finally:
             # Clean up progress tracking
             sync_status.sync_progress = None
+            
+            # CRITICAL FIX: Reset status if still SYNCING (prevents orphaned "syncing" collections)
+            if sync_status.status == SyncStatus.SYNCING:
+                # If we reach finally with SYNCING status, something went wrong
+                if result.success:
+                    sync_status.status = SyncStatus.IN_SYNC
+                else:
+                    sync_status.status = SyncStatus.SYNC_ERROR
+                
+                logger.warning(f"Sync status was still SYNCING in finally block for collection '{collection_name}', "
+                             f"reset to {sync_status.status}")
+                
+                # Save corrected status to persistent storage
+                self._save_sync_status_persistent(collection_name)
+            
             if progress_callback:
                 progress_callback(1.0, "Sync completed" if result.success else "Sync failed")
         
@@ -716,6 +752,145 @@ class IntelligentSyncManager:
             stats['avg_sync_health'] = sum(health_scores) / len(health_scores)
         
         return stats
+    
+    def _quick_change_detection(self, collection_name: str) -> bool:
+        """
+        Quick change detection without full file processing.
+        
+        Compares current file hashes with stored file mappings to detect changes.
+        Returns True if any files have changed since last sync.
+        """
+        try:
+            # Get current files in collection
+            files_info = self._get_collection_files(collection_name)
+            if not files_info:
+                return False  # No files, no changes
+            
+            # Get existing file mappings from last sync
+            collection_mappings = self.file_mappings.get(collection_name, {})
+            
+            # If no previous mappings, check persistent storage
+            if not collection_mappings:
+                collection_mappings = self.persistent_sync.load_collection_mappings(collection_name)
+                if collection_mappings:
+                    self.file_mappings[collection_name] = collection_mappings
+                else:
+                    # No previous sync mappings found - assume changes exist
+                    return len(files_info) > 0
+            
+            # Quick check: compare file count first
+            if len(files_info) != len(collection_mappings):
+                logger.debug(f"File count changed: {len(files_info)} current vs {len(collection_mappings)} mapped")
+                return True
+            
+            # Check each file for changes
+            changed_count = 0
+            for file_info in files_info:
+                file_path = file_info.get('path', '')
+                if not file_path:
+                    continue
+                
+                # Get existing mapping
+                existing_mapping = collection_mappings.get(file_path)
+                if not existing_mapping:
+                    logger.debug(f"New file detected: {file_path}")
+                    changed_count += 1
+                    continue
+                
+                try:
+                    # Read current file content and calculate hash
+                    read_result = self.collection_manager.read_file(
+                        collection_name, file_info['name'], file_info.get('folder', '')
+                    )
+                    
+                    if not read_result.get('success'):
+                        logger.warning(f"Could not read file for change detection: {file_path}")
+                        continue
+                    
+                    content = read_result.get('content', '')
+                    if not content:
+                        continue
+                    
+                    current_hash = calculate_file_hash(content)
+                    
+                    # Compare with stored hash
+                    if existing_mapping.file_hash != current_hash:
+                        logger.debug(f"File content changed: {file_path} (hash: {existing_mapping.file_hash[:8]} → {current_hash[:8]})")
+                        changed_count += 1
+                        
+                        # Stop early if we find changes (performance optimization)
+                        if changed_count > 0:
+                            break
+                            
+                except Exception as e:
+                    logger.warning(f"Error checking file {file_path} for changes: {e}")
+                    continue
+            
+            has_changes = changed_count > 0
+            logger.debug(f"Quick change detection for '{collection_name}': {changed_count} changed files, has_changes={has_changes}")
+            return has_changes
+            
+        except Exception as e:
+            logger.error(f"Quick change detection failed for collection '{collection_name}': {e}")
+            return False  # Assume no changes on error (conservative approach)
+    
+    def _get_changed_files_count(self, collection_name: str) -> int:
+        """
+        Count the number of changed files in a collection.
+        Similar to _quick_change_detection but returns the actual count.
+        """
+        try:
+            files_info = self._get_collection_files(collection_name)
+            if not files_info:
+                return 0
+            
+            # Get existing file mappings
+            collection_mappings = self.file_mappings.get(collection_name, {})
+            if not collection_mappings:
+                collection_mappings = self.persistent_sync.load_collection_mappings(collection_name)
+                if collection_mappings:
+                    self.file_mappings[collection_name] = collection_mappings
+                else:
+                    # No previous mappings = all files are "changed" (new)
+                    return len(files_info)
+            
+            changed_count = 0
+            
+            # Check each file
+            for file_info in files_info:
+                file_path = file_info.get('path', '')
+                if not file_path:
+                    continue
+                
+                existing_mapping = collection_mappings.get(file_path)
+                if not existing_mapping:
+                    # New file
+                    changed_count += 1
+                    continue
+                
+                try:
+                    # Read and check hash
+                    read_result = self.collection_manager.read_file(
+                        collection_name, file_info['name'], file_info.get('folder', '')
+                    )
+                    
+                    if read_result.get('success'):
+                        content = read_result.get('content', '')
+                        if content:
+                            current_hash = calculate_file_hash(content)
+                            if existing_mapping.file_hash != current_hash:
+                                changed_count += 1
+                                
+                except Exception as e:
+                    logger.warning(f"Error checking file {file_path} for change count: {e}")
+                    continue
+            
+            logger.debug(f"Changed files count for '{collection_name}': {changed_count}")
+            return changed_count
+            
+        except Exception as e:
+            logger.error(f"Failed to count changed files for '{collection_name}': {e}")
+            return 0
     
     def shutdown(self):
         """Shutdown the sync manager and clean up resources."""

@@ -11,22 +11,13 @@ import {
   Chip,
   InputAdornment,
   IconButton,
-  Collapse,
-  Divider,
   Alert,
   CircularProgress,
-  Tooltip,
 } from '@mui/material';
 import {
   Search as SearchIcon,
   Clear as ClearIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
   InsertDriveFile as FileIcon,
-  Code as CodeIcon,
-  Article as ArticleIcon,
-  List as ListIcon,
-  Subject as SubjectIcon
 } from '@mui/icons-material';
 import { useDebounce } from '../../hooks/useDebounce';
 import type { VectorSearchResult, VectorSyncStatus } from '../../types/api';
@@ -53,11 +44,9 @@ export const VectorSearchPanel: React.FC<VectorSearchPanelProps> = ({
   onSearch,
   onResultClick,
   onClearSearch,
-  maxHeight = 400, // TODO: implement dynamic height
-  showCollectionFilter = false // TODO: implement collection filter
+  maxHeight = 400 // TODO: implement dynamic height
 }) => {
   const [localQuery, setLocalQuery] = useState(searchQuery);
-  const [expandedResults, setExpandedResults] = useState<Set<number>>(new Set());
   const debouncedQuery = useDebounce(localQuery, 300);
 
   // Perform search when debounced query changes
@@ -78,53 +67,15 @@ export const VectorSearchPanel: React.FC<VectorSearchPanelProps> = ({
     onClearSearch();
   };
 
-  const toggleResultExpansion = (index: number) => {
-    const newExpanded = new Set(expandedResults);
-    if (newExpanded.has(index)) {
-      newExpanded.delete(index);
-    } else {
-      newExpanded.add(index);
-    }
-    setExpandedResults(newExpanded);
-  };
-
-  const getChunkTypeIcon = (chunkType: string) => {
-    switch (chunkType.toLowerCase()) {
-      case 'code_block':
-        return <CodeIcon fontSize="small" />;
-      case 'header_section':
-        return <ArticleIcon fontSize="small" />;
-      case 'list':
-        return <ListIcon fontSize="small" />;
-      default:
-        return <SubjectIcon fontSize="small" />;
-    }
-  };
-
   const getScoreColor = (score: number) => {
-    if (score >= 0.9) return 'success';
-    if (score >= 0.7) return 'warning';
+    if (score >= 0.8) return 'success';
+    if (score >= 0.6) return 'warning';
     return 'default';
   };
 
-  const formatContent = (content: string, maxLength: number = 150) => {
+  const formatContent = (content: string, maxLength: number = 120) => {
     if (content.length <= maxLength) return content;
     return content.substring(0, maxLength) + '...';
-  };
-
-  const highlightQuery = (text: string, query: string) => {
-    if (!query.trim()) return text;
-    
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    const parts = text.split(regex);
-    
-    return parts.map((part, index) => 
-      regex.test(part) ? (
-        <mark key={index} style={{ backgroundColor: '#ffeb3b', padding: '0 2px' }}>
-          {part}
-        </mark>
-      ) : part
-    );
   };
 
   const canUserSearch = () => {
@@ -140,7 +91,9 @@ export const VectorSearchPanel: React.FC<VectorSearchPanelProps> = ({
       case 'never_synced':
         return 'Collection has never been synced to vector store';
       case 'out_of_sync':
-        return `${collectionSyncStatus.changed_files_count} files have changed since last sync`;
+        return collectionSyncStatus.changed_files_count > 0 
+          ? `${collectionSyncStatus.changed_files_count} files have changed since last sync`
+          : 'Some files have changed since last sync';
       case 'syncing':
         return 'Collection is currently syncing';
       case 'sync_error':
@@ -182,25 +135,13 @@ export const VectorSearchPanel: React.FC<VectorSearchPanelProps> = ({
         />
 
         {/* Collection Info */}
-        {collectionId && collectionSyncStatus && !showCollectionFilter && (
+        {collectionId && collectionSyncStatus && (
           <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="caption" color="textSecondary">
-              Collection: {collectionId}
+              {collectionId} • {collectionSyncStatus.chunk_count} chunks
             </Typography>
-            <Chip
-              size="small"
-              label={`${collectionSyncStatus.chunk_count} chunks`}
-              variant="outlined"
-            />
             {!canUserSearch() && (
-              <Tooltip title={getSearchDisabledReason()}>
-                <Chip
-                  size="small"
-                  label="Sync required"
-                  color="warning"
-                  variant="outlined"
-                />
-              </Tooltip>
+              <Chip size="small" label="Sync required" color="warning" variant="outlined" />
             )}
           </Box>
         )}
@@ -226,111 +167,39 @@ export const VectorSearchPanel: React.FC<VectorSearchPanelProps> = ({
         )}
 
         {searchResults.length > 0 && (
-          <Box sx={{ height: '100%', maxHeight: maxHeight, overflow: 'auto' }}>
-            <List dense>
-              {searchResults.map((result, index) => {
-                const isExpanded = expandedResults.has(index);
-                const { metadata } = result;
-                
-                return (
-                  <React.Fragment key={index}>
-                    <ListItem disablePadding>
-                      <ListItemButton
-                        onClick={() => onResultClick(result)}
-                        sx={{ 
-                          alignItems: 'flex-start',
-                          py: 1,
-                          '&:hover': {
-                            backgroundColor: 'action.hover'
-                          }
-                        }}
-                      >
-                        <ListItemText
-                          primary={
-                            <Box display="flex" alignItems="center" gap={1} mb={0.5}>
-                              <FileIcon fontSize="small" color="action" />
-                              <Typography variant="body2" component="span" sx={{ fontWeight: 500 }}>
-                                {result.file_path.split('/').pop()}
-                              </Typography>
-                              <Box display="flex" alignItems="center" gap={0.5}>
-                                {getChunkTypeIcon(metadata.chunk_type)}
-                                <Chip
-                                  size="small"
-                                  label={`${(result.score * 100).toFixed(0)}%`}
-                                  color={getScoreColor(result.score)}
-                                  variant="outlined"
-                                  sx={{ height: 20, fontSize: '0.7rem' }}
-                                />
-                              </Box>
-                            </Box>
-                          }
-                          secondary={
-                            <Box>
-                              <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
-                                {highlightQuery(formatContent(result.content), localQuery)}
-                              </Typography>
-                              
-                              {metadata.header_hierarchy && (
-                                <Typography variant="caption" color="textSecondary">
-                                  {metadata.header_hierarchy}
-                                </Typography>
-                              )}
-                              
-                              <Box display="flex" alignItems="center" gap={0.5} mt={0.5}>
-                                {metadata.contains_code && (
-                                  <Chip
-                                    size="small"
-                                    label={metadata.programming_language || "Code"}
-                                    color="primary"
-                                    variant="outlined"
-                                    sx={{ height: 16, fontSize: '0.65rem' }}
-                                  />
-                                )}
-                                <Chip
-                                  size="small"
-                                  label={`Chunk ${result.chunk_index + 1}`}
-                                  variant="outlined"
-                                  sx={{ height: 16, fontSize: '0.65rem' }}
-                                />
-                              </Box>
-                            </Box>
-                          }
-                        />
-                        
-                        <IconButton
+          <List dense sx={{ overflow: 'auto', maxHeight: maxHeight }}>
+            {searchResults.map((result, index) => (
+              <ListItem key={index} disablePadding>
+                <ListItemButton
+                  onClick={() => onResultClick(result)}
+                  sx={{ alignItems: 'flex-start', py: 1 }}
+                >
+                  <ListItemText
+                    primary={
+                      <Box display="flex" alignItems="center" gap={1} mb={0.5}>
+                        <FileIcon fontSize="small" color="action" />
+                        <Typography variant="body2" sx={{ fontWeight: 500, flex: 1 }}>
+                          {result.file_path.split('/').pop()}
+                        </Typography>
+                        <Chip
                           size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleResultExpansion(index);
-                          }}
-                        >
-                          {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                        </IconButton>
-                      </ListItemButton>
-                    </ListItem>
-
-                    {/* Expanded Content */}
-                    <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                      <Box sx={{ px: 2, pb: 2 }}>
-                        <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.50' }}>
-                          <Typography variant="body2" component="pre" sx={{ 
-                            whiteSpace: 'pre-wrap',
-                            fontFamily: metadata.contains_code ? 'monospace' : 'inherit',
-                            maxHeight: 200,
-                            overflow: 'auto'
-                          }}>
-                            {highlightQuery(result.content, localQuery)}
-                          </Typography>
-                        </Paper>
+                          label={`${(result.score * 100).toFixed(0)}%`}
+                          color={getScoreColor(result.score)}
+                          variant="outlined"
+                          sx={{ height: 20, fontSize: '0.7rem' }}
+                        />
                       </Box>
-                    </Collapse>
-
-                    {index < searchResults.length - 1 && <Divider />}
-                  </React.Fragment>
-                );
-              })}
-            </List>
-          </Box>
+                    }
+                    secondary={
+                      <Typography variant="body2" color="textSecondary">
+                        {formatContent(result.content)}
+                      </Typography>
+                    }
+                  />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
         )}
       </Box>
 

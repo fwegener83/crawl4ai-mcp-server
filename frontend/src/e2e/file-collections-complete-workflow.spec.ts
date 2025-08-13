@@ -13,7 +13,6 @@ test.describe('File Collections - Kompletter Workflow', () => {
     
     // WICHTIG: Wir verwenden die "File Collections" Tab in der Top Navigation
     // NICHT die anderen Bereiche wie Simple Crawl, Deep Crawl, etc.
-    await page.click('[data-testid="file-collections-tab"]');
     await page.waitForSelector('[data-testid="collections-list"]', { timeout: 10000 });
     
     console.log('✅ File Collections Tab geöffnet');

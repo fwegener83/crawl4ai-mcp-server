@@ -11,8 +11,7 @@ test.describe('File Collections E2E', () => {
   });
 
   test('should display File Collections tab and load collections', async ({ page }) => {
-    // Click on File Collections tab
-    await page.click('[data-testid="file-collections-tab"]');
+    // File Collections is now the default page, no tab click needed
     
     // Wait for collections to load
     await page.waitForSelector('[data-testid="collections-list"]', { timeout: 10000 });
@@ -30,7 +29,6 @@ test.describe('File Collections E2E', () => {
 
   test('should be able to create a new collection', async ({ page }) => {
     // Navigate to File Collections tab
-    await page.click('[data-testid="file-collections-tab"]');
     await page.waitForSelector('[data-testid="collections-list"]', { timeout: 10000 });
     
     // Get initial collection count
@@ -87,7 +85,6 @@ test.describe('File Collections E2E', () => {
 
   test('should show collection details when clicked', async ({ page }) => {
     // Navigate to File Collections tab
-    await page.click('[data-testid="file-collections-tab"]');
     await page.waitForSelector('[data-testid="collections-list"]', { timeout: 10000 });
     
     // Check if we have any collections
@@ -124,7 +121,6 @@ test.describe('File Collections E2E', () => {
     });
     
     // Navigate to File Collections tab
-    await page.click('[data-testid="file-collections-tab"]');
     
     // Wait for the error state to be processed
     await page.waitForTimeout(3000);
@@ -155,7 +151,6 @@ test.describe('File Collections E2E', () => {
     });
     
     // Navigate to File Collections tab
-    await page.click('[data-testid="file-collections-tab"]');
     
     // Wait for network requests to complete
     await page.waitForTimeout(2000);
@@ -174,7 +169,6 @@ test.describe('File Collections E2E', () => {
       console.log('Backend is running correctly');
       
       // Navigate to File Collections and verify it works
-      await page.click('[data-testid="file-collections-tab"]');
       await page.waitForSelector('[data-testid="collections-list"]', { timeout: 10000 });
       
       await expect(page.locator('[data-testid="collections-list"]')).toBeVisible();

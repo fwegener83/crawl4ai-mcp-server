@@ -38,6 +38,17 @@ const api = axios.create({
   },
 });
 
+// Backend-to-Frontend Vector Sync Status field mapping
+interface BackendVectorSyncStatus {
+  collection_name: string;
+  is_enabled: boolean;
+  sync_status: string;
+  file_count: number;
+  vector_count: number;
+  last_sync: string | null;
+  error_message: string | null;
+}
+
 // Response interceptor for error handling with RESTful status codes
 api.interceptors.response.use(
   (response) => response,
@@ -92,6 +103,30 @@ api.interceptors.response.use(
  * 3 Basic Crawling Tools + File Collection Management + Vector Sync for File Collections
  */
 export class APIService {
+  
+  /**
+   * Transform backend VectorSyncStatus format to frontend format
+   */
+  private static transformVectorSyncStatus(backendStatus: BackendVectorSyncStatus): VectorSyncStatus {
+    return {
+      collection_name: backendStatus.collection_name,
+      sync_enabled: backendStatus.is_enabled,
+      status: backendStatus.sync_status as VectorSyncStatus['status'], // Map sync_status → status
+      total_files: backendStatus.file_count,     // Map file_count → total_files
+      synced_files: backendStatus.file_count,    // Assume all files are synced for now
+      changed_files_count: 0,                    // Backend doesn't provide this - always 0
+      chunk_count: backendStatus.vector_count,   // Map vector_count → chunk_count
+      total_chunks: backendStatus.vector_count,  // Assume total = current for now
+      last_sync: backendStatus.last_sync,
+      last_sync_attempt: backendStatus.last_sync,
+      last_sync_duration: null,                  // Backend doesn't provide this
+      sync_progress: null,                       // Backend doesn't provide progress - always null
+      sync_health_score: 1.0,                   // Assume healthy if no errors
+      errors: backendStatus.error_message ? [backendStatus.error_message] : [],
+      warnings: []                               // Backend doesn't provide warnings yet
+    };
+  }
+  
   // ===== BASIC CRAWLING TOOLS =====
   
   /**
@@ -357,28 +392,36 @@ export class APIService {
    * Get vector sync status for a specific collection
    */
   static async getCollectionSyncStatus(collectionId: string): Promise<VectorSyncStatus> {
-    const response: AxiosResponse<{ success: boolean; status: VectorSyncStatus; error?: string }> = 
+    const response: AxiosResponse<{ success: boolean; status: any; error?: string }> = 
       await api.get(`/vector-sync/collections/${collectionId}/status`);
     
     if (!response.data.success) {
       throw new Error(response.data.error || 'Failed to get sync status');
     }
     
-    return response.data.status;
+    // Transform backend response format to frontend format
+    return APIService.transformVectorSyncStatus(response.data.status);
   }
 
   /**
    * Get vector sync status for all collections
    */
   static async listCollectionSyncStatuses(): Promise<Record<string, VectorSyncStatus>> {
-    const response: AxiosResponse<{ success: boolean; statuses: Record<string, VectorSyncStatus>; error?: string }> = 
+    const response: AxiosResponse<{ success: boolean; statuses: Record<string, any>; error?: string }> = 
       await api.get('/vector-sync/collections/statuses');
     
     if (!response.data.success) {
       throw new Error(response.data.error || 'Failed to list sync statuses');
     }
     
-    return response.data.statuses;
+    // Transform backend response format to frontend format
+    const transformedStatuses: Record<string, VectorSyncStatus> = {};
+    
+    for (const [collectionName, backendStatus] of Object.entries(response.data.statuses)) {
+      transformedStatuses[collectionName] = APIService.transformVectorSyncStatus(backendStatus);
+    }
+    
+    return transformedStatuses;
   }
 
   /**

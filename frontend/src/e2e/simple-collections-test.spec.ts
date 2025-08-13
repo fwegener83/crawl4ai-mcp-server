@@ -11,7 +11,6 @@ test.describe('Simple Collections Test', () => {
     console.log('App geladen, suche nach File Collections Tab...');
     
     // Click on File Collections tab
-    await page.click('[data-testid="file-collections-tab"]');
     
     // Wait for collections to load
     await page.waitForSelector('[data-testid="collections-list"]', { timeout: 10000 });

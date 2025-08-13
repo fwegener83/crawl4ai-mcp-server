@@ -130,12 +130,47 @@ class VectorSyncAPI:
                     detail=f"Sync is disabled for collection '{collection_name}'"
                 )
             
-            # Check if already syncing
+            # Check if already syncing with stale sync detection
             if sync_status.status == SyncStatus.SYNCING:
-                raise HTTPException(
-                    status_code=409,
-                    detail=f"Collection '{collection_name}' is already syncing"
-                )
+                # DEADLOCK FIX: Check if sync is stale (stuck for too long)
+                from datetime import datetime, timezone, timedelta
+                
+                stale_threshold = timedelta(minutes=10)  # 10 minutes timeout
+                current_time = datetime.now(timezone.utc)
+                
+                # Check if sync attempt is stale - handle missing last_sync_attempt field
+                is_stale = False
+                if sync_status.last_sync_attempt:
+                    # Normal case: check if sync attempt is old
+                    is_stale = (current_time - sync_status.last_sync_attempt) > stale_threshold
+                else:
+                    # Edge case: no last_sync_attempt but status is SYNCING (probably orphaned)
+                    # Check if last_sync is very old or missing
+                    if not sync_status.last_sync:
+                        logger.warning(f"Collection '{collection_name}' has SYNCING status but no sync timestamps - likely orphaned")
+                        is_stale = True
+                    else:
+                        # Use last_sync as fallback timestamp
+                        is_stale = (current_time - sync_status.last_sync) > stale_threshold
+                
+                if is_stale:
+                    logger.warning(f"Detected stale sync for collection '{collection_name}' - "
+                                 f"stuck since {sync_status.last_sync_attempt} - forcing reset to allow new sync")
+                    
+                    # Force reset stale sync status
+                    sync_status.status = SyncStatus.SYNC_ERROR
+                    sync_status.errors.append(f"Stale sync detected and reset at {current_time.isoformat()}")
+                    
+                    # Save the corrected status
+                    self.sync_manager._save_sync_status_persistent(collection_name)
+                    
+                    logger.info(f"Collection '{collection_name}' sync status reset from stale SYNCING to SYNC_ERROR")
+                else:
+                    # Normal case - sync is recent and likely active
+                    raise HTTPException(
+                        status_code=409,
+                        detail=f"Collection '{collection_name}' is already syncing (started: {sync_status.last_sync_attempt})"
+                    )
             
             # Override chunking strategy if specified
             if request.chunking_strategy:

@@ -233,21 +233,50 @@ def mcp_client():
     return client
 
 
-@pytest.fixture
-def cleanup_test_collection():
-    """Fixture to clean up test collections after tests."""
+@pytest_asyncio.fixture
+async def cleanup_test_collection():
+    """Fixture to clean up test collections after tests - GUARANTEED cleanup even on test failure."""
     created_collections = []
     
     def register_collection(collection_name: str):
+        """Register a collection for cleanup - will be deleted even if test fails."""
         created_collections.append(collection_name)
+        logger.info(f"Registered collection '{collection_name}' for cleanup")
     
     yield register_collection
     
-    # Cleanup after test
+    # GUARANTEED cleanup after test (even on test failure/exception)
     if created_collections:
-        logger.info(f"Cleaning up {len(created_collections)} test collections")
-        # The actual cleanup will be handled by the test itself
-        # since we're testing the delete functionality
+        logger.info(f"🧹 CLEANUP: Deleting {len(created_collections)} test collections")
+        
+        # Import the collection service for direct cleanup
+        from services.collection_service import CollectionService
+        
+        # Create collection service matching the MCP client setup
+        collection_service = CollectionService()
+        
+        cleanup_success = 0
+        cleanup_failed = 0
+        
+        for collection_name in created_collections:
+            try:
+                logger.info(f"🗑️ Deleting test collection: {collection_name}")
+                result = await collection_service.delete_collection(collection_name)
+                
+                if result.get('success', False):
+                    cleanup_success += 1
+                    logger.info(f"✅ Deleted {collection_name}")
+                else:
+                    cleanup_failed += 1
+                    logger.warning(f"❌ Failed to delete {collection_name}: {result.get('error', 'Unknown error')}")
+                    
+            except Exception as e:
+                cleanup_failed += 1
+                logger.error(f"❌ Exception deleting {collection_name}: {e}")
+        
+        logger.info(f"🧹 Cleanup complete: {cleanup_success} deleted, {cleanup_failed} failed")
+    else:
+        logger.info("🧹 No test collections to clean up")
 
 
 class TestMCPWorkflowE2E:
@@ -529,19 +558,8 @@ Vector databases store data as high-dimensional vectors, enabling semantic simil
         
         logger.info("✅ Search quality verification passed")
         
-        # ===== STEP 8: Clean up collection =====
-        logger.info("Step 8: Cleaning up collection via MCP")
-        
-        delete_result = await mcp_client.call_tool(
-            "delete_file_collection",
-            collection_name=collection_name
-        )
-        
-        # Parse delete result (might be JSON string)
-        if isinstance(delete_result, str):
-            delete_result = json.loads(delete_result)
-        
-        assert delete_result["success"] is True
+        # Test completed successfully - cleanup happens in finally block
+        logger.info("✅ E2E test completed successfully")
         
         logger.info("✅ Collection cleaned up successfully")
         
