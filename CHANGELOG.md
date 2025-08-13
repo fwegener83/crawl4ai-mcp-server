@@ -5,6 +5,32 @@ All notable changes to the Crawl4AI MCP Server project will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Vector Sync Deadlock Resolution**: Collections no longer get permanently stuck in "syncing" status preventing future operations
+- **Live Change Detection**: File modifications are now immediately detected and reflected in sync status indicators  
+- **Frontend Polling Race Conditions**: Unified recovery mechanism prevents multiple polling functions from conflicting
+- **Vector Sync Status Persistence**: Enhanced status management with automatic stale sync detection and 10-minute timeout recovery
+
+### Changed
+- **Frontend API Migration**: Complete migration to new backend parameter structure with improved error handling
+- **Test Infrastructure**: Enhanced MCP E2E tests with guaranteed collection cleanup preventing database pollution
+- **Vector Sync UI**: Improved status indicators with graceful fallbacks for edge cases (e.g., "Files changed" when count unavailable)
+- **Backend Service Layer**: Migrated vector sync service parameters for better consistency across API and MCP protocols
+
+### Added  
+- **Automatic Test Cleanup**: Pytest fixture automatically removes test collections even on test failures
+- **Stale Sync Detection**: Backend automatically detects and recovers from stuck synchronization operations
+- **Enhanced Error Recovery**: Comprehensive timeout and retry mechanisms for vector sync operations
+- **Real-time Change Monitoring**: Hash-based file change detection for immediate status updates
+
+### Architecture Decisions
+- **Vector Sync Reliability Improvements**: Comprehensive fixes for deadlock issues, change detection, and test infrastructure
+  - Decision details: [ADR-001: Vector Sync Reliability](docs/adr/ADR_2025-01-13_vector-sync-reliability-improvements.md)
+  - Impact: Transformed unreliable Vector Sync system into robust, user-friendly feature
+  - Test cleanup: Removed 22 existing test collections and prevents future accumulation
+
 ## [1.0.0] - 2025-08-10 - Initial Release
 
 ### System Overview
