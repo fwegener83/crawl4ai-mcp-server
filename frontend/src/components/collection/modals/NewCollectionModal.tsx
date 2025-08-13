@@ -63,6 +63,7 @@ export function NewCollectionModal() {
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>
             <TextField
+              inputProps={{ 'data-testid': 'collection-name-input' }}
               label={
                 <span>
                   Name <Typography component="span" color="error">*</Typography>
@@ -78,6 +79,7 @@ export function NewCollectionModal() {
             />
             
             <TextField
+              inputProps={{ 'data-testid': 'collection-description-input' }}
               label="Description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -99,6 +101,7 @@ export function NewCollectionModal() {
             Cancel
           </Button>
           <LoadingButton
+            data-testid="create-collection-submit"
             type="submit"
             loading={isSubmitting}
             disabled={!name.trim()}

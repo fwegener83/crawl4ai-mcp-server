@@ -10,9 +10,51 @@ This is a Crawl4AI MCP (Model Context Protocol) Server with a React frontend for
 - **Frontend**: React/TypeScript application with Vite, TailwindCSS, and comprehensive testing
 - **Architecture**: Dual-mode system supporting both RAG knowledge base and file-based collections
 
+## API Status Code Rules
+
+### HTTP Status Code Matrix for Vector Sync APIs
+
+The vector sync API endpoints follow RESTful conventions with consistent error handling:
+
+| Szenario | Status Code | Response Structure | Anwendung |
+|----------|-------------|-------------------|-----------|
+| **Erfolgreiche Operation** | 200 | `{"success": true, "data": {...}}` | Sync erfolgreich, Status abgerufen, Suche mit Ergebnissen |
+| **Collection nicht gefunden** | 404 | `{"detail": {"error": {"code": "COLLECTION_NOT_FOUND", "message": "...", "details": {...}}}}` | Collection existiert nicht |
+| **Ungültige Parameter** | 400 | `{"detail": {"error": {"code": "MISSING_QUERY\|INVALID_LIMIT", "message": "...", "details": {...}}}}` | Fehlende/ungültige Request-Parameter |
+| **Server/Sync-Fehler** | 500 | `{"detail": {"error": {"code": "SYNC_FAILED", "message": "...", "details": {...}}}}` | Technische Sync-Fehler |
+| **Service nicht verfügbar** | 503 | `{"detail": {"error": {"code": "SERVICE_UNAVAILABLE", "message": "...", "details": {...}}}}` | RAG-Dependencies nicht installiert |
+
+### Vector Sync Endpoints
+
+**Manual Sync Design**: Vector synchronization is exclusively triggered manually - no automatic syncing on file changes.
+
+- `POST /api/vector-sync/collections/{name}/sync` - Collection synchronisieren (manuell)
+- `GET /api/vector-sync/collections/{name}/status` - Sync-Status einer Collection
+- `GET /api/vector-sync/collections/statuses` - Status aller Collections
+- `POST /api/vector-sync/search` - Vektorsuche
+- `DELETE /api/vector-sync/collections/{name}/vectors` - Alle Vektoren einer Collection löschen
+
+### Error Response Format
+
+```json
+{
+  "detail": {
+    "error": {
+      "code": "ERROR_CODE",
+      "message": "Human readable error message",
+      "details": {
+        "field1": "additional context",
+        "field2": "more context"
+      }
+    }
+  }
+}
+```
+
 ## Essential Commands
 
 ### Backend Development
+
 ```bash
 # Start MCP server
 uv run python server.py
@@ -32,6 +74,7 @@ python3 -c "from tools.knowledge_base.dependencies import is_rag_available; prin
 ```
 
 ### Frontend Development
+
 ```bash
 cd frontend
 
@@ -120,9 +163,19 @@ File collections are the primary focus for the frontend interface, providing a f
 - 100% test success rate is required before any commit
 - Test failures indicate real problems that must be fixed, not ignored
 
+### Documentation and Architecture Decisions
+
+- **Architecture Decision Records (ADRs)**: Stored in `docs/adr/` following the template in `.claude/template/ADR_TEMPLATE.md`
+- **Changelog Management**: All changes documented in `CHANGELOG.md` with semantic versioning
+- **Automated Workflows**: Use `.claude/commands/` for structured development:
+  - `execute.md`: Full-stack implementation with automatic ADR creation
+  - `finalize-feature.md`: PR completion with ADR finalization and changelog updates
+- **Documentation Cross-References**: ADRs link to changelog entries, architecture details in `docs/ARCHITECTURE.md`
+
 ## Important Configuration
 
 ### Environment Variables
+
 ```bash
 # RAG Configuration (optional)
 RAG_DB_PATH=./rag_db              # ChromaDB storage path
@@ -136,7 +189,9 @@ CRAWL4AI_TIMEOUT=30
 ```
 
 ### Claude Desktop Integration
+
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
 ```json
 {
   "mcpServers": {
@@ -155,4 +210,12 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 - `frontend/src/`: React application source
 - `tests/`: Python test suite
 - `frontend/src/e2e/`: Playwright E2E tests
-- Collections stored in `./collections/` directory by default
+- `docs/adr/`: Architecture Decision Records
+- `~/.context42/databases/`: SQLite collections database and ChromaDB vectors
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+- Wertvolles wissen in spezifischen Bereichen soll in spezifischen subfolder/claude.md files gespeichert werden. Bspw. sollen wertvolle Dinge zum Thema Tests in tests/claude.md gepeichert werden.

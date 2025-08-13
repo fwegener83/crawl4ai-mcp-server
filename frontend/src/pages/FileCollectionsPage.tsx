@@ -12,6 +12,7 @@ export function FileCollectionsPage() {
   return (
     <CollectionProvider>
       <Box 
+        data-testid="file-collections-page"
         sx={{ 
           height: '100%', 
           display: 'flex', 

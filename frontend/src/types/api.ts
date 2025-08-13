@@ -32,41 +32,42 @@ export interface LinkPreview {
   total_external: number;
 }
 
-// RAG Knowledge Base Types
-export interface StoreResult {
-  success: boolean;
-  message: string;
-  chunks_stored: number;
-  collection_name: string;
-}
-
-export interface SearchResult {
-  content: string;
-  metadata: {
-    source_url?: string;
-    chunk_index: number;
-    score: number;
-  };
-  distance: number;
-}
-
-export interface Collection {
-  name: string;
-  count: number;
-  metadata: Record<string, unknown>;
-}
-
-export interface DeleteResult {
-  success: boolean;
-  message: string;
-  collection_name: string;
-}
+// Note: RAG Knowledge Base types removed - using File Collections with Vector Sync instead
 
 // API Error Response
 export interface APIError {
   error: string;
   message: string;
   details?: unknown;
+}
+
+// Specific Error Classes for HTTP Status Code Handling
+export class CollectionNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'CollectionNotFoundError';
+  }
+}
+
+export class ServiceUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ServiceUnavailableError';
+  }
+}
+
+export class SyncFailedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SyncFailedError';
+  }
+}
+
+export class InvalidFileExtensionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidFileExtensionError';
+  }
 }
 
 // Loading States
@@ -80,7 +81,8 @@ export interface APIResponse<T> {
 
 // File Collection Management Types
 export interface FileCollection {
-  name: string;
+  id: string;          // Unique ID (same as name for uniqueness) 
+  name: string;        // Collection name
   description: string;
   created_at: string;
   file_count: number;

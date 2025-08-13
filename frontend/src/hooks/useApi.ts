@@ -84,12 +84,13 @@ export function useCollections() {
   const listApi = useApi<any[]>();
   const deleteApi = useApi<any>();
   const storeApi = useApi<any>();
-  const searchApi = useApi<any[]>();
+  const createApi = useApi<any>();
+  const searchApi = useApi<any>();
 
   const refreshCollections = useCallback(async () => {
     try {
       const { APIService } = await import('../services/api');
-      const result = await listApi.execute(() => APIService.listCollections());
+      const result = await listApi.execute(() => APIService.listFileCollections());
       setCollections(result || []);
       return result;
     } catch (error) {
@@ -98,17 +99,36 @@ export function useCollections() {
     }
   }, [listApi]);
 
+  const createCollection = useCallback(async (name: string, description?: string) => {
+    const { APIService } = await import('../services/api');
+    const result = await createApi.execute(() => 
+      APIService.createFileCollection({ name, description: description || '' })
+    );
+    await refreshCollections();
+    return result;
+  }, [createApi]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const deleteCollection = useCallback(async (name: string) => {
     const { APIService } = await import('../services/api');
-    await deleteApi.execute(() => APIService.deleteCollection(name));
+    await deleteApi.execute(() => APIService.deleteFileCollection(name));
     await refreshCollections();
   }, [deleteApi]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const storeContent = useCallback(async (content: string, collectionName?: string) => {
     const targetCollection = collectionName || selectedCollection;
     const { APIService } = await import('../services/api');
+    
+    // Generate a filename based on timestamp and first few words of content
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const firstWords = content.substring(0, 50).replace(/[^a-zA-Z0-9\s]/g, '').trim().split(' ').slice(0, 5).join('-');
+    const filename = `${firstWords}-${timestamp}.md`.toLowerCase();
+    
     const result = await storeApi.execute(() => 
-      APIService.storeInCollection(content, targetCollection)
+      APIService.saveFileToCollection(targetCollection, {
+        filename,
+        content,
+        folder: ''
+      })
     );
     await refreshCollections();
     return result;
@@ -120,10 +140,14 @@ export function useCollections() {
     nResults?: number,
     similarityThreshold?: number
   ) => {
-    const targetCollection = collectionName || selectedCollection;
     const { APIService } = await import('../services/api');
     return await searchApi.execute(() =>
-      APIService.searchCollections(query, targetCollection, nResults, similarityThreshold)
+      APIService.searchVectors({
+        query,
+        collection_name: collectionName || selectedCollection,
+        limit: nResults || 10,
+        similarity_threshold: similarityThreshold || 0.7
+      })
     );
   }, [searchApi, selectedCollection]);
 
@@ -134,18 +158,21 @@ export function useCollections() {
     
     // API states
     listLoading: listApi.loading,
+    createLoading: createApi.loading,
     deleteLoading: deleteApi.loading,
     storeLoading: storeApi.loading,
     searchLoading: searchApi.loading,
     
     // Errors
     listError: listApi.error,
+    createError: createApi.error,
     deleteError: deleteApi.error,
     storeError: storeApi.error,
     searchError: searchApi.error,
     
     // Actions
     refreshCollections,
+    createCollection,
     deleteCollection,
     storeContent,
     searchInCollection,

@@ -370,7 +370,7 @@ class TestVectorSyncAPI:
         assert response.success is True
         assert len(response.results) == 1
         assert response.results[0]['content'] == 'Test search result content'
-        assert response.results[0]['score'] == 0.9
+        assert response.results[0]['similarity_score'] == 0.9  # Use similarity_score instead of score
         assert response.query_time > 0
 
 

@@ -166,7 +166,7 @@ function collectionReducer(state: CollectionState, action: CollectionAction): Co
     case 'REMOVE_COLLECTION':
       return {
         ...state,
-        collections: state.collections.filter(c => c.name !== action.payload),
+        collections: state.collections.filter(c => c.id !== action.payload),
         selectedCollection: state.selectedCollection === action.payload ? null : state.selectedCollection,
       };
       

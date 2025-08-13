@@ -91,7 +91,7 @@ export const SyncProgressIndicator: React.FC<SyncProgressIndicatorProps> = ({
       case 'partial_sync':
         return `Partial sync (${warnings.length} warnings)`;
       case 'out_of_sync':
-        return `${changed_files_count} files changed`;
+        return changed_files_count > 0 ? `${changed_files_count} files changed` : 'Files changed';
       case 'never_synced':
         return 'Never synced to vector store';
       default:
@@ -280,7 +280,11 @@ export const SyncProgressIndicator: React.FC<SyncProgressIndicatorProps> = ({
                   <FileIcon fontSize="small" />
                 </ListItemIcon>
                 <ListItemText 
-                  primary={`${total_files} total files, ${changed_files_count || 0} changed`}
+                  primary={
+                    changed_files_count > 0 
+                      ? `${total_files} total files, ${changed_files_count} changed`
+                      : `${total_files} total files${total_files > 0 ? ', some changed' : ''}`
+                  }
                   primaryTypographyProps={{ variant: 'body2' }}
                 />
               </ListItem>

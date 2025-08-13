@@ -3,11 +3,7 @@ import axios from 'axios';
 import type { 
   DeepCrawlConfig, 
   CrawlResult, 
-  LinkPreview, 
-  StoreResult, 
-  SearchResult, 
-  Collection, 
-  DeleteResult 
+  LinkPreview
 } from '../types/api';
 
 // Mock axios
@@ -91,12 +87,8 @@ describe('APIService', () => {
       
       const mockResponse = { 
         data: { 
-          results: { 
-            success: true,
-            pages: mockResults,
-            crawl_summary: {},
-            streaming: false
-          } 
+          success: true,
+          pages: mockResults
         } 
       };
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
@@ -135,93 +127,13 @@ describe('APIService', () => {
     });
   });
 
-  describe('storeInCollection', () => {
-    it('should store content in default collection', async () => {
-      const mockStoreResult: StoreResult = {
-        success: true,
-        collection_name: 'default',
-        documents_added: 1,
-        message: 'Content stored successfully'
-      };
-      
-      mockAxiosInstance.post.mockResolvedValue({ data: mockStoreResult });
-      
-      const { APIService } = await import('./api');
-      const result = await APIService.storeInCollection('Sample content');
-      
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/collections', {
-        crawl_result: 'Sample content',
-        collection_name: 'default'
-      });
-      expect(result).toEqual(mockStoreResult);
-    });
-  });
+  // Removed obsolete storeInCollection test - replaced by File Collections
 
-  describe('searchCollections', () => {
-    it('should search with default parameters', async () => {
-      const mockResults: SearchResult[] = [
-        {
-          id: '1',
-          content: 'Matching content',
-          metadata: { source: 'https://example.com' },
-          score: 0.95
-        }
-      ];
-      
-      mockAxiosInstance.get.mockResolvedValue({ data: { results: mockResults } });
-      
-      const { APIService } = await import('./api');
-      const result = await APIService.searchCollections('test query');
-      
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/search', {
-        params: {
-          query: 'test query',
-          collection_name: 'default',
-          n_results: 5
-        }
-      });
-      expect(result).toEqual(mockResults);
-    });
-  });
+  // Removed obsolete searchCollections test - replaced by Vector Search API
 
-  describe('listCollections', () => {
-    it('should list all collections', async () => {
-      const mockCollections: Collection[] = [
-        {
-          name: 'default',
-          document_count: 10,
-          created_at: '2024-01-01T00:00:00Z',
-          last_updated: '2024-01-02T00:00:00Z'
-        }
-      ];
-      
-      mockAxiosInstance.get.mockResolvedValue({ data: { collections: mockCollections } });
-      
-      const { APIService } = await import('./api');
-      const result = await APIService.listCollections();
-      
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/collections');
-      expect(result).toEqual(mockCollections);
-    });
-  });
+  // Removed obsolete listCollections test - replaced by listFileCollections
 
-  describe('deleteCollection', () => {
-    it('should delete a collection', async () => {
-      const mockDeleteResult: DeleteResult = {
-        success: true,
-        collection_name: 'test-collection',
-        message: 'Collection deleted successfully'
-      };
-      
-      mockAxiosInstance.delete.mockResolvedValue({ data: mockDeleteResult });
-      
-      const { APIService } = await import('./api');
-      const result = await APIService.deleteCollection('test-collection');
-      
-      expect(mockAxiosInstance.delete).toHaveBeenCalledWith('/collections/test-collection');
-      expect(result).toEqual(mockDeleteResult);
-    });
-  });
+  // Removed obsolete deleteCollection test - replaced by deleteFileCollection
 
   describe('healthCheck', () => {
     it('should return true when backend is healthy', async () => {

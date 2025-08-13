@@ -51,10 +51,20 @@ export interface UISettings {
   enableAnimations: boolean;
 }
 
+export interface VectorSyncSettings {
+  enableAutoSync: boolean;
+  syncPollingInterval: number; // in seconds
+  maxSearchResults: number;
+  similarityThreshold: number; // 0.0 - 1.0
+  enableSearchHighlighting: boolean;
+  defaultChunkingStrategy: 'fixed' | 'sentence' | 'paragraph';
+}
+
 export interface AllSettings {
   crawl: CrawlSettings;
   storage: StorageSettings;
   ui: UISettings;
+  vectorSync: VectorSyncSettings;
 }
 
 export interface SettingsPanelProps {
@@ -273,6 +283,79 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       label="Enable animations"
                     />
                   </Box>
+                </Box>
+              </AccordionDetails>
+            </Accordion>
+
+            {/* Vector Sync Settings */}
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography variant="h6">Vector Sync Settings</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Configure vector synchronization and semantic search preferences
+                  </Typography>
+                  
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <TextFieldElement
+                      name="vectorSync.syncPollingInterval"
+                      label="Sync Polling Interval (seconds)"
+                      type="number"
+                      rules={{ min: 5, max: 60 }}
+                      helperText="How often to check sync progress"
+                      sx={{ flex: 1 }}
+                    />
+                    <TextFieldElement
+                      name="vectorSync.maxSearchResults"
+                      label="Max Search Results"
+                      type="number"
+                      rules={{ min: 10, max: 100 }}
+                      helperText="Maximum results per search"
+                      sx={{ flex: 1 }}
+                    />
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <TextFieldElement
+                      name="vectorSync.similarityThreshold"
+                      label="Similarity Threshold"
+                      type="number"
+                      rules={{ min: 0.1, max: 1.0 }}
+                      inputProps={{ step: 0.1 }}
+                      helperText="Minimum similarity for search results (0.1-1.0)"
+                      sx={{ flex: 1 }}
+                    />
+                    <SelectElement
+                      name="vectorSync.defaultChunkingStrategy"
+                      label="Default Chunking Strategy"
+                      options={[
+                        { id: 'paragraph', label: 'Paragraph' },
+                        { id: 'sentence', label: 'Sentence' },
+                        { id: 'fixed', label: 'Fixed Size' }
+                      ]}
+                      helperText="How to split content into chunks"
+                      sx={{ flex: 1 }}
+                    />
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', gap: 4 }}>
+                    <SwitchElement
+                      name="vectorSync.enableAutoSync"
+                      label="Enable automatic synchronization"
+                      disabled
+                    />
+                    <SwitchElement
+                      name="vectorSync.enableSearchHighlighting"
+                      label="Enable search highlighting"
+                      disabled
+                    />
+                  </Box>
+                  
+                  <Typography variant="caption" color="text.secondary">
+                    Note: Auto-sync and search highlighting are currently disabled to maintain simple UI
+                  </Typography>
                 </Box>
               </AccordionDetails>
             </Accordion>

@@ -479,3 +479,38 @@ class FileRepository:
                 "error": str(e),
                 "message": f"Failed to list files in collection '{collection_id}'"
             }
+    
+    def delete_file(self, collection_id: str, filename: str, folder_path: str = "") -> Dict[str, Any]:
+        """Delete a file from a collection."""
+        try:
+            with self.db.get_connection() as conn:
+                # Check if file exists
+                file_exists = conn.execute("""
+                    SELECT id FROM files 
+                    WHERE collection_id = ? AND filename = ? AND folder_path = ?
+                """, (collection_id, filename, folder_path)).fetchone()
+                
+                if not file_exists:
+                    return {
+                        "success": False,
+                        "error": f"File '{filename}' not found in collection '{collection_id}'",
+                        "message": "File does not exist"
+                    }
+                
+                # Delete the file
+                conn.execute("""
+                    DELETE FROM files 
+                    WHERE collection_id = ? AND filename = ? AND folder_path = ?
+                """, (collection_id, filename, folder_path))
+                
+                return {
+                    "success": True,
+                    "message": f"File '{filename}' deleted successfully from collection '{collection_id}'"
+                }
+                
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "message": f"Failed to delete file '{filename}' from collection '{collection_id}'"
+            }

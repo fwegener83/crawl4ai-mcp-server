@@ -24,7 +24,8 @@ from .vector_sync_schemas import (
 from .enhanced_content_processor import EnhancedContentProcessor
 from .vector_store import VectorStore
 from .dependencies import is_rag_available
-from ..collection_manager import CollectionFileManager
+from .database_collection_adapter import DatabaseCollectionAdapter
+from .persistent_sync_manager import PersistentSyncManager
 
 logger = logging.getLogger(__name__)
 
@@ -45,21 +46,24 @@ class IntelligentSyncManager:
     def __init__(
         self,
         vector_store: VectorStore,
-        collection_manager: CollectionFileManager,
-        config: Optional[SyncConfiguration] = None
+        collection_manager: Optional[DatabaseCollectionAdapter] = None,
+        config: Optional[SyncConfiguration] = None,
+        persistent_db_path: str = "vector_sync.db"
     ):
-        """Initialize the sync manager.
+        """Initialize the sync manager with database-only storage.
         
         Args:
             vector_store: Vector storage instance
-            collection_manager: File collection manager
+            collection_manager: Database collection manager (optional, will create if None)
             config: Sync configuration (uses defaults if None)
+            persistent_db_path: Path to persistent database for sync status and files
         """
         if not is_rag_available():
             raise ImportError("RAG dependencies required for vector sync")
         
         self.vector_store = vector_store
-        self.collection_manager = collection_manager
+        # Use provided collection manager or create database-only manager
+        self.collection_manager = collection_manager or DatabaseCollectionAdapter(persistent_db_path)
         self.config = config or SyncConfiguration()
         
         # Content processor for intelligent chunking
@@ -68,10 +72,16 @@ class IntelligentSyncManager:
             enable_ab_testing=False  # Disable A/B testing for production sync
         )
         
-        # State tracking
+        # Persistent storage manager
+        self.persistent_sync = PersistentSyncManager(persistent_db_path)
+        
+        # State tracking - now loads from persistent storage
         self.sync_status: Dict[str, VectorSyncStatus] = {}
         self.file_mappings: Dict[str, Dict[str, FileVectorMapping]] = {}  # collection -> file_path -> mapping
         self.active_jobs: Dict[str, SyncJobSpec] = {}
+        
+        # Load existing sync statuses from database
+        self._load_persistent_state()
         
         # Thread pool for concurrent processing
         self.executor = ThreadPoolExecutor(max_workers=self.config.max_concurrent_files)
@@ -80,9 +90,37 @@ class IntelligentSyncManager:
         self.progress_callbacks: Dict[str, Callable] = {}
         
         logger.info(f"IntelligentSyncManager initialized with config: {self.config.model_dump()}")
+        logger.info(f"Loaded {len(self.sync_status)} sync statuses from persistent storage")
+    
+    def _load_persistent_state(self):
+        """Load sync status and file mappings from persistent storage."""
+        try:
+            # Load sync statuses
+            persistent_statuses = self.persistent_sync.load_all_sync_statuses()
+            self.sync_status.update(persistent_statuses)
+            
+            # Load file mappings for each collection
+            for collection_name in self.sync_status.keys():
+                collection_mappings = self.persistent_sync.load_collection_mappings(collection_name)
+                if collection_mappings:
+                    self.file_mappings[collection_name] = collection_mappings
+            
+            logger.info(f"Loaded {len(self.sync_status)} sync statuses and "
+                       f"{sum(len(mappings) for mappings in self.file_mappings.values())} file mappings from database")
+        except Exception as e:
+            logger.warning(f"Could not load persistent state: {e}")
+            # Continue with empty state - will be populated as needed
+    
+    def _save_sync_status_persistent(self, collection_name: str):
+        """Save sync status to persistent storage."""
+        if collection_name in self.sync_status:
+            status = self.sync_status[collection_name]
+            success = self.persistent_sync.save_sync_status(status)
+            if not success:
+                logger.warning(f"Failed to save persistent sync status for collection {collection_name}")
     
     def get_collection_sync_status(self, collection_name: str) -> VectorSyncStatus:
-        """Get current sync status for a collection."""
+        """Get current sync status for a collection with live change detection."""
         if collection_name not in self.sync_status:
             # Initialize status for new collection
             self.sync_status[collection_name] = VectorSyncStatus(
@@ -90,7 +128,28 @@ class IntelligentSyncManager:
                 sync_enabled=self.config.enabled
             )
         
-        return self.sync_status[collection_name]
+        sync_status = self.sync_status[collection_name]
+        
+        # LIVE CHANGE DETECTION: Check if files have changed since last sync
+        # Only check if collection is currently in_sync (avoid expensive checks for other states)
+        if sync_status.status == SyncStatus.IN_SYNC and sync_status.sync_enabled:
+            try:
+                # Quick change detection without full file processing
+                has_changes = self._quick_change_detection(collection_name)
+                if has_changes:
+                    logger.info(f"Live change detection: Collection '{collection_name}' has file changes - updating status to out_of_sync")
+                    sync_status.status = SyncStatus.OUT_OF_SYNC
+                    # Get actual changed files count from quick detection
+                    changed_count = self._get_changed_files_count(collection_name)
+                    sync_status.changed_files_count = changed_count
+                    
+                    # Save updated status
+                    self._save_sync_status_persistent(collection_name)
+            except Exception as e:
+                logger.warning(f"Live change detection failed for collection '{collection_name}': {e}")
+                # Don't update status on error - keep existing status
+        
+        return sync_status
     
     def list_collection_sync_statuses(self) -> Dict[str, VectorSyncStatus]:
         """Get sync status for all collections."""
@@ -137,6 +196,9 @@ class IntelligentSyncManager:
         sync_status.errors.clear()
         sync_status.warnings.clear()
         
+        # Save initial sync status to persistent storage
+        self._save_sync_status_persistent(collection_name)
+        
         # Create sync result
         result = SyncResult(
             job_id=job_id,
@@ -152,8 +214,7 @@ class IntelligentSyncManager:
                 result.errors.append(f"Collection '{collection_name}' does not exist")
                 return result
             
-            # Get collection info and files
-            collection_info = self.collection_manager.get_collection_info(collection_name)
+            # Get collection files info
             files_info = self._get_collection_files(collection_name)
             
             if not files_info:
@@ -231,6 +292,9 @@ class IntelligentSyncManager:
             else:
                 sync_status.status = SyncStatus.IN_SYNC
             
+            # Save final sync status to persistent storage
+            self._save_sync_status_persistent(collection_name)
+            
             result.success = sync_status.status in [SyncStatus.IN_SYNC, SyncStatus.PARTIAL_SYNC]
             
             if result.success:
@@ -246,9 +310,27 @@ class IntelligentSyncManager:
             sync_status.status = SyncStatus.SYNC_ERROR
             sync_status.errors.append(str(e))
             
+            # Save error status to persistent storage
+            self._save_sync_status_persistent(collection_name)
+            
         finally:
             # Clean up progress tracking
             sync_status.sync_progress = None
+            
+            # CRITICAL FIX: Reset status if still SYNCING (prevents orphaned "syncing" collections)
+            if sync_status.status == SyncStatus.SYNCING:
+                # If we reach finally with SYNCING status, something went wrong
+                if result.success:
+                    sync_status.status = SyncStatus.IN_SYNC
+                else:
+                    sync_status.status = SyncStatus.SYNC_ERROR
+                
+                logger.warning(f"Sync status was still SYNCING in finally block for collection '{collection_name}', "
+                             f"reset to {sync_status.status}")
+                
+                # Save corrected status to persistent storage
+                self._save_sync_status_persistent(collection_name)
+            
             if progress_callback:
                 progress_callback(1.0, "Sync completed" if result.success else "Sync failed")
         
@@ -479,8 +561,13 @@ class IntelligentSyncManager:
                 
                 metadata_dict = serialize_for_vector_db(metadata_dict)
                 
+                # CRITICAL FIX: Make chunk IDs collection-specific to prevent ChromaDB overwrites
+                # ChromaDB uses IDs as unique keys - same ID overwrites existing data
+                original_id = chunk['id']
+                collection_specific_id = f"{collection_name}_{original_id}"
+                
                 vector_chunks.append({
-                    'id': chunk['id'],
+                    'id': collection_specific_id,
                     'content': chunk['content'],
                     'metadata': metadata_dict
                 })
@@ -517,10 +604,15 @@ class IntelligentSyncManager:
                 chunking_strategy=self.config.chunking_strategy
             )
             
-            # Store mapping
+            # Store mapping in RAM and persistent storage
             if collection_name not in self.file_mappings:
                 self.file_mappings[collection_name] = {}
             self.file_mappings[collection_name][file_path] = file_mapping
+            
+            # Save file mapping to persistent storage
+            success = self.persistent_sync.save_file_mapping(file_mapping)
+            if not success:
+                logger.warning(f"Failed to save persistent file mapping for {file_path}")
             
             logger.debug(f"Processed file {file_path}: {len(vector_chunks)} chunks")
             
@@ -553,10 +645,20 @@ class IntelligentSyncManager:
     async def _count_collection_chunks(self, collection_name: str) -> int:
         """Count total chunks for a collection in vector store."""
         try:
-            # Query vector store for collection chunks
-            # This is a simplified implementation - actual implementation would depend on vector store capabilities
+            # First try to get from in-memory mappings
             collection_mappings = self.file_mappings.get(collection_name, {})
-            return sum(mapping.chunk_count for mapping in collection_mappings.values())
+            if collection_mappings:
+                return sum(mapping.chunk_count for mapping in collection_mappings.values())
+            
+            # Fallback: load from persistent storage
+            persistent_mappings = self.persistent_sync.load_collection_mappings(collection_name)
+            if persistent_mappings:
+                # Update in-memory cache
+                self.file_mappings[collection_name] = persistent_mappings
+                return sum(mapping.chunk_count for mapping in persistent_mappings.values())
+            
+            # No mappings found
+            return 0
         except Exception as e:
             logger.error(f"Error counting chunks for collection {collection_name}: {str(e)}")
             return 0
@@ -650,6 +752,145 @@ class IntelligentSyncManager:
             stats['avg_sync_health'] = sum(health_scores) / len(health_scores)
         
         return stats
+    
+    def _quick_change_detection(self, collection_name: str) -> bool:
+        """
+        Quick change detection without full file processing.
+        
+        Compares current file hashes with stored file mappings to detect changes.
+        Returns True if any files have changed since last sync.
+        """
+        try:
+            # Get current files in collection
+            files_info = self._get_collection_files(collection_name)
+            if not files_info:
+                return False  # No files, no changes
+            
+            # Get existing file mappings from last sync
+            collection_mappings = self.file_mappings.get(collection_name, {})
+            
+            # If no previous mappings, check persistent storage
+            if not collection_mappings:
+                collection_mappings = self.persistent_sync.load_collection_mappings(collection_name)
+                if collection_mappings:
+                    self.file_mappings[collection_name] = collection_mappings
+                else:
+                    # No previous sync mappings found - assume changes exist
+                    return len(files_info) > 0
+            
+            # Quick check: compare file count first
+            if len(files_info) != len(collection_mappings):
+                logger.debug(f"File count changed: {len(files_info)} current vs {len(collection_mappings)} mapped")
+                return True
+            
+            # Check each file for changes
+            changed_count = 0
+            for file_info in files_info:
+                file_path = file_info.get('path', '')
+                if not file_path:
+                    continue
+                
+                # Get existing mapping
+                existing_mapping = collection_mappings.get(file_path)
+                if not existing_mapping:
+                    logger.debug(f"New file detected: {file_path}")
+                    changed_count += 1
+                    continue
+                
+                try:
+                    # Read current file content and calculate hash
+                    read_result = self.collection_manager.read_file(
+                        collection_name, file_info['name'], file_info.get('folder', '')
+                    )
+                    
+                    if not read_result.get('success'):
+                        logger.warning(f"Could not read file for change detection: {file_path}")
+                        continue
+                    
+                    content = read_result.get('content', '')
+                    if not content:
+                        continue
+                    
+                    current_hash = calculate_file_hash(content)
+                    
+                    # Compare with stored hash
+                    if existing_mapping.file_hash != current_hash:
+                        logger.debug(f"File content changed: {file_path} (hash: {existing_mapping.file_hash[:8]} → {current_hash[:8]})")
+                        changed_count += 1
+                        
+                        # Stop early if we find changes (performance optimization)
+                        if changed_count > 0:
+                            break
+                            
+                except Exception as e:
+                    logger.warning(f"Error checking file {file_path} for changes: {e}")
+                    continue
+            
+            has_changes = changed_count > 0
+            logger.debug(f"Quick change detection for '{collection_name}': {changed_count} changed files, has_changes={has_changes}")
+            return has_changes
+            
+        except Exception as e:
+            logger.error(f"Quick change detection failed for collection '{collection_name}': {e}")
+            return False  # Assume no changes on error (conservative approach)
+    
+    def _get_changed_files_count(self, collection_name: str) -> int:
+        """
+        Count the number of changed files in a collection.
+        Similar to _quick_change_detection but returns the actual count.
+        """
+        try:
+            files_info = self._get_collection_files(collection_name)
+            if not files_info:
+                return 0
+            
+            # Get existing file mappings
+            collection_mappings = self.file_mappings.get(collection_name, {})
+            if not collection_mappings:
+                collection_mappings = self.persistent_sync.load_collection_mappings(collection_name)
+                if collection_mappings:
+                    self.file_mappings[collection_name] = collection_mappings
+                else:
+                    # No previous mappings = all files are "changed" (new)
+                    return len(files_info)
+            
+            changed_count = 0
+            
+            # Check each file
+            for file_info in files_info:
+                file_path = file_info.get('path', '')
+                if not file_path:
+                    continue
+                
+                existing_mapping = collection_mappings.get(file_path)
+                if not existing_mapping:
+                    # New file
+                    changed_count += 1
+                    continue
+                
+                try:
+                    # Read and check hash
+                    read_result = self.collection_manager.read_file(
+                        collection_name, file_info['name'], file_info.get('folder', '')
+                    )
+                    
+                    if read_result.get('success'):
+                        content = read_result.get('content', '')
+                        if content:
+                            current_hash = calculate_file_hash(content)
+                            if existing_mapping.file_hash != current_hash:
+                                changed_count += 1
+                                
+                except Exception as e:
+                    logger.warning(f"Error checking file {file_path} for change count: {e}")
+                    continue
+            
+            logger.debug(f"Changed files count for '{collection_name}': {changed_count}")
+            return changed_count
+            
+        except Exception as e:
+            logger.error(f"Failed to count changed files for '{collection_name}': {e}")
+            return 0
     
     def shutdown(self):
         """Shutdown the sync manager and clean up resources."""

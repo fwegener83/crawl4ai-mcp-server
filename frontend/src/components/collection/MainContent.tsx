@@ -1,7 +1,6 @@
 import React from 'react';
 import { useCollectionOperations } from '../../hooks/useCollectionOperations';
 import { useVectorSync } from '../../hooks/useVectorSync';
-import type { SyncCollectionRequest } from '../../types/api';
 import { CollectionSyncButton } from './CollectionSyncButton';
 import { VectorSyncIndicator } from './VectorSyncIndicator';
 import { VectorSearchPanel } from './VectorSearchPanel';
@@ -24,7 +23,6 @@ export function MainContent({ className = '' }: MainContentProps) {
   const { 
     getSyncStatus, 
     syncCollection, 
-    deleteVectors,
     searchVectors,
     searchResults: vectorSearchResults,
     searchQuery: vectorSearchQuery,
@@ -35,9 +33,9 @@ export function MainContent({ className = '' }: MainContentProps) {
   const [searchPanelOpen, setSearchPanelOpen] = React.useState(false);
 
   // Vector search handlers
-  const handleVectorSearch = async (query: string, collectionName?: string) => {
+  const handleVectorSearch = async (query: string, collectionId?: string) => {
     if (state.selectedCollection) {
-      await searchVectors(query, collectionName || state.selectedCollection);
+      await searchVectors(query, collectionId || state.selectedCollection);
     }
   };
 
@@ -47,17 +45,12 @@ export function MainContent({ className = '' }: MainContentProps) {
   };
 
   // Vector sync handlers - bind collection name
-  const handleSyncCollection = async (request: SyncCollectionRequest) => {
+  const handleSyncCollection = async () => {
     if (state.selectedCollection) {
-      await syncCollection(state.selectedCollection, request);
+      await syncCollection(state.selectedCollection);
     }
   };
 
-  const handleDeleteVectors = async () => {
-    if (state.selectedCollection) {
-      await deleteVectors(state.selectedCollection);
-    }
-  };
 
   const toggleSearchPanel = () => {
     setSearchPanelOpen(!searchPanelOpen);
@@ -119,10 +112,11 @@ export function MainContent({ className = '' }: MainContentProps) {
   }
 
   // Find the selected collection
-  const selectedCollection = state.collections.find(c => c.name === state.selectedCollection);
+  const selectedCollection = state.collections.find(c => c.id === state.selectedCollection);
 
   return (
     <Box 
+      data-testid="collection-details"
       sx={{ 
         flex: 1, 
         display: 'flex', 
@@ -161,20 +155,22 @@ export function MainContent({ className = '' }: MainContentProps) {
               {state.selectedCollection && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <VectorSyncIndicator
-                    collectionName={state.selectedCollection}
+                    data-testid="vector-sync-indicator"
+                    collectionId={state.selectedCollection}
                     syncStatus={getSyncStatus(state.selectedCollection)}
                     showText={true}
                     size="medium"
                   />
                   <CollectionSyncButton
-                    collectionName={state.selectedCollection}
+                    data-testid="vector-sync-btn"
+                    collectionId={state.selectedCollection}
                     syncStatus={getSyncStatus(state.selectedCollection)}
                     onSync={handleSyncCollection}
-                    onDeleteVectors={handleDeleteVectors}
                     size="medium"
                   />
                 </Box>
               )}
+
               
               <IconButton
                 onClick={toggleSearchPanel}
@@ -192,6 +188,7 @@ export function MainContent({ className = '' }: MainContentProps) {
               </IconButton>
               
               <Button
+                data-testid="add-page-btn"
                 onClick={() => openModal('addPage')}
                 variant="contained"
                 color="success"
@@ -270,7 +267,7 @@ export function MainContent({ className = '' }: MainContentProps) {
             </IconButton>
 
             <VectorSearchPanel
-              collectionName={state.selectedCollection}
+              collectionId={state.selectedCollection}
               collectionSyncStatus={getSyncStatus(state.selectedCollection)}
               searchResults={vectorSearchResults}
               searchQuery={vectorSearchQuery}

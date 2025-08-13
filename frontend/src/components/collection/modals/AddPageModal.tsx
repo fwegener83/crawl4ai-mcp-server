@@ -98,6 +98,7 @@ export function AddPageModal() {
               fullWidth
               error={url.trim() !== '' && !isValidUrl(url.trim())}
               helperText={url.trim() && !isValidUrl(url.trim()) ? 'Please enter a valid URL' : ''}
+              inputProps={{ 'data-testid': 'add-page-url-input' }}
             />
             
             <TextField
@@ -130,6 +131,7 @@ export function AddPageModal() {
             Cancel
           </Button>
           <LoadingButton
+            data-testid="add-page-submit"
             type="submit"
             loading={isSubmitting}
             disabled={!isFormValid}

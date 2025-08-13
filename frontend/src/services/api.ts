@@ -3,10 +3,6 @@ import type {
   CrawlResult,
   DeepCrawlConfig,
   LinkPreview,
-  StoreResult,
-  SearchResult,
-  Collection,
-  DeleteResult,
   APIError,
   FileCollection,
   FileMetadata,
@@ -16,14 +12,21 @@ import type {
   CrawlToCollectionRequest,
   FileCollectionResponse,
   CrawlToCollectionResponse,
-  FileCollectionListResponse,
   FileContentResponse,
-  // Vector Sync types
+  // Vector Sync types (for File Collections)
   VectorSyncStatus,
   VectorSearchRequest,
   VectorSearchResponse,
   SyncCollectionRequest,
   SyncCollectionResponse,
+} from '../types/api';
+
+// Import Error Classes as values, not types
+import {
+  CollectionNotFoundError,
+  ServiceUnavailableError,
+  SyncFailedError,
+  InvalidFileExtensionError,
 } from '../types/api';
 
 // Configure axios instance with base URL for backend API
@@ -35,24 +38,95 @@ const api = axios.create({
   },
 });
 
-// Response interceptor for error handling
+// Backend-to-Frontend Vector Sync Status field mapping
+interface BackendVectorSyncStatus {
+  collection_name: string;
+  is_enabled: boolean;
+  sync_status: string;
+  file_count: number;
+  vector_count: number;
+  last_sync: string | null;
+  error_message: string | null;
+}
+
+// Response interceptor for error handling with RESTful status codes
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    const status = error.response?.status;
+    let errorMessage = 'An unexpected error occurred';
+    
+    if (error.response?.data?.detail?.error) {
+      // New structured error format: { detail: { error: { code, message, details } } }
+      const errorData = error.response.data.detail.error;
+      errorMessage = errorData.message || errorMessage;
+      
+      // Throw specific error classes based on error codes and status
+      switch (status) {
+        case 404:
+          if (errorData.code === 'COLLECTION_NOT_FOUND') {
+            return Promise.reject(new CollectionNotFoundError(errorMessage));
+          }
+          break;
+        case 503:
+          if (errorData.code === 'SERVICE_UNAVAILABLE') {
+            return Promise.reject(new ServiceUnavailableError(errorMessage));
+          }
+          break;
+        case 500:
+          if (errorData.code === 'SYNC_FAILED') {
+            return Promise.reject(new SyncFailedError(errorMessage));
+          }
+          if (errorMessage.includes('extension not allowed') || errorMessage.includes('Invalid file extension')) {
+            return Promise.reject(new InvalidFileExtensionError(errorMessage));
+          }
+          break;
+      }
+    } else {
+      // Fallback to legacy format or basic error
+      errorMessage = error.response?.data?.message || error.message || errorMessage;
+    }
+    
+    // Generic APIError for other cases
     const apiError: APIError = {
-      error: error.response?.status || 'NetworkError',
-      message: error.response?.data?.message || error.message || 'An unexpected error occurred',
-      details: error.response?.data?.details,
+      error: error.response?.data?.detail?.error?.code || status?.toString() || 'NetworkError',
+      message: errorMessage,
+      details: error.response?.data?.detail?.error?.details || error.response?.data?.details,
     };
+    
     return Promise.reject(apiError);
   }
 );
 
 /**
- * API Service for Extended MCP Tools Integration
- * 3 Basic Crawling Tools + 4 RAG Knowledge Base Tools + File Collection Management
+ * API Service for Unified Server Integration
+ * 3 Basic Crawling Tools + File Collection Management + Vector Sync for File Collections
  */
 export class APIService {
+  
+  /**
+   * Transform backend VectorSyncStatus format to frontend format
+   */
+  private static transformVectorSyncStatus(backendStatus: BackendVectorSyncStatus): VectorSyncStatus {
+    return {
+      collection_name: backendStatus.collection_name,
+      sync_enabled: backendStatus.is_enabled,
+      status: backendStatus.sync_status as VectorSyncStatus['status'], // Map sync_status → status
+      total_files: backendStatus.file_count,     // Map file_count → total_files
+      synced_files: backendStatus.file_count,    // Assume all files are synced for now
+      changed_files_count: 0,                    // Backend doesn't provide this - always 0
+      chunk_count: backendStatus.vector_count,   // Map vector_count → chunk_count
+      total_chunks: backendStatus.vector_count,  // Assume total = current for now
+      last_sync: backendStatus.last_sync,
+      last_sync_attempt: backendStatus.last_sync,
+      last_sync_duration: null,                  // Backend doesn't provide this
+      sync_progress: null,                       // Backend doesn't provide progress - always null
+      sync_health_score: 1.0,                   // Assume healthy if no errors
+      errors: backendStatus.error_message ? [backendStatus.error_message] : [],
+      warnings: []                               // Backend doesn't provide warnings yet
+    };
+  }
+  
   // ===== BASIC CRAWLING TOOLS =====
   
   /**
@@ -69,16 +143,16 @@ export class APIService {
    * Perform deep domain crawling with advanced configuration
    */
   static async deepCrawlDomain(config: DeepCrawlConfig): Promise<CrawlResult[]> {
-    const response: AxiosResponse<{ results: { success: boolean; pages: CrawlResult[]; crawl_summary: unknown; streaming: boolean; error?: string } }> = await api.post('/deep-crawl', config);
+    const response: AxiosResponse<{ success: boolean; pages: CrawlResult[]; error?: string }> = await api.post('/deep-crawl', config);
     
     // Check if the backend returned an error
-    if (!response.data.results.success) {
-      const errorMsg = response.data.results.error || 'Deep crawl failed';
+    if (!response.data.success) {
+      const errorMsg = response.data.error || 'Deep crawl failed';
       console.error('Backend deep crawl error:', errorMsg);
       throw new Error(`Deep crawl failed: ${errorMsg}`);
     }
     
-    return response.data.results.pages || [];
+    return response.data.pages || [];
   }
 
   /**
@@ -95,62 +169,7 @@ export class APIService {
     return response.data;
   }
 
-  // ===== RAG KNOWLEDGE BASE TOOLS =====
-
-  /**
-   * Store crawled content in RAG knowledge base
-   */
-  static async storeInCollection(
-    content: string,
-    collection_name: string = 'default'
-  ): Promise<StoreResult> {
-    const response: AxiosResponse<StoreResult> = await api.post('/collections', {
-      crawl_result: content,
-      collection_name,
-    });
-    return response.data;
-  }
-
-  /**
-   * Search across collections with semantic search
-   */
-  static async searchCollections(
-    query: string,
-    collection_name: string = 'default',
-    n_results: number = 5,
-    similarity_threshold?: number
-  ): Promise<SearchResult[]> {
-    const params: Record<string, unknown> = {
-      query,
-      collection_name,
-      n_results,
-    };
-    
-    if (similarity_threshold !== undefined) {
-      params.similarity_threshold = similarity_threshold;
-    }
-
-    const response: AxiosResponse<{ results: SearchResult[] }> = await api.get('/search', {
-      params,
-    });
-    return response.data.results;
-  }
-
-  /**
-   * List all available collections with statistics
-   */
-  static async listCollections(): Promise<Collection[]> {
-    const response: AxiosResponse<{ collections: Collection[] }> = await api.get('/collections');
-    return response.data.collections;
-  }
-
-  /**
-   * Delete a collection from knowledge base
-   */
-  static async deleteCollection(collection_name: string): Promise<DeleteResult> {
-    const response: AxiosResponse<DeleteResult> = await api.delete(`/collections/${collection_name}`);
-    return response.data;
-  }
+  // Note: RAG Knowledge Base tools removed - replaced by File Collections with Vector Sync
 
   // ===== UTILITY METHODS =====
 
@@ -184,26 +203,40 @@ export class APIService {
    * Create a new file collection
    */
   static async createFileCollection(request: CreateCollectionRequest): Promise<FileCollection> {
-    const response: AxiosResponse<FileCollectionResponse<FileCollection>> = await api.post('/file-collections', request);
+    const response: AxiosResponse<any> = await api.post('/file-collections', request);
     
     if (!response.data.success) {
       throw new Error(response.data.error || 'Failed to create collection');
     }
     
-    return response.data.data!;
+    // Backend returns collection directly in response.data.collection, not nested in data.data
+    const collection = response.data.collection || response.data.data;
+    
+    // Ensure collection has an id field (same as name for uniqueness)
+    return {
+      ...collection,
+      id: collection.id || collection.name, // Use existing id or fallback to name
+    };
   }
 
   /**
    * List all file collections
    */
   static async listFileCollections(): Promise<FileCollection[]> {
-    const response: AxiosResponse<FileCollectionResponse<FileCollectionListResponse>> = await api.get('/file-collections');
+    const response: AxiosResponse<any> = await api.get('/file-collections');
     
     if (!response.data.success) {
       throw new Error(response.data.error || 'Failed to list collections');
     }
     
-    return response.data.data?.collections || [];
+    // Backend returns collections directly in response.data.collections, not nested in data.data
+    const collections = response.data.collections || [];
+    
+    // Ensure each collection has an id field (same as name for uniqueness)
+    return collections.map((collection: any) => ({
+      ...collection,
+      id: collection.id || collection.name, // Use existing id or fallback to name
+    }));
   }
 
   /**
@@ -216,7 +249,13 @@ export class APIService {
       throw new Error(response.data.error || 'Failed to get collection info');
     }
     
-    return response.data.data!;
+    const collection = response.data.data!;
+    
+    // Ensure collection has an id field (same as name for uniqueness)
+    return {
+      ...collection,
+      id: collection.id || collection.name, // Use existing id or fallback to name
+    };
   }
 
   /**
@@ -352,40 +391,48 @@ export class APIService {
   /**
    * Get vector sync status for a specific collection
    */
-  static async getCollectionSyncStatus(collectionName: string): Promise<VectorSyncStatus> {
-    const response: AxiosResponse<{ success: boolean; status: VectorSyncStatus; error?: string }> = 
-      await api.get(`/vector-sync/collections/${collectionName}/status`);
+  static async getCollectionSyncStatus(collectionId: string): Promise<VectorSyncStatus> {
+    const response: AxiosResponse<{ success: boolean; status: any; error?: string }> = 
+      await api.get(`/vector-sync/collections/${collectionId}/status`);
     
     if (!response.data.success) {
       throw new Error(response.data.error || 'Failed to get sync status');
     }
     
-    return response.data.status;
+    // Transform backend response format to frontend format
+    return APIService.transformVectorSyncStatus(response.data.status);
   }
 
   /**
    * Get vector sync status for all collections
    */
   static async listCollectionSyncStatuses(): Promise<Record<string, VectorSyncStatus>> {
-    const response: AxiosResponse<{ success: boolean; statuses: Record<string, VectorSyncStatus>; error?: string }> = 
+    const response: AxiosResponse<{ success: boolean; statuses: Record<string, any>; error?: string }> = 
       await api.get('/vector-sync/collections/statuses');
     
     if (!response.data.success) {
       throw new Error(response.data.error || 'Failed to list sync statuses');
     }
     
-    return response.data.statuses;
+    // Transform backend response format to frontend format
+    const transformedStatuses: Record<string, VectorSyncStatus> = {};
+    
+    for (const [collectionName, backendStatus] of Object.entries(response.data.statuses)) {
+      transformedStatuses[collectionName] = APIService.transformVectorSyncStatus(backendStatus);
+    }
+    
+    return transformedStatuses;
   }
 
   /**
    * Sync a collection to vector store
    */
   static async syncCollection(
-    collectionName: string, 
+    collectionId: string, 
     request: SyncCollectionRequest = {}
   ): Promise<SyncCollectionResponse> {
     const response: AxiosResponse<SyncCollectionResponse> = await api.post(
-      `/vector-sync/collections/${collectionName}/sync`,
+      `/vector-sync/collections/${collectionId}/sync`,
       request
     );
     
@@ -396,38 +443,13 @@ export class APIService {
     return response.data;
   }
 
-  /**
-   * Enable vector sync for a collection
-   */
-  static async enableCollectionSync(collectionName: string): Promise<void> {
-    const response: AxiosResponse<{ success: boolean; error?: string }> = await api.post(
-      `/vector-sync/collections/${collectionName}/enable`
-    );
-    
-    if (!response.data.success) {
-      throw new Error(response.data.error || 'Failed to enable sync');
-    }
-  }
-
-  /**
-   * Disable vector sync for a collection
-   */
-  static async disableCollectionSync(collectionName: string): Promise<void> {
-    const response: AxiosResponse<{ success: boolean; error?: string }> = await api.post(
-      `/vector-sync/collections/${collectionName}/disable`
-    );
-    
-    if (!response.data.success) {
-      throw new Error(response.data.error || 'Failed to disable sync');
-    }
-  }
 
   /**
    * Delete all vectors for a collection
    */
-  static async deleteCollectionVectors(collectionName: string): Promise<void> {
+  static async deleteCollectionVectors(collectionId: string): Promise<void> {
     const response: AxiosResponse<{ success: boolean; error?: string }> = await api.delete(
-      `/vector-sync/collections/${collectionName}/vectors`
+      `/vector-sync/collections/${collectionId}/vectors`
     );
     
     if (!response.data.success) {

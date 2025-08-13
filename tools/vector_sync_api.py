@@ -18,7 +18,8 @@ from .knowledge_base.vector_sync_schemas import (
     VectorSyncStatus, SyncConfiguration, SyncResult, SyncStatus
 )
 from .knowledge_base.vector_store import VectorStore
-from .collection_manager import CollectionFileManager
+# CollectionFileManager removed - using database-only DatabaseCollectionAdapter
+from .knowledge_base.database_collection_adapter import DatabaseCollectionAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +79,7 @@ class VectorSyncAPI:
         self,
         sync_manager: IntelligentSyncManager,
         vector_store: VectorStore,
-        collection_manager: CollectionFileManager
+        collection_manager: DatabaseCollectionAdapter
     ):
         """Initialize the API handler.
         
@@ -129,12 +130,47 @@ class VectorSyncAPI:
                     detail=f"Sync is disabled for collection '{collection_name}'"
                 )
             
-            # Check if already syncing
+            # Check if already syncing with stale sync detection
             if sync_status.status == SyncStatus.SYNCING:
-                raise HTTPException(
-                    status_code=409,
-                    detail=f"Collection '{collection_name}' is already syncing"
-                )
+                # DEADLOCK FIX: Check if sync is stale (stuck for too long)
+                from datetime import datetime, timezone, timedelta
+                
+                stale_threshold = timedelta(minutes=10)  # 10 minutes timeout
+                current_time = datetime.now(timezone.utc)
+                
+                # Check if sync attempt is stale - handle missing last_sync_attempt field
+                is_stale = False
+                if sync_status.last_sync_attempt:
+                    # Normal case: check if sync attempt is old
+                    is_stale = (current_time - sync_status.last_sync_attempt) > stale_threshold
+                else:
+                    # Edge case: no last_sync_attempt but status is SYNCING (probably orphaned)
+                    # Check if last_sync is very old or missing
+                    if not sync_status.last_sync:
+                        logger.warning(f"Collection '{collection_name}' has SYNCING status but no sync timestamps - likely orphaned")
+                        is_stale = True
+                    else:
+                        # Use last_sync as fallback timestamp
+                        is_stale = (current_time - sync_status.last_sync) > stale_threshold
+                
+                if is_stale:
+                    logger.warning(f"Detected stale sync for collection '{collection_name}' - "
+                                 f"stuck since {sync_status.last_sync_attempt} - forcing reset to allow new sync")
+                    
+                    # Force reset stale sync status
+                    sync_status.status = SyncStatus.SYNC_ERROR
+                    sync_status.errors.append(f"Stale sync detected and reset at {current_time.isoformat()}")
+                    
+                    # Save the corrected status
+                    self.sync_manager._save_sync_status_persistent(collection_name)
+                    
+                    logger.info(f"Collection '{collection_name}' sync status reset from stale SYNCING to SYNC_ERROR")
+                else:
+                    # Normal case - sync is recent and likely active
+                    raise HTTPException(
+                        status_code=409,
+                        detail=f"Collection '{collection_name}' is already syncing (started: {sync_status.last_sync_attempt})"
+                    )
             
             # Override chunking strategy if specified
             if request.chunking_strategy:
@@ -380,15 +416,26 @@ class VectorSyncAPI:
         Returns:
             Search results with file location mapping
         """
+        # Existenzprüfung für Collection
+        if request.collection_name and not self._collection_exists(request.collection_name):
+            raise HTTPException(
+                status_code=404,
+                detail=f"Collection '{request.collection_name}' not found"
+            )
         try:
             import time
             start_time = time.time()
             
-            # Perform vector search
+            # Perform vector search with collection filtering
+            filter_dict = None
+            if request.collection_name:
+                filter_dict = {'collection_name': request.collection_name}
+                
             results = self.vector_store.similarity_search(
                 query=request.query,
                 k=request.limit,
-                score_threshold=request.similarity_threshold
+                score_threshold=request.similarity_threshold,
+                filter=filter_dict
             )
             
             query_time = time.time() - start_time
@@ -399,13 +446,9 @@ class VectorSyncAPI:
                 # Extract metadata
                 metadata = result.get('metadata', {})
                 
-                # Filter by collection if specified
-                if request.collection_name and metadata.get('collection_name') != request.collection_name:
-                    continue
-                
                 enhanced_result = {
                     'content': result.get('content', ''),
-                    'score': result.get('score', 0.0),
+                    'similarity_score': result.get('score', 0.0),  # Changed from 'score' to 'similarity_score'
                     'chunk_id': result.get('id', ''),
                     'collection_name': metadata.get('collection_name', ''),
                     'source_file': metadata.get('source_file', ''),
@@ -416,6 +459,7 @@ class VectorSyncAPI:
                     'programming_language': metadata.get('programming_language'),
                     'word_count': metadata.get('word_count', 0),
                     'created_at': metadata.get('created_at'),
+                    'metadata': metadata,  # Add full metadata as expected by tests
                     'file_location': {
                         'collection': metadata.get('collection_name', ''),
                         'file_path': metadata.get('source_file', ''),

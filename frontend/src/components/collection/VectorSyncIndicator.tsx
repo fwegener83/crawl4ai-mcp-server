@@ -11,19 +11,21 @@ import {
 import type { VectorSyncStatus } from '../../types/api';
 
 interface VectorSyncIndicatorProps {
-  collectionName: string;
+  collectionId: string;
   syncStatus?: VectorSyncStatus;
   size?: 'small' | 'medium' | 'large';
   showText?: boolean;
   className?: string;
+  'data-testid'?: string;
 }
 
 export const VectorSyncIndicator: React.FC<VectorSyncIndicatorProps> = ({
-  collectionName,
+  collectionId,
   syncStatus,
   size = 'medium',
   showText = false,
-  className = ''
+  className = '',
+  'data-testid': dataTestId
 }) => {
   // Get status display information
   const getStatusInfo = () => {
@@ -44,23 +46,25 @@ export const VectorSyncIndicator: React.FC<VectorSyncIndicatorProps> = ({
           icon: <CloudUploadIcon />,
           color: 'info' as const,
           text: 'Never synced',
-          tooltipTitle: `Collection "${collectionName}" has never been synced to vector store`
+          tooltipTitle: `Collection "${collectionId}" has never been synced to vector store`
         };
 
       case 'in_sync':
         return {
-          icon: <CheckCircleIcon />,
+          icon: <CheckCircleIcon data-testid={dataTestId ? `${dataTestId}-success` : 'sync-success-indicator'} />,
           color: 'success' as const,
           text: 'In sync',
-          tooltipTitle: `Collection "${collectionName}" is up to date (Health: ${Math.round(sync_health_score * 100)}%)`
+          tooltipTitle: `Collection "${collectionId}" is up to date (Health: ${Math.round(sync_health_score * 100)}%)`
         };
 
       case 'out_of_sync':
         return {
           icon: <SyncIcon />,
           color: 'warning' as const,
-          text: `${changed_files_count} files changed`,
-          tooltipTitle: `${changed_files_count} files have changed since last sync`
+          text: changed_files_count > 0 ? `${changed_files_count} files changed` : 'Files changed',
+          tooltipTitle: changed_files_count > 0 
+            ? `${changed_files_count} files have changed since last sync`
+            : 'Some files have changed since last sync'
         };
 
       case 'syncing': {
@@ -69,7 +73,7 @@ export const VectorSyncIndicator: React.FC<VectorSyncIndicatorProps> = ({
           icon: <SyncIcon className="animate-spin" />,
           color: 'primary' as const,
           text: `Syncing... ${progressPercent}%`,
-          tooltipTitle: `Syncing collection "${collectionName}" - ${progressPercent}% complete`
+          tooltipTitle: `Syncing collection "${collectionId}" - ${progressPercent}% complete`
         };
       }
 

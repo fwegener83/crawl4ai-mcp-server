@@ -44,7 +44,8 @@ describe('APIService - File Collection Management', () => {
       const mockResponse = {
         data: {
           success: true,
-          data: {
+          collection: {
+            id: 'test-collection',
             name: 'test-collection',
             description: 'A test collection',
             created_at: '2025-01-01T00:00:00Z',
@@ -66,7 +67,21 @@ describe('APIService - File Collection Management', () => {
       const result = await APIService.createFileCollection(request);
 
       expect(mockApi.post).toHaveBeenCalledWith('/file-collections', request);
-      expect(result).toEqual(mockResponse.data.data);
+      expect(result).toEqual({
+        id: 'test-collection',
+        name: 'test-collection',
+        description: 'A test collection',
+        created_at: '2025-01-01T00:00:00Z',
+        file_count: 0,
+        folders: [],
+        metadata: {
+          created_at: '2025-01-01T00:00:00Z',
+          description: 'A test collection',
+          last_modified: '2025-01-01T00:00:00Z',
+          file_count: 0,
+          total_size: 0
+        }
+      });
     });
 
     it('should throw error when creation fails', async () => {
@@ -91,6 +106,7 @@ describe('APIService - File Collection Management', () => {
     it('should list file collections successfully', async () => {
       const mockCollections: FileCollection[] = [
         {
+          id: 'collection1',
           name: 'collection1',
           description: 'First collection',
           created_at: '2025-01-01T00:00:00Z',
@@ -109,9 +125,7 @@ describe('APIService - File Collection Management', () => {
       const mockResponse = {
         data: {
           success: true,
-          data: {
-            collections: mockCollections
-          }
+          collections: mockCollections
         }
       };
 

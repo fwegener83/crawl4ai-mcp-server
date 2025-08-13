@@ -30,6 +30,14 @@ const defaultSettings: AllSettings = {
     showPreview: true,
     enableAnimations: true,
   },
+  vectorSync: {
+    enableAutoSync: false,
+    syncPollingInterval: 10,
+    maxSearchResults: 20,
+    similarityThreshold: 0.7,
+    enableSearchHighlighting: true,
+    defaultChunkingStrategy: 'sentence',
+  },
 };
 
 export const SettingsPage: React.FC = () => {

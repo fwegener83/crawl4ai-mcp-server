@@ -24,6 +24,8 @@ dependencies = [
     "pytest-asyncio>=1.0.0",
     "requests>=2.32.4",
     "langchain>=0.3.27",
+    "dependency-injector>=4.48.1",
+    "pytest-cov>=6.2.1",
 ]
 
 [tool.setuptools.packages.find]
@@ -41,12 +43,14 @@ test = [
     "pytest-cov",
     "httpx",
     "tomli",
+    "dependency-injector>=4.48.1",
 ]
 dev = [
     "mypy",
     "ruff",
     "bandit",
     "safety",
+    "dependency-injector>=4.48.1",
 ]
 
 [tool.pytest.ini_options]
@@ -88,4 +92,5 @@ test = [
     "pytest-cov>=6.2.1",
     "pytest-timeout>=2.4.0",
     "tomli>=2.2.1",
+    "dependency-injector>=4.48.1",
 ]

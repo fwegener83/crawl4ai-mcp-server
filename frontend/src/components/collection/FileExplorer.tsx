@@ -217,6 +217,7 @@ export function FileExplorer({ className = '' }: FileExplorerProps) {
     return (
       <Box
         key={node.path}
+        data-testid="file-item"
         onClick={() => {
           const pathParts = node.path.split('/');
           const filename = pathParts.pop()!;
@@ -398,7 +399,7 @@ export function FileExplorer({ className = '' }: FileExplorerProps) {
                 </Button>
               </Box>
             ) : (
-              <Box>
+              <Box data-testid="empty-files">
                 <CreateNewFolderIcon 
                   sx={{ 
                     fontSize: 48, 

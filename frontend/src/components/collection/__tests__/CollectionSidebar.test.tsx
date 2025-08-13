@@ -27,6 +27,7 @@ vi.mock('../../ui', async () => {
 
 const mockCollections: FileCollection[] = [
   {
+    id: 'collection-1',
     name: 'collection-1',
     description: 'First test collection',
     created_at: '2024-01-01T00:00:00Z',
@@ -39,6 +40,7 @@ const mockCollections: FileCollection[] = [
     }
   },
   {
+    id: 'collection-2',
     name: 'collection-2',
     description: 'Second test collection',
     created_at: '2024-01-02T00:00:00Z',

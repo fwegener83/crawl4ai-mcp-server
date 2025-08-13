@@ -204,7 +204,12 @@ class ContentProcessor:
                 }
             )
             
-            chunk_id = self._generate_chunk_id(chunk, i)
+            chunk_id = self._generate_chunk_id(
+                chunk, i, 
+                collection_name=source_metadata.get('collection_name'),
+                file_path=source_metadata.get('file_path')
+            )
+            print(f"DEBUG CONTENTPROCESSOR: Generated chunk ID {chunk_id} for collection {source_metadata.get('collection_name')}, file {source_metadata.get('file_path')}")
             
             processed_chunks.append({
                 "id": chunk_id,
@@ -279,7 +284,12 @@ class ContentProcessor:
                     }
                 )
                 
-                chunk_id = self._generate_chunk_id(chunk, chunk_index, base_metadata.get("url"))
+                chunk_id = self._generate_chunk_id(
+                    chunk, chunk_index, 
+                    url=base_metadata.get("url"),
+                    collection_name=source_metadata.get('collection_name'),
+                    file_path=source_metadata.get('file_path')
+                )
                 
                 all_processed_chunks.append({
                     "id": chunk_id,
@@ -328,13 +338,26 @@ class ContentProcessor:
         self,
         chunk: str,
         chunk_index: int,
-        url: Optional[str] = None
+        url: Optional[str] = None,
+        collection_name: Optional[str] = None,
+        file_path: Optional[str] = None
     ) -> str:
         """Generate unique ID for a chunk."""
-        # Create a unique identifier based on content hash and index
+        # Create a unique identifier based on collection, file, content hash and index
         content_hash = hashlib.md5(chunk.encode('utf-8')).hexdigest()[:8]
         
-        if url:
+        # Include collection_name to prevent cross-collection ID conflicts
+        if collection_name:
+            collection_hash = hashlib.md5(collection_name.encode('utf-8')).hexdigest()[:4]
+            if file_path:
+                file_hash = hashlib.md5(file_path.encode('utf-8')).hexdigest()[:4]
+                return f"{collection_hash}_{file_hash}_{content_hash}_{chunk_index}"
+            elif url:
+                url_hash = hashlib.md5(url.encode('utf-8')).hexdigest()[:4]
+                return f"{collection_hash}_{url_hash}_{content_hash}_{chunk_index}"
+            else:
+                return f"{collection_hash}_{content_hash}_{chunk_index}"
+        elif url:
             url_hash = hashlib.md5(url.encode('utf-8')).hexdigest()[:4]
             return f"{url_hash}_{content_hash}_{chunk_index}"
         else:
