@@ -371,6 +371,7 @@ class TestOllamaLLMService:
 class TestLLMServiceFactory:
     """Test LLM service factory for provider switching."""
     
+    @pytest.mark.skipif(not OPENAI_AVAILABLE, reason="OpenAI package not available")
     @patch.dict('os.environ', {
         'RAG_LLM_PROVIDER': 'openai',
         'RAG_OPENAI_API_KEY': 'test-key',
@@ -384,6 +385,7 @@ class TestLLMServiceFactory:
         assert service.model == "gpt-4o-mini"
         assert service.provider == "openai"
     
+    @pytest.mark.skipif(not OLLAMA_AVAILABLE, reason="Ollama package not available")
     @patch.dict('os.environ', {
         'RAG_LLM_PROVIDER': 'ollama',
         'RAG_OLLAMA_HOST': 'http://localhost:11434',
@@ -397,6 +399,7 @@ class TestLLMServiceFactory:
         assert service.model == "llama3.1:8b"
         assert service.provider == "ollama"
     
+    @pytest.mark.skipif(not OPENAI_AVAILABLE, reason="OpenAI package not available")
     @patch.dict('os.environ', {
         'RAG_LLM_PROVIDER': 'openai'
     }, clear=True)
