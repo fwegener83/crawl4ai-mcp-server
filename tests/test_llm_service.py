@@ -19,7 +19,9 @@ from services.llm_service import (
     LLMError,
     LLMUnavailableError,
     LLMRateLimitError,
-    LLMInvalidModelError
+    LLMInvalidModelError,
+    OPENAI_AVAILABLE,
+    OLLAMA_AVAILABLE
 )
 
 
@@ -38,6 +40,7 @@ class TestLLMServiceProtocol:
         assert abstract_methods == expected_methods
 
 
+@pytest.mark.skipif(not OPENAI_AVAILABLE, reason="OpenAI package not available")
 class TestOpenAILLMService:
     """Test OpenAI LLM service implementation."""
     
@@ -238,6 +241,7 @@ class TestOpenAILLMService:
             OpenAILLMService(api_key="test-key", model="")
 
 
+@pytest.mark.skipif(not OLLAMA_AVAILABLE, reason="Ollama package not available")
 class TestOllamaLLMService:
     """Test Ollama LLM service implementation."""
     
