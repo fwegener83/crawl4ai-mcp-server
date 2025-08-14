@@ -12,8 +12,24 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
 
 import httpx
-from openai import AsyncOpenAI, APIConnectionError, RateLimitError, APIError
-import ollama
+
+# Optional imports for LLM providers
+try:
+    from openai import AsyncOpenAI, APIConnectionError, RateLimitError, APIError
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+    AsyncOpenAI = None
+    APIConnectionError = Exception
+    RateLimitError = Exception
+    APIError = Exception
+
+try:
+    import ollama
+    OLLAMA_AVAILABLE = True
+except ImportError:
+    OLLAMA_AVAILABLE = False
+    ollama = None
 
 
 class LLMError(Exception):
@@ -107,6 +123,8 @@ class OpenAILLMService(LLMService):
             api_key: OpenAI API key
             model: Model name to use
         """
+        if not OPENAI_AVAILABLE:
+            raise ImportError("OpenAI package not available. Install with: pip install openai")
         if not api_key or not api_key.strip():
             raise ValueError("API key is required for OpenAI service")
         if not model or not model.strip():
@@ -235,6 +253,8 @@ class OllamaLLMService(LLMService):
             host: Ollama server host URL
             model: Model name to use
         """
+        if not OLLAMA_AVAILABLE:
+            raise ImportError("Ollama package not available. Install with: pip install ollama")
         if not host or not host.strip():
             raise ValueError("Host is required for Ollama service")
         if not model or not model.strip():
@@ -367,6 +387,8 @@ class LLMServiceFactory:
         provider = os.getenv("RAG_LLM_PROVIDER", "openai").lower()
         
         if provider == "openai":
+            if not OPENAI_AVAILABLE:
+                raise ImportError("OpenAI package not available. Install with: pip install openai")
             api_key = os.getenv("RAG_OPENAI_API_KEY")
             if not api_key:
                 raise ValueError(
@@ -377,6 +399,8 @@ class LLMServiceFactory:
             return OpenAILLMService(api_key=api_key, model=model)
         
         elif provider == "ollama":
+            if not OLLAMA_AVAILABLE:
+                raise ImportError("Ollama package not available. Install with: pip install ollama")
             host = os.getenv("RAG_OLLAMA_HOST")
             if not host:
                 host = "http://localhost:11434"  # Default fallback

@@ -276,5 +276,4 @@ export interface RAGError {
   details?: Record<string, any>;
 }
 
-// Explicit re-exports to fix module resolution issues
-export type { RAGSource, RAGQueryRequest, RAGQueryResponse, RAGQueryMetadata };
+// Note: Types are already exported above as individual interface declarations
