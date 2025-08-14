@@ -10,7 +10,20 @@ import json
 import logging
 import sys
 import os
+from pathlib import Path
 from typing import Dict, Any, Optional
+
+# Load environment variables from .env file
+env_file = Path(__file__).parent / '.env'
+if env_file.exists():
+    with open(env_file) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                key, value = line.split('=', 1)
+                # Don't override existing environment variables
+                if key not in os.environ:
+                    os.environ[key] = value
 
 # FastMCP for MCP protocol
 from fastmcp import FastMCP
@@ -417,8 +430,10 @@ class UnifiedServer:
         async def rag_query(query: str, collection_name: str = None, max_chunks: int = 5, similarity_threshold: float = 0.7) -> str:
             """Execute RAG query combining vector search with LLM response generation."""
             try:
-                # Get LLM service
+                # Get services from container
                 llm_service = self.container.llm_service()
+                vector_service = self.container.vector_sync_service()
+                collection_service = self.container.collection_service()
                 
                 # Create RAG request with validation
                 rag_request = RAGQueryRequest(
@@ -1147,8 +1162,27 @@ class UnifiedServer:
         async def rag_query(request: dict):
             """Execute RAG query combining vector search with LLM response generation."""
             try:
-                # Get LLM service
+                # DEBUG: Test LLM service directly in HTTP context
+                logger.info("DEBUG: Creating LLM service from container...")
                 llm_service = self.container.llm_service()
+                logger.info(f"DEBUG: LLM service created: {llm_service.provider}")
+                
+                logger.info("DEBUG: Testing LLM health check...")
+                health = await llm_service.health_check()
+                logger.info(f"DEBUG: Health check result: {health}")
+                
+                if health:
+                    logger.info("DEBUG: Testing direct LLM generation...")
+                    test_response = await llm_service.generate_response(
+                        query="Test",
+                        context="Test context",
+                        max_tokens=5
+                    )
+                    logger.info(f"DEBUG: Direct generation result: {test_response}")
+                
+                # Get services from container
+                vector_service = self.container.vector_sync_service()
+                collection_service = self.container.collection_service()
                 
                 # Create RAG request with validation
                 try:
@@ -1231,16 +1265,16 @@ class UnifiedServer:
     async def run_mcp_server(self):
         """Run the MCP server (stdio protocol)."""
         logger.info("Starting MCP server (stdio)")
-        if not self.mcp_server:
+        if not self._mcp_server:
             self.setup_mcp_server()
         
         # Run MCP server
-        await self.mcp_server.run()
+        await self._mcp_server.run()
     
     async def run_http_server(self, host: str = "0.0.0.0", port: int = 8000):
         """Run the HTTP server."""
         logger.info(f"Starting HTTP server on {host}:{port}")
-        if not self.http_app:
+        if not self._http_app:
             self.setup_http_app()
         
         # Import uvicorn here to avoid import issues
@@ -1248,7 +1282,7 @@ class UnifiedServer:
         
         # Run HTTP server
         config = uvicorn.Config(
-            self.http_app,
+            self._http_app,
             host=host,
             port=port,
             log_level="info"
