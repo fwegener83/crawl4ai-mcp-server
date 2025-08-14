@@ -22,8 +22,7 @@ class TestRAGHTTPEndpoint:
     @pytest.fixture
     def mock_rag_use_case(self):
         """Mock RAG use-case function."""
-        mock_func = AsyncMock()
-        return mock_func
+        return AsyncMock()
     
     @pytest.fixture
     def mock_unified_server(self, mock_rag_use_case):
@@ -33,7 +32,10 @@ class TestRAGHTTPEndpoint:
             # Mock the services
             server.container.vector_service = Mock()
             server.container.collection_service = Mock() 
-            server.container.llm_service = Mock()
+            # llm_service is a provider that returns a service instance
+            mock_llm_service = Mock()
+            mock_llm_service.provider = "openai"
+            server.container.llm_service = Mock(return_value=mock_llm_service)
             yield server
     
     @pytest.fixture
@@ -228,8 +230,7 @@ class TestRAGMCPTool:
     @pytest.fixture
     def mock_rag_use_case(self):
         """Mock RAG use-case function."""
-        mock_func = AsyncMock()
-        return mock_func
+        return AsyncMock()
     
     @pytest.fixture
     def mock_mcp_server(self, mock_rag_use_case):
@@ -239,7 +240,10 @@ class TestRAGMCPTool:
             # Mock the services
             server.container.vector_service = Mock()
             server.container.collection_service = Mock()
-            server.container.llm_service = Mock()
+            # llm_service is a provider that returns a service instance
+            mock_llm_service = Mock()
+            mock_llm_service.provider = "openai"
+            server.container.llm_service = Mock(return_value=mock_llm_service)
             yield server.mcp
     
     @pytest.mark.asyncio

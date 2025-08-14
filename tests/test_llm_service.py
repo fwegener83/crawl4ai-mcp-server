@@ -408,6 +408,7 @@ class TestLLMServiceFactory:
         with pytest.raises(ValueError, match="RAG_OPENAI_API_KEY"):
             LLMServiceFactory.create_service()
     
+    @pytest.mark.skipif(not OLLAMA_AVAILABLE, reason="Ollama package not available")
     @patch.dict('os.environ', {
         'RAG_LLM_PROVIDER': 'ollama'
     }, clear=True)
@@ -428,6 +429,7 @@ class TestLLMServiceFactory:
         with pytest.raises(ValueError, match="Unknown LLM provider"):
             LLMServiceFactory.create_service()
     
+    @pytest.mark.skipif(not OPENAI_AVAILABLE, reason="OpenAI package not available")
     @patch.dict('os.environ', {}, clear=True)
     def test_default_provider_fallback(self):
         """Test default provider when no configuration provided."""
