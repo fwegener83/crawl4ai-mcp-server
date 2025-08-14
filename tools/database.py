@@ -172,6 +172,14 @@ class DatabaseManager:
         if hasattr(self._local, 'connection') and self._local.connection:
             self._local.connection.close()
             self._local.connection = None
+    
+    def __del__(self):
+        """Cleanup on garbage collection."""
+        try:
+            self.close()
+        except Exception:
+            # Ignore errors during cleanup
+            pass
 
 
 class CollectionRepository:

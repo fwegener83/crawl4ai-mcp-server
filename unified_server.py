@@ -431,7 +431,10 @@ class UnifiedServer:
             """Execute RAG query combining vector search with LLM response generation."""
             try:
                 # Get services from container
-                llm_service = self.container.llm_service()
+                if hasattr(self.container, 'llm_service'):
+                    llm_service = self.container.llm_service()
+                else:
+                    raise ValueError("LLM service not available - check that openai/ollama dependencies are installed")
                 vector_service = self.container.vector_sync_service()
                 collection_service = self.container.collection_service()
                 
@@ -1164,7 +1167,10 @@ class UnifiedServer:
             try:
                 # DEBUG: Test LLM service directly in HTTP context
                 logger.info("DEBUG: Creating LLM service from container...")
-                llm_service = self.container.llm_service()
+                if hasattr(self.container, 'llm_service'):
+                    llm_service = self.container.llm_service()
+                else:
+                    return {"success": False, "error": "LLM service not available - check that openai/ollama dependencies are installed"}
                 logger.info(f"DEBUG: LLM service created: {llm_service.provider}")
                 
                 logger.info("DEBUG: Testing LLM health check...")

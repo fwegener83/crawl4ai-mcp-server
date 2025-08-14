@@ -13,7 +13,14 @@ from dependency_injector import containers, providers
 from .web_crawling_service import WebCrawlingService
 from .collection_service import CollectionService
 from .vector_sync_service import VectorSyncService
-from .llm_service import LLMServiceFactory
+# Optional LLM service import
+try:
+    from .llm_service import LLMServiceFactory
+    LLM_SERVICE_AVAILABLE = True
+except ImportError as e:
+    LLMServiceFactory = None
+    LLM_SERVICE_AVAILABLE = False
+    logger.warning(f"LLM service not available: {e}")
 # Import centralized configuration
 from config.paths import Context42Config
 
@@ -49,10 +56,7 @@ class Container(containers.DeclarativeContainer):
         WebCrawlingService
     )
     
-    # LLM service (singleton for configuration consistency)
-    llm_service = providers.Singleton(
-        LLMServiceFactory.create_service
-    )
+    # LLM service will be added dynamically if available
 
 
 def create_container() -> Container:
@@ -68,6 +72,15 @@ def create_container() -> Container:
     logger.info("Creating dependency injection container")
     
     container = Container()
+    
+    # Dynamically add LLM service if available
+    if LLM_SERVICE_AVAILABLE:
+        logger.info("Adding LLM service to container")
+        container.llm_service = providers.Singleton(
+            LLMServiceFactory.create_service
+        )
+    else:
+        logger.warning("LLM service not available - container will not have llm_service provider")
     
     # Database-only configuration - no filesystem directories needed
     # COLLECTIONS_BASE_DIR is obsolete - using vector_sync.db database storage
