@@ -72,6 +72,10 @@ class IntelligentSyncManager:
             enable_ab_testing=False  # Disable A/B testing for production sync
         )
         
+        # Enhanced RAG services for overlap-aware processing
+        self._enhanced_rag_service = None
+        self._initialize_enhanced_rag_services()
+        
         # Persistent storage manager
         self.persistent_sync = PersistentSyncManager(persistent_db_path)
         
@@ -91,6 +95,23 @@ class IntelligentSyncManager:
         
         logger.info(f"IntelligentSyncManager initialized with config: {self.config.model_dump()}")
         logger.info(f"Loaded {len(self.sync_status)} sync statuses from persistent storage")
+    
+    def _initialize_enhanced_rag_services(self):
+        """Initialize enhanced RAG services for overlap-aware processing."""
+        try:
+            from tools.knowledge_base.rag_tools import get_rag_service
+            self._enhanced_rag_service = get_rag_service()
+            logger.info("Enhanced RAG services initialized for overlap-aware sync")
+        except ImportError as e:
+            logger.warning(f"Enhanced RAG services not available: {e}")
+            self._enhanced_rag_service = None
+        except Exception as e:
+            logger.error(f"Failed to initialize enhanced RAG services: {e}")
+            self._enhanced_rag_service = None
+    
+    def _use_enhanced_storage(self) -> bool:
+        """Check if enhanced storage operations should be used."""
+        return self._enhanced_rag_service is not None
     
     def _load_persistent_state(self):
         """Load sync status and file mappings from persistent storage."""
@@ -582,12 +603,24 @@ class IntelligentSyncManager:
                 except Exception as e:
                     logger.warning(f"Could not delete old chunks for {file_path}: {str(e)}")
             
-            # Add new chunks to vector store
-            self.vector_store.add_documents(
-                [chunk['content'] for chunk in vector_chunks],
-                metadatas=[chunk['metadata'] for chunk in vector_chunks],
-                ids=[chunk['id'] for chunk in vector_chunks]
-            )
+            # Add new chunks to vector store with enhanced metadata support
+            if self._use_enhanced_storage():
+                # Use enhanced storage with relationship-aware metadata
+                self.vector_store.add_documents(
+                    [chunk['content'] for chunk in vector_chunks],
+                    metadatas=[chunk['metadata'] for chunk in vector_chunks],
+                    ids=[chunk['id'] for chunk in vector_chunks]
+                )
+                
+                # After storage, enhance with relationship data if supported
+                self._enhance_chunk_relationships(collection_name, vector_chunks)
+            else:
+                # Fallback to standard storage
+                self.vector_store.add_documents(
+                    [chunk['content'] for chunk in vector_chunks],
+                    metadatas=[chunk['metadata'] for chunk in vector_chunks],
+                    ids=[chunk['id'] for chunk in vector_chunks]
+                )
             
             result['chunks_created'] = len(vector_chunks)
             
@@ -622,6 +655,176 @@ class IntelligentSyncManager:
             result['errors'].append(error_msg)
         
         return result
+    
+    def _enhance_chunk_relationships(self, collection_name: str, vector_chunks: List[Dict[str, Any]]):
+        """Enhance chunks with relationship data for overlap-aware processing."""
+        try:
+            if not self._enhanced_rag_service:
+                return
+            
+            # Build relationship mappings for sequential chunks
+            for i, chunk in enumerate(vector_chunks):
+                chunk_metadata = chunk.get('metadata', {})
+                
+                # Add sequential relationship data
+                if i > 0:
+                    chunk_metadata['previous_chunk_id'] = vector_chunks[i-1]['id']
+                if i < len(vector_chunks) - 1:
+                    chunk_metadata['next_chunk_id'] = vector_chunks[i+1]['id']
+                
+                # Check for content overlap with previous chunk
+                if i > 0:
+                    overlap_data = self._calculate_chunk_overlap(
+                        vector_chunks[i-1]['content'], 
+                        chunk['content']
+                    )
+                    if overlap_data['has_overlap']:
+                        chunk_metadata['overlap_sources'] = [vector_chunks[i-1]['id']]
+                        chunk_metadata['overlap_regions'] = [overlap_data['region']]
+                        chunk_metadata['overlap_percentage'] = overlap_data['percentage']
+                
+                # Mark as eligible for context expansion
+                chunk_metadata['context_expansion_eligible'] = True
+                chunk_metadata['collection_name'] = collection_name
+            
+            logger.debug(f"Enhanced {len(vector_chunks)} chunks with relationship data")
+            
+        except Exception as e:
+            logger.warning(f"Failed to enhance chunk relationships: {e}")
+    
+    def _calculate_chunk_overlap(self, prev_content: str, current_content: str) -> Dict[str, Any]:
+        """Calculate overlap between two consecutive chunks."""
+        try:
+            # Simple overlap detection - look for common suffix/prefix
+            min_overlap_words = 5  # Minimum words to consider overlap
+            overlap_threshold = 0.1  # 10% minimum overlap
+            
+            prev_words = prev_content.split()
+            current_words = current_content.split()
+            
+            # Find longest common substring at boundaries
+            max_overlap_len = 0
+            overlap_start = 0
+            overlap_end = 0
+            
+            # Check suffix of previous with prefix of current
+            for i in range(min_overlap_words, min(len(prev_words), len(current_words)) + 1):
+                prev_suffix = ' '.join(prev_words[-i:])
+                current_prefix = ' '.join(current_words[:i])
+                
+                if prev_suffix == current_prefix and i > max_overlap_len:
+                    max_overlap_len = i
+                    overlap_start = 0
+                    overlap_end = len(current_prefix)
+            
+            if max_overlap_len > 0:
+                overlap_percentage = max_overlap_len / len(current_words)
+                if overlap_percentage >= overlap_threshold:
+                    return {
+                        'has_overlap': True,
+                        'region': [overlap_start, overlap_end],
+                        'percentage': overlap_percentage,
+                        'word_count': max_overlap_len
+                    }
+            
+            return {
+                'has_overlap': False,
+                'region': [],
+                'percentage': 0.0,
+                'word_count': 0
+            }
+            
+        except Exception as e:
+            logger.warning(f"Failed to calculate chunk overlap: {e}")
+            return {'has_overlap': False, 'region': [], 'percentage': 0.0, 'word_count': 0}
+    
+    def search_with_relationships(
+        self,
+        collection_name: str,
+        query: str,
+        limit: int = 10,
+        similarity_threshold: float = 0.7,
+        enable_context_expansion: bool = False
+    ) -> Dict[str, Any]:
+        """Enhanced search with relationship support."""
+        try:
+            if not self._use_enhanced_storage():
+                # Fallback to standard vector search
+                return self._standard_vector_search(collection_name, query, limit, similarity_threshold)
+            
+            # Use enhanced RAG service for relationship-aware search
+            search_result = self._enhanced_rag_service.search_content(
+                query=query,
+                collection_name=collection_name,
+                n_results=limit,
+                similarity_threshold=similarity_threshold,
+                enable_context_expansion=enable_context_expansion
+            )
+            
+            return search_result
+            
+        except Exception as e:
+            logger.error(f"Enhanced search failed: {e}")
+            # Fallback to standard search
+            return self._standard_vector_search(collection_name, query, limit, similarity_threshold)
+    
+    def _standard_vector_search(
+        self,
+        collection_name: str,
+        query: str,
+        limit: int,
+        similarity_threshold: float
+    ) -> Dict[str, Any]:
+        """Standard vector search fallback."""
+        try:
+            # Get or create collection
+            self.vector_store.get_or_create_collection(collection_name)
+            
+            # Perform search
+            results = self.vector_store.query(
+                query_texts=[query],
+                n_results=limit
+            )
+            
+            # Process results
+            search_results = []
+            if results.get("documents") and results["documents"][0]:
+                documents = results["documents"][0]
+                metadatas = results.get("metadatas", [[]])[0]
+                distances = results.get("distances", [[]])[0]
+                ids = results.get("ids", [[]])[0]
+                
+                for i, (doc, metadata, distance, doc_id) in enumerate(zip(
+                    documents, metadatas, distances, ids
+                )):
+                    similarity = 1.0 - distance if distance is not None else 0.0
+                    
+                    if similarity >= similarity_threshold:
+                        search_results.append({
+                            "id": doc_id,
+                            "content": doc,
+                            "metadata": metadata or {},
+                            "similarity": similarity,
+                            "rank": i + 1
+                        })
+            
+            return {
+                "success": True,
+                "query": query,
+                "collection_name": collection_name,
+                "results": search_results,
+                "total_results": len(search_results),
+                "enhanced_search": False
+            }
+            
+        except Exception as e:
+            logger.error(f"Standard vector search failed: {e}")
+            return {
+                "success": False,
+                "query": query,
+                "message": f"Search failed: {str(e)}",
+                "results": []
+            }
     
     def _collection_exists(self, collection_name: str) -> bool:
         """Check if collection exists."""

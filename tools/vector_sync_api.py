@@ -53,6 +53,8 @@ class VectorSearchRequest(BaseModel):
     collection_name: Optional[str] = Field(None, description="Specific collection to search")
     limit: int = Field(default=10, description="Maximum number of results")
     similarity_threshold: float = Field(default=0.7, description="Minimum similarity score")
+    enable_context_expansion: bool = Field(default=False, description="Enable context expansion using chunk relationships")
+    relationship_filter: Optional[Dict[str, Any]] = Field(None, description="Filter based on chunk relationships")
 
 
 class VectorSearchResponse(BaseModel):
@@ -426,17 +428,44 @@ class VectorSyncAPI:
             import time
             start_time = time.time()
             
-            # Perform vector search with collection filtering
-            filter_dict = None
-            if request.collection_name:
-                filter_dict = {'collection_name': request.collection_name}
+            # Use enhanced search if relationships are requested
+            if request.enable_context_expansion or request.relationship_filter:
+                # Use intelligent sync manager's enhanced search
+                search_result = self.sync_manager.search_with_relationships(
+                    collection_name=request.collection_name or "default",
+                    query=request.query,
+                    limit=request.limit,
+                    similarity_threshold=request.similarity_threshold,
+                    enable_context_expansion=request.enable_context_expansion
+                )
                 
-            results = self.vector_store.similarity_search(
-                query=request.query,
-                k=request.limit,
-                score_threshold=request.similarity_threshold,
-                filter=filter_dict
-            )
+                if search_result.get("success", False):
+                    results = []
+                    for res in search_result.get("results", []):
+                        # Convert to expected format
+                        results.append({
+                            'content': res.get('content', ''),
+                            'score': res.get('similarity', 0.0),
+                            'id': res.get('id', ''),
+                            'metadata': res.get('metadata', {}),
+                            'relationship_data': res.get('relationship_data', {}),
+                            'expansion_source': res.get('expansion_source'),
+                            'expansion_type': res.get('expansion_type')
+                        })
+                else:
+                    results = []
+            else:
+                # Standard vector search with collection filtering
+                filter_dict = None
+                if request.collection_name:
+                    filter_dict = {'collection_name': request.collection_name}
+                    
+                results = self.vector_store.similarity_search(
+                    query=request.query,
+                    k=request.limit,
+                    score_threshold=request.similarity_threshold,
+                    filter=filter_dict
+                )
             
             query_time = time.time() - start_time
             
@@ -466,6 +495,21 @@ class VectorSyncAPI:
                         'chunk_position': metadata.get('chunk_index', 0)
                     }
                 }
+                
+                # Add enhanced relationship data if available
+                if 'relationship_data' in result:
+                    enhanced_result['relationship_data'] = result['relationship_data']
+                if 'expansion_source' in result:
+                    enhanced_result['expansion_source'] = result['expansion_source']
+                if 'expansion_type' in result:
+                    enhanced_result['expansion_type'] = result['expansion_type']
+                    
+                # Add overlap information from metadata
+                if metadata.get('overlap_sources'):
+                    enhanced_result['overlap_sources'] = metadata['overlap_sources']
+                    enhanced_result['overlap_percentage'] = metadata.get('overlap_percentage', 0.0)
+                if metadata.get('context_expansion_eligible'):
+                    enhanced_result['context_expansion_eligible'] = True
                 enhanced_results.append(enhanced_result)
             
             return VectorSearchResponse(
