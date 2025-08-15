@@ -229,3 +229,51 @@ export interface SyncCollectionResponse {
   sync_result?: SyncResult;
   error?: string;
 }
+
+// RAG Query Types
+export interface RAGQueryRequest {
+  query: string;
+  collection_name?: string;
+  max_chunks?: number;
+  similarity_threshold?: number;
+}
+
+export interface RAGSource {
+  content: string;
+  similarity_score: number;
+  metadata: {
+    source: string;
+    created_at?: string;
+    [key: string]: any;
+  };
+  collection_name?: string;
+  file_path?: string;
+}
+
+export interface RAGQueryMetadata {
+  chunks_used: number;
+  collection_searched: string | null;
+  llm_provider: string | null;
+  response_time_ms: number;
+  token_usage?: {
+    total: number;
+    prompt: number;
+    completion: number;
+  };
+}
+
+export interface RAGQueryResponse {
+  success: boolean;
+  answer: string | null;
+  sources: RAGSource[];
+  metadata: RAGQueryMetadata;
+  error?: string;
+}
+
+export interface RAGError {
+  code: string;
+  message: string;
+  details?: Record<string, any>;
+}
+
+// Note: Types are already exported above as individual interface declarations

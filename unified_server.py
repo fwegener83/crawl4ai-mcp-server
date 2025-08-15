@@ -10,7 +10,20 @@ import json
 import logging
 import sys
 import os
+from pathlib import Path
 from typing import Dict, Any, Optional
+
+# Load environment variables from .env file
+env_file = Path(__file__).parent / '.env'
+if env_file.exists():
+    with open(env_file) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                key, value = line.split('=', 1)
+                # Don't override existing environment variables
+                if key not in os.environ:
+                    os.environ[key] = value
 
 # FastMCP for MCP protocol
 from fastmcp import FastMCP
@@ -19,12 +32,20 @@ from fastmcp import FastMCP
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+# Pydantic for validation
+from pydantic import ValidationError
+
 # Our service layer
 from services.containers import get_container
 from services.interfaces import (
     CrawlResult, DeepCrawlConfig, LinkPreview,
     CollectionInfo, FileInfo, VectorSyncStatus, VectorSearchResult
 )
+from application_layer.rag_query import (
+    RAGQueryRequest, RAGQueryResponse, rag_query_use_case,
+    RAGValidationError, RAGUnavailableError, RAGError
+)
+from services.llm_service import LLMServiceFactory
 
 # Configure logging
 logging.basicConfig(
@@ -51,11 +72,25 @@ class UnifiedServer:
         self.container = get_container()
         
         # Initialize protocol handlers
-        self.mcp_server = None
-        self.http_app = None
+        self._mcp_server = None
+        self._http_app = None
         
         # Server state
         self.running = False
+    
+    @property
+    def mcp(self):
+        """Get or create MCP server instance."""
+        if self._mcp_server is None:
+            self._mcp_server = self.setup_mcp_server()
+        return self._mcp_server
+    
+    @property 
+    def app(self):
+        """Get or create HTTP app instance."""
+        if self._http_app is None:
+            self._http_app = self.setup_http_app()
+        return self._http_app
     
     def setup_mcp_server(self) -> FastMCP:
         """
@@ -389,7 +424,80 @@ class UnifiedServer:
                 logger.error(f"MCP search_collection_vectors error: {e}")
                 return json.dumps({"success": False, "error": str(e)})
         
-        self.mcp_server = mcp_server
+        # ===== RAG QUERY TOOL =====
+        
+        @mcp_server.tool()
+        async def rag_query(query: str, collection_name: str = None, max_chunks: int = 5, similarity_threshold: float = 0.7) -> str:
+            """Execute RAG query combining vector search with LLM response generation."""
+            try:
+                # Get services from container
+                if hasattr(self.container, 'llm_service'):
+                    llm_service = self.container.llm_service()
+                else:
+                    raise ValueError("LLM service not available - check that openai/ollama dependencies are installed")
+                vector_service = self.container.vector_sync_service()
+                collection_service = self.container.collection_service()
+                
+                # Create RAG request with validation
+                rag_request = RAGQueryRequest(
+                    query=query,
+                    collection_name=collection_name,
+                    max_chunks=max_chunks,
+                    similarity_threshold=similarity_threshold
+                )
+                
+                # Execute RAG query use-case
+                result = await rag_query_use_case(
+                    vector_service=vector_service,
+                    collection_service=collection_service,
+                    llm_service=llm_service,
+                    request=rag_request
+                )
+                
+                # Return JSON string (MCP protocol requirement)
+                return json.dumps({
+                    "success": result.success,
+                    "answer": result.answer,
+                    "sources": result.sources,
+                    "metadata": result.metadata,
+                    "error": result.error
+                })
+                
+            except RAGValidationError as ve:
+                return json.dumps({
+                    "success": False,
+                    "error": {
+                        "code": ve.code,
+                        "message": ve.message,
+                        "details": ve.details
+                    }
+                })
+                
+            except RAGUnavailableError as ue:
+                return json.dumps({
+                    "success": False,
+                    "error": {
+                        "code": "SERVICE_UNAVAILABLE",
+                        "message": str(ue),
+                        "details": {"service": ue.service}
+                    }
+                })
+                
+            except RAGError as re:
+                return json.dumps({
+                    "success": False,
+                    "error": {
+                        "code": "RAG_ERROR",
+                        "message": str(re),
+                        "details": {}
+                    }
+                })
+                
+            except Exception as e:
+                logger.error(f"MCP rag_query error: {e}")
+                return json.dumps({"success": False, "error": str(e)})
+        
+        self._mcp_server = mcp_server
         logger.info("MCP protocol handler configured with service layer adapters")
         return mcp_server
     
@@ -1051,23 +1159,128 @@ class UnifiedServer:
                 logger.error(f"HTTP delete_collection_vectors error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
         
-        self.http_app = app
+        # ===== RAG QUERY ENDPOINT =====
+        
+        @app.post("/api/query")
+        async def rag_query(request: dict):
+            """Execute RAG query combining vector search with LLM response generation."""
+            try:
+                # DEBUG: Test LLM service directly in HTTP context
+                logger.info("DEBUG: Creating LLM service from container...")
+                if hasattr(self.container, 'llm_service'):
+                    llm_service = self.container.llm_service()
+                else:
+                    return {"success": False, "error": "LLM service not available - check that openai/ollama dependencies are installed"}
+                logger.info(f"DEBUG: LLM service created: {llm_service.provider}")
+                
+                logger.info("DEBUG: Testing LLM health check...")
+                health = await llm_service.health_check()
+                logger.info(f"DEBUG: Health check result: {health}")
+                
+                if health:
+                    logger.info("DEBUG: Testing direct LLM generation...")
+                    test_response = await llm_service.generate_response(
+                        query="Test",
+                        context="Test context",
+                        max_tokens=5
+                    )
+                    logger.info(f"DEBUG: Direct generation result: {test_response}")
+                
+                # Get services from container
+                vector_service = self.container.vector_sync_service()
+                collection_service = self.container.collection_service()
+                
+                # Create RAG request with validation
+                try:
+                    rag_request = RAGQueryRequest(
+                        query=request.get("query"),
+                        collection_name=request.get("collection_name"),
+                        max_chunks=request.get("max_chunks", 5),
+                        similarity_threshold=request.get("similarity_threshold", 0.7)
+                    )
+                except ValidationError as ve:
+                    # Handle Pydantic validation errors with proper 422 status
+                    raise HTTPException(
+                        status_code=422,
+                        detail=ve.errors()
+                    )
+                
+                # Execute RAG query use-case
+                result = await rag_query_use_case(
+                    vector_service=vector_service,
+                    collection_service=collection_service,
+                    llm_service=llm_service,
+                    request=rag_request
+                )
+                
+                # Return structured response
+                return {
+                    "success": result.success,
+                    "answer": result.answer,
+                    "sources": result.sources,
+                    "metadata": result.metadata,
+                    "error": result.error
+                }
+                
+            except RAGValidationError as ve:
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error": {
+                            "code": ve.code,
+                            "message": str(ve),
+                            "details": ve.details
+                        }
+                    }
+                )
+            
+            except RAGUnavailableError as ue:
+                raise HTTPException(
+                    status_code=503,
+                    detail={
+                        "error": {
+                            "code": "SERVICE_UNAVAILABLE",
+                            "message": str(ue),
+                            "details": {"service": ue.service}
+                        }
+                    }
+                )
+                
+            except RAGError as re:
+                raise HTTPException(
+                    status_code=500,
+                    detail={
+                        "error": {
+                            "code": "RAG_ERROR",
+                            "message": str(re),
+                            "details": {}
+                        }
+                    }
+                )
+                
+            except HTTPException:
+                raise  # Re-raise HTTPExceptions without wrapping
+            except Exception as e:
+                logger.error(f"HTTP rag_query error: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
+        self._http_app = app
         logger.info("HTTP protocol handler configured with service layer controllers")
         return app
     
     async def run_mcp_server(self):
         """Run the MCP server (stdio protocol)."""
         logger.info("Starting MCP server (stdio)")
-        if not self.mcp_server:
+        if not self._mcp_server:
             self.setup_mcp_server()
         
         # Run MCP server
-        await self.mcp_server.run()
+        await self._mcp_server.run()
     
     async def run_http_server(self, host: str = "0.0.0.0", port: int = 8000):
         """Run the HTTP server."""
         logger.info(f"Starting HTTP server on {host}:{port}")
-        if not self.http_app:
+        if not self._http_app:
             self.setup_http_app()
         
         # Import uvicorn here to avoid import issues
@@ -1075,7 +1288,7 @@ class UnifiedServer:
         
         # Run HTTP server
         config = uvicorn.Config(
-            self.http_app,
+            self._http_app,
             host=host,
             port=port,
             log_level="info"

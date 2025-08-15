@@ -423,6 +423,14 @@ class SQLiteCollectionFileManager:
         """Close database connections."""
         if hasattr(self, 'db'):
             self.db.close()
+    
+    def __del__(self):
+        """Cleanup on garbage collection."""
+        try:
+            self.close()
+        except Exception:
+            # Ignore errors during cleanup
+            pass
 
 
 # Factory function to create appropriate manager based on configuration

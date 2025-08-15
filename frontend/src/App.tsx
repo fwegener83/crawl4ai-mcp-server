@@ -4,20 +4,26 @@ import TopNavigation from './components/navigation/TopNavigation';
 import { NotificationProvider } from './components/ui/NotificationProvider';
 import { CollectionProvider } from './contexts/CollectionContext';
 import { SettingsModal } from './components/modals';
-// Removed obsolete page components - simplified to File Collections only
 import FileCollectionsPage from './pages/FileCollectionsPage';
+import RAGQueryPage from './pages/RAGQueryPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AppThemeProvider } from './contexts/ThemeContext';
 
-type Page = 'file-collections';
+type Page = 'file-collections' | 'rag-query';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('file-collections');
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const renderCurrentPage = () => {
-    // Always render File Collections as the main interface
-    return <FileCollectionsPage />;
+    switch (currentPage) {
+      case 'file-collections':
+        return <FileCollectionsPage />;
+      case 'rag-query':
+        return <RAGQueryPage />;
+      default:
+        return <FileCollectionsPage />;
+    }
   };
 
   return (

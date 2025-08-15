@@ -20,8 +20,8 @@ import LightModeIcon from '@mui/icons-material/LightMode';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import WebIcon from '@mui/icons-material/Web';
-// Removed unused navigation icons
 import FolderIcon from '@mui/icons-material/Folder';
+import SearchIcon from '@mui/icons-material/Search';
 
 export interface TopNavigationProps {
   title?: string;
@@ -42,6 +42,7 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
 
   const navigationTabs = [
     { id: 'file-collections', label: 'File Collections', icon: <FolderIcon fontSize="small" /> },
+    { id: 'rag-query', label: 'RAG Query', icon: <SearchIcon fontSize="small" /> },
   ];
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
