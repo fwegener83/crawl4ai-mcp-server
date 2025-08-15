@@ -27,15 +27,33 @@ class TestRAGHTTPEndpoint:
     @pytest.fixture
     def mock_unified_server(self, mock_rag_use_case):
         """Mock unified server with RAG endpoint."""
+        # Patch the rag_query_use_case directly, just like MCP tests do
         with patch('unified_server.rag_query_use_case', mock_rag_use_case):
             server = UnifiedServer()
-            # Mock the services
-            server.container.vector_service = Mock()
-            server.container.collection_service = Mock() 
-            # llm_service is a provider that returns a service instance
-            mock_llm_service = Mock()
+            
+            # Mock vector service
+            mock_vector_service = Mock()
+            mock_vector_service.vector_available = True
+            mock_vector_service.search_vectors = AsyncMock(return_value=[])
+            
+            # Mock collection service  
+            mock_collection_service = Mock()
+            mock_collection_service.get_collection = AsyncMock(return_value={"name": "test"})
+            
+            # Mock LLM service with proper async methods
+            mock_llm_service = AsyncMock()
             mock_llm_service.provider = "openai"
-            server.container.llm_service = Mock(return_value=mock_llm_service)
+            mock_llm_service.health_check = AsyncMock(return_value=True)
+            mock_llm_service.generate_response = AsyncMock(return_value={
+                "success": True,
+                "answer": "Machine learning is a subset of AI that enables computers to learn from data.",
+                "provider": "openai"
+            })
+            
+            # Assign services to container (still needed for other operations)
+            server.container.vector_sync_service = lambda: mock_vector_service
+            server.container.collection_service = lambda: mock_collection_service 
+            server.container.llm_service = lambda: mock_llm_service
             yield server
     
     @pytest.fixture
@@ -235,14 +253,37 @@ class TestRAGMCPTool:
     @pytest.fixture
     def mock_mcp_server(self, mock_rag_use_case):
         """Mock MCP server with RAG tool."""
-        with patch('unified_server.rag_query_use_case', mock_rag_use_case):
+        # Also need to mock search_vectors_use_case that's called within rag_query_use_case
+        mock_search_vectors = AsyncMock(return_value=[
+            {
+                "content": "ML is a subset of AI",
+                "metadata": {"source": "ai_docs.md"},
+                "similarity_score": 0.85,
+                "collection_name": "ai_docs"
+            }
+        ])
+        
+        with patch('unified_server.rag_query_use_case', mock_rag_use_case), \
+             patch('application_layer.rag_query.search_vectors_use_case', mock_search_vectors):
             server = UnifiedServer()
-            # Mock the services
-            server.container.vector_service = Mock()
-            server.container.collection_service = Mock()
-            # llm_service is a provider that returns a service instance
+            # Mock the services with async methods
+            mock_vector_service = Mock()
+            mock_vector_service.vector_available = True
+            mock_vector_service.search_vectors = AsyncMock(return_value=[])  # Will use patched result anyway
+            
+            mock_collection_service = Mock()
+            mock_collection_service.get_collection = AsyncMock(return_value={"name": "test"})
+            
+            server.container.vector_service = mock_vector_service
+            server.container.collection_service = mock_collection_service
+            # llm_service is a provider that returns a service instance with async methods
             mock_llm_service = Mock()
             mock_llm_service.provider = "openai"
+            mock_llm_service.generate_response = AsyncMock(return_value={
+                "success": True,
+                "answer": "Machine learning is a subset of AI that enables computers to learn from data.",
+                "provider": "openai"
+            })
             server.container.llm_service = Mock(return_value=mock_llm_service)
             yield server.mcp
     
