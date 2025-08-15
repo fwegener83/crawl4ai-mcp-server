@@ -7,25 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **RAG Query Feature**: Complete question-answering system combining vector search with LLM response generation
+  - HTTP API endpoint `/api/query` for external integrations
+  - MCP tool `rag_query` for Claude Desktop integration
+  - Support for both OpenAI (cloud) and Ollama (local) LLM providers
+  - Graceful degradation to vector-only search when LLM providers are unavailable
+  - Comprehensive error handling with structured error responses
+- **LLM Provider Abstraction**: Flexible architecture supporting multiple LLM providers through environment configuration
+- **AsyncMock Testing Infrastructure**: Robust integration test patterns for async service architectures
+- **Automatic Test Cleanup**: Pytest fixture automatically removes test collections even on test failures
+- **Stale Sync Detection**: Backend automatically detects and recovers from stuck synchronization operations
+- **Enhanced Error Recovery**: Comprehensive timeout and retry mechanisms for vector sync operations
+- **Real-time Change Monitoring**: Hash-based file change detection for immediate status updates
+
 ### Fixed
+- **AsyncMock Integration Test Issues**: Resolved "object Mock can't be used in 'await' expression" errors across all integration tests
+- **LLM Service Test Dependencies**: Added proper skip decorators for tests requiring optional OpenAI/Ollama packages
 - **Vector Sync Deadlock Resolution**: Collections no longer get permanently stuck in "syncing" status preventing future operations
 - **Live Change Detection**: File modifications are now immediately detected and reflected in sync status indicators  
 - **Frontend Polling Race Conditions**: Unified recovery mechanism prevents multiple polling functions from conflicting
 - **Vector Sync Status Persistence**: Enhanced status management with automatic stale sync detection and 10-minute timeout recovery
 
 ### Changed
+- **Test Mocking Strategy**: Unified AsyncMock patterns across HTTP and MCP integration tests for consistency
 - **Frontend API Migration**: Complete migration to new backend parameter structure with improved error handling
 - **Test Infrastructure**: Enhanced MCP E2E tests with guaranteed collection cleanup preventing database pollution
 - **Vector Sync UI**: Improved status indicators with graceful fallbacks for edge cases (e.g., "Files changed" when count unavailable)
 - **Backend Service Layer**: Migrated vector sync service parameters for better consistency across API and MCP protocols
 
-### Added  
-- **Automatic Test Cleanup**: Pytest fixture automatically removes test collections even on test failures
-- **Stale Sync Detection**: Backend automatically detects and recovers from stuck synchronization operations
-- **Enhanced Error Recovery**: Comprehensive timeout and retry mechanisms for vector sync operations
-- **Real-time Change Monitoring**: Hash-based file change detection for immediate status updates
-
 ### Architecture Decisions
+- **LLM Provider Abstraction Strategy**: Multi-provider architecture with OpenAI and Ollama support
+  - Decision details: [ADR-002: LLM Provider Abstraction](docs/adr/ADR_2025-01-13_llm-provider-abstraction-strategy.md)
+  - Impact: Flexible LLM integration supporting both cloud and local deployment scenarios
+  - Environment-based provider switching with zero downtime configuration changes
+- **AsyncMock Testing Strategy**: Standardized integration test mocking patterns for async service architectures
+  - Decision details: [ADR-003: AsyncMock Testing Strategy](docs/adr/ADR_2025-01-15_asyncmock-testing-strategy.md)
+  - Impact: Reliable, maintainable integration tests with consistent AsyncMock patterns
+  - Complete resolution of async/await mocking issues across all test suites
 - **Vector Sync Reliability Improvements**: Comprehensive fixes for deadlock issues, change detection, and test infrastructure
   - Decision details: [ADR-001: Vector Sync Reliability](docs/adr/ADR_2025-01-13_vector-sync-reliability-improvements.md)
   - Impact: Transformed unreliable Vector Sync system into robust, user-friendly feature
