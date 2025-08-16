@@ -24,7 +24,6 @@ import {
   Search as SearchIcon,
   Clear as ClearIcon,
   InsertDriveFile as FileIcon,
-  ExpandMore as ExpandMoreIcon,
   ChevronRight as ChevronRightIcon,
   Timeline as TimelineIcon,
   Settings as SettingsIcon,
@@ -32,8 +31,7 @@ import {
 import { useDebounce } from '../../hooks/useDebounce';
 import type { 
   EnhancedVectorSearchResult, 
-  VectorSyncStatus, 
-  EnhancedVectorSearchRequest 
+  VectorSyncStatus
 } from '../../types/api';
 
 interface EnhancedSearchOptions {

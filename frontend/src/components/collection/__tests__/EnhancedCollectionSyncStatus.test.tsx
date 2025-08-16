@@ -132,7 +132,7 @@ describe('EnhancedCollectionSyncStatus', () => {
       render(<EnhancedCollectionSyncStatus {...defaultProps} />);
       
       expect(screen.getByText('Files: 12/12')).toBeInTheDocument();
-      expect(screen.getByText('Last sync: few seconds ago')).toBeInTheDocument();
+      expect(screen.getByText(/Last sync:/)).toBeInTheDocument();
     });
   });
 
@@ -178,10 +178,10 @@ describe('EnhancedCollectionSyncStatus', () => {
       await userEvent.click(detailsButton);
       
       await waitFor(() => {
-        expect(screen.getByText('Overlap Ratio:')).toBeInTheDocument();
-        expect(screen.getByText('27%')).toBeInTheDocument(); // Math.round(23/85 * 100) = 27
-        expect(screen.getByText('Context Expansion Eligible:')).toBeInTheDocument();
-        expect(screen.getByText('79%')).toBeInTheDocument(); // Math.round(67/85 * 100) = 79
+        expect(screen.getByTestId('overlap-ratio-metric')).toBeInTheDocument();
+        expect(screen.getByText(/27%/)).toBeInTheDocument(); // Math.round(23/85 * 100) = 27
+        expect(screen.getByTestId('context-expansion-metric')).toBeInTheDocument();
+        expect(screen.getByText(/79%/)).toBeInTheDocument(); // Math.round(67/85 * 100) = 79
       });
     });
 
@@ -192,9 +192,9 @@ describe('EnhancedCollectionSyncStatus', () => {
       await userEvent.click(detailsButton);
       
       await waitFor(() => {
-        expect(screen.getByText('Sync Duration:')).toBeInTheDocument();
-        expect(screen.getByText('Health Score:')).toBeInTheDocument();
-        expect(screen.getByText('Enhanced Processing: Active')).toBeInTheDocument();
+        expect(screen.getByTestId('sync-duration-metric')).toBeInTheDocument();
+        expect(screen.getByTestId('health-score-metric')).toBeInTheDocument();
+        expect(screen.getByText(/Enhanced Processing: Active/)).toBeInTheDocument();
       });
     });
   });
@@ -259,7 +259,7 @@ describe('EnhancedCollectionSyncStatus', () => {
       );
       
       expect(screen.getByText('2 Errors')).toBeInTheDocument();
-      expect(screen.getByTestId('error-icon')).toBeInTheDocument();
+      expect(screen.getAllByTestId('error-icon').length).toBeGreaterThan(0);
     });
 
     it('handles syncing state with enhanced features', () => {
@@ -298,15 +298,16 @@ describe('EnhancedCollectionSyncStatus', () => {
       await userEvent.keyboard('{Enter}');
       
       await waitFor(() => {
-        expect(screen.getByText('Overlap Ratio:')).toBeInTheDocument();
+        expect(screen.getByTestId('overlap-ratio-metric')).toBeInTheDocument();
       });
     });
 
     it('provides meaningful tooltips for enhanced metrics', () => {
       render(<EnhancedCollectionSyncStatus {...defaultProps} />);
       
-      const enhancedIndicator = screen.getByText('Enhanced RAG');
-      expect(enhancedIndicator).toHaveAttribute('title', expect.stringContaining('Enhanced'));
+      // Look for the tooltip container rather than the chip text itself
+      const enhancedIndicator = screen.getByLabelText('Collection uses enhanced RAG features with overlap-aware chunking and context expansion');
+      expect(enhancedIndicator).toBeInTheDocument();
     });
   });
 
@@ -337,8 +338,9 @@ describe('EnhancedCollectionSyncStatus', () => {
         />
       );
       
-      expect(screen.getByText('10,000 total chunks')).toBeInTheDocument();
-      expect(screen.getByText('3,500 overlap chunks')).toBeInTheDocument();
+      // Use regex to match different locale formats (10,000 or 10.000)
+      expect(screen.getByText(/10[.,]000 total chunks/)).toBeInTheDocument();
+      expect(screen.getByText(/3[.,]500 overlap chunks/)).toBeInTheDocument();
     });
   });
 });

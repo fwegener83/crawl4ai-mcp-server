@@ -19,7 +19,6 @@ import {
   Timeline as TimelineIcon,
   TrendingUp as TrendingUpIcon,
   Speed as SpeedIcon,
-  Storage as StorageIcon,
   ExpandMore as ExpandMoreIcon,
   Info as InfoIcon,
 } from '@mui/icons-material';
@@ -29,7 +28,6 @@ interface EnhancedCollectionSyncStatusProps {
   syncStatus: VectorSyncStatus;
   collectionName: string;
   onSyncClick?: () => void;
-  onShowDetails?: () => void;
   onShowStatistics?: (collectionName: string) => void;
   showEnhancedFeatures?: boolean;
   compact?: boolean;
@@ -39,7 +37,6 @@ export const EnhancedCollectionSyncStatus: React.FC<EnhancedCollectionSyncStatus
   syncStatus,
   collectionName,
   onSyncClick,
-  onShowDetails,
   onShowStatistics,
   showEnhancedFeatures = true,
   compact = false
@@ -268,12 +265,12 @@ export const EnhancedCollectionSyncStatus: React.FC<EnhancedCollectionSyncStatus
             
             <Box sx={{ pl: 3, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
               {syncStatus.last_sync_duration && (
-                <Typography variant="body2">
+                <Typography variant="body2" data-testid="sync-duration-metric">
                   Sync Duration: {formatDuration(syncStatus.last_sync_duration)}
                 </Typography>
               )}
               
-              <Typography variant="body2">
+              <Typography variant="body2" data-testid="health-score-metric">
                 Health Score: 
                 <Chip 
                   size="small" 
@@ -299,11 +296,11 @@ export const EnhancedCollectionSyncStatus: React.FC<EnhancedCollectionSyncStatus
               </Typography>
               
               <Box sx={{ pl: 3, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                <Typography variant="body2">
+                <Typography variant="body2" data-testid="overlap-ratio-metric">
                   Overlap Ratio: {enhancedMetrics.overlapRatio}%
                 </Typography>
                 
-                <Typography variant="body2">
+                <Typography variant="body2" data-testid="context-expansion-metric">
                   Context Expansion Eligible: {enhancedMetrics.expansionRatio}%
                 </Typography>
                 
