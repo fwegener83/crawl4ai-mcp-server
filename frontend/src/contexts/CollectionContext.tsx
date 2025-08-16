@@ -62,6 +62,7 @@ export interface CollectionState {
       newFile: boolean;
       deleteConfirmation: { open: boolean; type: 'collection' | 'file'; target: string | null };
       vectorSearch: boolean;
+      enhancedSettings: boolean;
     };
     error: string | null;
   };
@@ -102,6 +103,7 @@ const initialState: CollectionState = {
       newFile: false,
       deleteConfirmation: { open: false, type: 'collection', target: null },
       vectorSearch: false,
+      enhancedSettings: false,
     },
     error: null,
   },

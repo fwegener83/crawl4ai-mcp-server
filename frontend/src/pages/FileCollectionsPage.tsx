@@ -7,6 +7,7 @@ import AddPageModal from '../components/collection/modals/AddPageModal';
 import AddMultiplePagesModal from '../components/collection/modals/AddMultiplePagesModal';
 import NewFileModal from '../components/collection/modals/NewFileModal';
 import DeleteConfirmationModal from '../components/collection/modals/DeleteConfirmationModal';
+import EnhancedSettingsModal from '../components/collection/modals/EnhancedSettingsModal';
 
 export function FileCollectionsPage() {
   return (
@@ -30,6 +31,7 @@ export function FileCollectionsPage() {
         <AddMultiplePagesModal />
         <NewFileModal />
         <DeleteConfirmationModal />
+        <EnhancedSettingsModal />
       </Box>
     </CollectionProvider>
   );
