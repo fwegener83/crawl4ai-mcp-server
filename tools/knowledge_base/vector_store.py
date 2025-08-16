@@ -340,7 +340,8 @@ class VectorStore:
             documents = []
             if results['documents'] and results['documents'][0]:
                 for i, doc in enumerate(results['documents'][0]):
-                    metadata = results['metadatas'][0][i] if results['metadatas'] and results['metadatas'][0] else {}
+                    raw_metadata = results['metadatas'][0][i] if results['metadatas'] and results['metadatas'][0] else {}
+                    metadata = self._deserialize_metadata_from_storage(raw_metadata)
                     distance = results['distances'][0][i] if results['distances'] and results['distances'][0] else 0.0
                     # ChromaDB can return negative cosine distances, handle appropriately
                     score = max(0.0, 1.0 - distance)  # Ensure non-negative scores
@@ -377,10 +378,12 @@ class VectorStore:
             results = self.collection.get(ids=[doc_id], include=['documents', 'metadatas'])
             
             if results['documents'] and results['documents'][0]:
+                raw_metadata = results['metadatas'][0] if results['metadatas'] else {}
+                metadata = self._deserialize_metadata_from_storage(raw_metadata)
                 return {
                     'id': doc_id,
                     'content': results['documents'][0],
-                    'metadata': results['metadatas'][0] if results['metadatas'] else {}
+                    'metadata': metadata
                 }
             
             return None
@@ -428,44 +431,112 @@ class VectorStore:
     def _enhance_metadata_for_storage(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """Enhance metadata for overlap-aware ChromaDB storage.
         
+        ChromaDB only supports scalar metadata values (str, int, float, bool, None).
+        Lists and other complex types must be JSON-serialized.
+        
         Args:
             metadata: Original metadata dictionary.
             
         Returns:
             Enhanced metadata compatible with ChromaDB storage requirements.
         """
+        import json
+        import time
+        
         enhanced = metadata.copy()
         
-        # Ensure all relationship lists are JSON-serializable
-        relationship_fields = [
+        # List fields that need JSON serialization for ChromaDB storage
+        list_fields = [
             'overlap_sources', 'overlap_regions', 'section_siblings',
             'header_hierarchy', 'expansion_candidates'
         ]
         
-        for field in relationship_fields:
-            if field in enhanced and enhanced[field] is not None:
-                # Convert tuples to lists for JSON serialization
-                if isinstance(enhanced[field], list):
-                    enhanced[field] = [
-                        list(item) if isinstance(item, tuple) else item
-                        for item in enhanced[field]
-                    ]
+        # Convert list fields to JSON strings for ChromaDB compatibility
+        for field in list_fields:
+            if field in enhanced:
+                if enhanced[field] is not None:
+                    if isinstance(enhanced[field], list):
+                        # Convert tuples to lists first, then serialize to JSON
+                        normalized_list = [
+                            list(item) if isinstance(item, tuple) else item
+                            for item in enhanced[field]
+                        ]
+                        enhanced[field] = json.dumps(normalized_list)
+                    elif not isinstance(enhanced[field], str):
+                        # Convert other types to JSON string
+                        enhanced[field] = json.dumps(enhanced[field])
+                else:
+                    # Store null as empty JSON array string
+                    enhanced[field] = "[]"
         
-        # Add default values for relationship tracking if missing
+        # Add default values for relationship tracking if missing (as JSON strings)
         if 'overlap_sources' not in enhanced:
-            enhanced['overlap_sources'] = []
+            enhanced['overlap_sources'] = "[]"
         if 'overlap_regions' not in enhanced:
-            enhanced['overlap_regions'] = []
+            enhanced['overlap_regions'] = "[]"
+        if 'section_siblings' not in enhanced:
+            enhanced['section_siblings'] = "[]"
+        if 'header_hierarchy' not in enhanced:
+            enhanced['header_hierarchy'] = "[]"
         if 'overlap_percentage' not in enhanced:
             enhanced['overlap_percentage'] = 0.0
         if 'context_expansion_eligible' not in enhanced:
             enhanced['context_expansion_eligible'] = True
         
         # Add storage timestamp
-        import time
         enhanced['stored_at'] = time.time()
         
-        return enhanced
+        # Remove or convert None values as ChromaDB doesn't support them
+        cleaned_metadata = {}
+        for key, value in enhanced.items():
+            if value is None:
+                # Skip None values entirely rather than converting
+                continue
+            elif isinstance(value, (str, int, float, bool)):
+                cleaned_metadata[key] = value
+            else:
+                # This shouldn't happen after our JSON serialization above, but just in case
+                try:
+                    cleaned_metadata[key] = str(value)
+                except:
+                    continue  # Skip problematic values
+        
+        return cleaned_metadata
+    
+    def _deserialize_metadata_from_storage(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """Deserialize metadata retrieved from ChromaDB storage.
+        
+        Converts JSON-serialized list fields back to Python lists.
+        
+        Args:
+            metadata: Metadata dictionary from ChromaDB.
+            
+        Returns:
+            Metadata with deserialized list fields.
+        """
+        import json
+        
+        if not metadata:
+            return metadata
+            
+        deserialized = metadata.copy()
+        
+        # List fields that were JSON-serialized for storage
+        list_fields = [
+            'overlap_sources', 'overlap_regions', 'section_siblings',
+            'header_hierarchy', 'expansion_candidates'
+        ]
+        
+        # Deserialize JSON string fields back to lists
+        for field in list_fields:
+            if field in deserialized and isinstance(deserialized[field], str):
+                try:
+                    deserialized[field] = json.loads(deserialized[field])
+                except (json.JSONDecodeError, TypeError):
+                    # If deserialization fails, default to empty list
+                    deserialized[field] = []
+        
+        return deserialized
     
     def search_with_relationships(
         self,
@@ -500,7 +571,8 @@ class VectorStore:
             search_results = []
             if results['documents'] and results['documents'][0]:
                 for i, doc in enumerate(results['documents'][0]):
-                    metadata = results['metadatas'][0][i] if results['metadatas'] and results['metadatas'][0] else {}
+                    raw_metadata = results['metadatas'][0][i] if results['metadatas'] and results['metadatas'][0] else {}
+                    metadata = self._deserialize_metadata_from_storage(raw_metadata)
                     distance = results['distances'][0][i] if results['distances'] and results['distances'][0] else 0.0
                     score = max(0.0, 1.0 - distance)
                     
@@ -587,7 +659,8 @@ class VectorStore:
                     
                     if neighbor_results['documents'] and neighbor_results['documents'][0]:
                         neighbor_doc = neighbor_results['documents'][0]
-                        neighbor_metadata = neighbor_results['metadatas'][0] if neighbor_results['metadatas'] else {}
+                        raw_neighbor_metadata = neighbor_results['metadatas'][0] if neighbor_results['metadatas'] else {}
+                        neighbor_metadata = self._deserialize_metadata_from_storage(raw_neighbor_metadata)
                         
                         expanded_results.append({
                             'id': neighbor_id,
@@ -660,7 +733,8 @@ class VectorStore:
             related_chunks = []
             if results['documents'] and results['documents'][0]:
                 for i, doc in enumerate(results['documents'][0]):
-                    metadata = results['metadatas'][0][i] if results['metadatas'] and results['metadatas'][0] else {}
+                    raw_metadata = results['metadatas'][0][i] if results['metadatas'] and results['metadatas'][0] else {}
+                    metadata = self._deserialize_metadata_from_storage(raw_metadata)
                     
                     related_chunks.append({
                         'id': results['ids'][0][i] if results['ids'] and results['ids'][0] else '',
@@ -704,7 +778,8 @@ class VectorStore:
             if not (center_results['documents'] and center_results['documents'][0]):
                 return []
             
-            center_metadata = center_results['metadatas'][0] if center_results['metadatas'] else {}
+            raw_center_metadata = center_results['metadatas'][0] if center_results['metadatas'] else {}
+            center_metadata = self._deserialize_metadata_from_storage(raw_center_metadata)
             related_ids = []
             
             # Extract related IDs based on relationship type
@@ -734,7 +809,8 @@ class VectorStore:
             if related_results['documents']:
                 for i, doc in enumerate(related_results['documents']):
                     if doc:  # Skip empty documents
-                        metadata = related_results['metadatas'][i] if related_results['metadatas'] else {}
+                        raw_metadata = related_results['metadatas'][i] if related_results['metadatas'] else {}
+                        metadata = self._deserialize_metadata_from_storage(raw_metadata)
                         
                         related_chunks.append({
                             'id': related_ids[i],
@@ -785,7 +861,8 @@ class VectorStore:
                 has_siblings_count = 0
                 
                 if sample_results['metadatas']:
-                    for metadata in sample_results['metadatas']:
+                    for raw_metadata in sample_results['metadatas']:
+                        metadata = self._deserialize_metadata_from_storage(raw_metadata)
                         if metadata.get('overlap_sources'):
                             overlap_count += 1
                         if metadata.get('context_expansion_eligible'):
