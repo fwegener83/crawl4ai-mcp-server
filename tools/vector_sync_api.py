@@ -202,18 +202,30 @@ class VectorSyncAPI:
                 'progress': job_progress
             }
             
+            # Get updated sync status after successful sync
+            updated_sync_status = self.sync_manager.get_collection_sync_status(collection_name)
+            
             response = SyncCollectionResponse(
                 success=sync_result.success,
                 job_id=sync_result.job_id,
                 message=f"Sync {'completed' if sync_result.success else 'failed'} for collection '{collection_name}'",
                 sync_result={
+                    # Sync operation statistics
                     'files_processed': sync_result.files_processed,
                     'chunks_created': sync_result.chunks_created,
                     'chunks_updated': sync_result.chunks_updated,
                     'total_duration': sync_result.total_duration,
                     'errors': sync_result.errors,
                     'warnings': sync_result.warnings,
-                    'health_score': sync_result.health_score
+                    'health_score': sync_result.health_score,
+                    # Current collection status after sync
+                    'collection_name': updated_sync_status.collection_name,
+                    'is_enabled': updated_sync_status.sync_enabled,
+                    'last_sync': updated_sync_status.last_sync.isoformat() if updated_sync_status.last_sync else "",
+                    'file_count': updated_sync_status.total_files,
+                    'vector_count': updated_sync_status.chunk_count,
+                    'sync_status': updated_sync_status.status.value,
+                    'error_message': '; '.join(updated_sync_status.errors) if updated_sync_status.errors else None
                 }
             )
             
