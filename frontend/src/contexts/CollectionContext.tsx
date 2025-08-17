@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer } from 'react';
 import type { ReactNode } from 'react';
-import type { FileCollection, FileMetadata, VectorSyncStatus, VectorSearchResult } from '../types/api';
+import type { FileCollection, FileMetadata, VectorSyncStatus } from '../types/api';
 
 // State Types
 export interface FileNode {
@@ -40,9 +40,6 @@ export interface CollectionState {
   // Vector sync state
   vectorSync: {
     statuses: Record<string, VectorSyncStatus>; // collectionName -> status
-    searchResults: VectorSearchResult[];
-    searchQuery: string;
-    searchLoading: boolean;
   };
   
   // UI state
@@ -53,7 +50,6 @@ export interface CollectionState {
       saving: boolean;
       crawling: boolean;
       vectorSync: boolean;
-      vectorSearch: boolean;
     };
     modals: {
       newCollection: boolean;
@@ -83,9 +79,6 @@ const initialState: CollectionState = {
   },
   vectorSync: {
     statuses: {},
-    searchResults: [],
-    searchQuery: '',
-    searchLoading: false,
   },
   ui: {
     loading: {
@@ -94,7 +87,6 @@ const initialState: CollectionState = {
       saving: false,
       crawling: false,
       vectorSync: false,
-      vectorSearch: false,
     },
     modals: {
       newCollection: false,
@@ -145,10 +137,7 @@ export type CollectionAction =
   // Vector sync actions
   | { type: 'SET_VECTOR_SYNC_STATUS'; payload: { collectionName: string; status: VectorSyncStatus } }
   | { type: 'SET_VECTOR_SYNC_STATUSES'; payload: Record<string, VectorSyncStatus> }
-  | { type: 'UPDATE_SYNC_PROGRESS'; payload: { collectionName: string; progress: number; message?: string } }
-  | { type: 'SET_VECTOR_SEARCH_RESULTS'; payload: VectorSearchResult[] }
-  | { type: 'SET_VECTOR_SEARCH_QUERY'; payload: string }
-  | { type: 'CLEAR_VECTOR_SEARCH' };
+  | { type: 'UPDATE_SYNC_PROGRESS'; payload: { collectionName: string; progress: number; message?: string } };
 
 // Reducer
 function collectionReducer(state: CollectionState, action: CollectionAction): CollectionState {
@@ -383,34 +372,6 @@ function collectionReducer(state: CollectionState, action: CollectionAction): Co
       }
       return state;
     }
-
-    case 'SET_VECTOR_SEARCH_RESULTS':
-      return {
-        ...state,
-        vectorSync: {
-          ...state.vectorSync,
-          searchResults: action.payload,
-        },
-      };
-
-    case 'SET_VECTOR_SEARCH_QUERY':
-      return {
-        ...state,
-        vectorSync: {
-          ...state.vectorSync,
-          searchQuery: action.payload,
-        },
-      };
-
-    case 'CLEAR_VECTOR_SEARCH':
-      return {
-        ...state,
-        vectorSync: {
-          ...state.vectorSync,
-          searchResults: [],
-          searchQuery: '',
-        },
-      };
       
     default:
       return state;

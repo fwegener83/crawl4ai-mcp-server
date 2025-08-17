@@ -15,7 +15,11 @@ import {
   AccordionDetails,
   Stack,
   Container,
-  CircularProgress
+  CircularProgress,
+  FormControlLabel,
+  Switch,
+  Chip,
+  Divider
 } from '../components/ui';
 import { Select } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -35,6 +39,10 @@ const RAGQueryPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [collections, setCollections] = useState<FileCollection[]>([]);
   const [loadingCollections, setLoadingCollections] = useState(true);
+  
+  // Enhanced RAG Features
+  const [enableContextExpansion, setEnableContextExpansion] = useState(false);
+  const [enableRelationshipSearch, setEnableRelationshipSearch] = useState(false);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -48,6 +56,9 @@ const RAGQueryPage: React.FC = () => {
         collection_name: collection === 'all' ? undefined : collection,
         max_chunks: maxChunks,
         similarity_threshold: similarityThreshold,
+        // Enhanced RAG features
+        enable_context_expansion: enableContextExpansion,
+        enable_relationship_search: enableRelationshipSearch,
       });
       
       setResults(response);
@@ -162,6 +173,59 @@ const RAGQueryPage: React.FC = () => {
                       marks
                       valueLabelDisplay="auto"
                     />
+                  </Box>
+
+                  <Divider sx={{ my: 2 }} />
+                  
+                  {/* Enhanced RAG Features */}
+                  <Box>
+                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      Enhanced RAG Features
+                      <Chip 
+                        label="BETA" 
+                        size="small" 
+                        color="primary" 
+                        variant="outlined"
+                      />
+                    </Typography>
+                    
+                    <Stack spacing={2}>
+                      <FormControlLabel
+                        control={
+                          <Switch 
+                            checked={enableContextExpansion}
+                            onChange={(e) => setEnableContextExpansion(e.target.checked)}
+                            data-testid="context-expansion-toggle"
+                          />
+                        }
+                        label={
+                          <Box>
+                            <Typography variant="body2">Context Expansion</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Include related chunks based on semantic relationships and overlap
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                      
+                      <FormControlLabel
+                        control={
+                          <Switch 
+                            checked={enableRelationshipSearch}
+                            onChange={(e) => setEnableRelationshipSearch(e.target.checked)}
+                            data-testid="relationship-search-toggle"
+                          />
+                        }
+                        label={
+                          <Box>
+                            <Typography variant="body2">Relationship-Aware Search</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Use chunk hierarchies and document structure for improved relevance
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                    </Stack>
                   </Box>
                 </Stack>
               </AccordionDetails>

@@ -1,7 +1,7 @@
-import React from 'react';
 import { Dialog, DialogTitle, DialogContent, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useCollection } from '../../../contexts/CollectionContext';
+import { useVectorSync } from '../../../hooks/useVectorSync';
 import { EnhancedSettingsPanel } from '../EnhancedSettingsPanel';
 
 export interface EnhancedSettingsModalProps {
@@ -10,6 +10,7 @@ export interface EnhancedSettingsModalProps {
 
 export function EnhancedSettingsModal({ collectionId }: EnhancedSettingsModalProps) {
   const { state, dispatch } = useCollection();
+  const { getSyncStatus } = useVectorSync();
   
   const handleClose = () => {
     dispatch({ type: 'CLOSE_MODAL', payload: 'enhancedSettings' });
@@ -19,6 +20,19 @@ export function EnhancedSettingsModal({ collectionId }: EnhancedSettingsModalPro
     // Settings are automatically persisted by the EnhancedSettingsPanel
     console.log('Enhanced settings updated:', settings);
   };
+
+  const handleApplySettings = (settings: any) => {
+    // Apply settings to the collection
+    console.log('Apply enhanced settings:', settings);
+  };
+
+  const handleResetToDefaults = () => {
+    // Reset settings to defaults
+    console.log('Reset enhanced settings to defaults');
+  };
+
+  const selectedCollectionId = collectionId || state.selectedCollection;
+  const syncStatus = selectedCollectionId ? getSyncStatus(selectedCollectionId) : undefined;
 
   return (
     <Dialog
@@ -47,11 +61,17 @@ export function EnhancedSettingsModal({ collectionId }: EnhancedSettingsModalPro
       </DialogTitle>
       
       <DialogContent sx={{ p: 0 }}>
-        <EnhancedSettingsPanel
-          collectionId={collectionId || state.selectedCollection || ''}
-          onSettingsChange={handleSettingsChange}
-          showAdvancedSettings={true}
-        />
+        {selectedCollectionId && syncStatus && (
+          <EnhancedSettingsPanel
+            collectionName={selectedCollectionId}
+            syncStatus={syncStatus}
+            open={state.ui.modals.enhancedSettings}
+            onClose={handleClose}
+            onSettingsChange={handleSettingsChange}
+            onApplySettings={handleApplySettings}
+            onResetToDefaults={handleResetToDefaults}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

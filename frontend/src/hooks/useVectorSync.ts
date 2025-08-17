@@ -3,9 +3,7 @@ import { useCollection } from '../contexts/CollectionContext';
 import { APIService } from '../services/api';
 import type { 
   VectorSyncStatus, 
-  VectorSearchRequest, 
-  SyncCollectionRequest,
-  VectorSearchResult 
+  SyncCollectionRequest
 } from '../types/api';
 import {
   CollectionNotFoundError,
@@ -17,9 +15,6 @@ import {
 interface UseVectorSyncReturn {
   // State
   syncStatuses: Record<string, VectorSyncStatus>;
-  searchResults: VectorSearchResult[];
-  searchQuery: string;
-  searchLoading: boolean;
   
   // Actions
   getSyncStatus: (collectionId: string) => VectorSyncStatus | undefined;
@@ -27,8 +22,6 @@ interface UseVectorSyncReturn {
   refreshAllSyncStatuses: () => Promise<void>;
   syncCollection: (collectionId: string, request?: SyncCollectionRequest) => Promise<void>;
   deleteVectors: (collectionId: string) => Promise<void>;
-  searchVectors: (query: string, collectionId?: string) => Promise<void>;
-  clearSearch: () => void;
   
   // Utilities
   canSync: (collectionId: string) => boolean;
@@ -55,7 +48,7 @@ const getErrorMessage = (error: unknown): string => {
 
 export const useVectorSync = (): UseVectorSyncReturn => {
   const { state, dispatch } = useCollection();
-  const { vectorSync, ui } = state;
+  const { vectorSync } = state;
   
   // Track active polling intervals for sync operations
   const pollingIntervals = useRef<Map<string, NodeJS.Timeout>>(new Map());
@@ -336,40 +329,6 @@ export const useVectorSync = (): UseVectorSyncReturn => {
     }
   }, [dispatch, refreshSyncStatus, stopPolling]);
 
-  // Search vectors
-  const searchVectors = useCallback(async (query: string, collectionId?: string) => {
-    if (!query.trim()) {
-      dispatch({ type: 'CLEAR_VECTOR_SEARCH' });
-      return;
-    }
-
-    try {
-      dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSearch', value: true } });
-      dispatch({ type: 'SET_VECTOR_SEARCH_QUERY', payload: query });
-      
-      const request: VectorSearchRequest = {
-        query: query.trim(),
-        collection_name: collectionId,
-        limit: 20
-      };
-      
-      const response = await APIService.searchVectors(request);
-      dispatch({ type: 'SET_VECTOR_SEARCH_RESULTS', payload: response.results });
-    } catch (error) {
-      dispatch({ 
-        type: 'SET_ERROR', 
-        payload: getErrorMessage(error) 
-      });
-      dispatch({ type: 'SET_VECTOR_SEARCH_RESULTS', payload: [] });
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSearch', value: false } });
-    }
-  }, [dispatch]);
-
-  // Clear search
-  const clearSearch = useCallback(() => {
-    dispatch({ type: 'CLEAR_VECTOR_SEARCH' });
-  }, [dispatch]);
 
   // Utility functions
   const canSync = useCallback((collectionId: string): boolean => {
@@ -452,9 +411,6 @@ export const useVectorSync = (): UseVectorSyncReturn => {
   return {
     // State
     syncStatuses: vectorSync.statuses,
-    searchResults: vectorSync.searchResults,
-    searchQuery: vectorSync.searchQuery,
-    searchLoading: ui.loading.vectorSearch,
     
     // Actions
     getSyncStatus,
@@ -462,8 +418,6 @@ export const useVectorSync = (): UseVectorSyncReturn => {
     refreshAllSyncStatuses,
     syncCollection,
     deleteVectors,
-    searchVectors,
-    clearSearch,
     
     // Utilities
     canSync,

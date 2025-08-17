@@ -1,21 +1,14 @@
-import React from 'react';
 import { useCollectionOperations } from '../../hooks/useCollectionOperations';
 import { useVectorSync } from '../../hooks/useVectorSync';
 import { CollectionSyncButton } from './CollectionSyncButton';
-import { VectorSyncIndicator } from './VectorSyncIndicator';
-import { VectorSearchPanel } from './VectorSearchPanel';
-import { EnhancedVectorSearchPanel } from './EnhancedVectorSearchPanel';
 import { EnhancedCollectionSyncStatus } from './EnhancedCollectionSyncStatus';
 import FileExplorer from './FileExplorer';
 import EditorArea from './EditorArea';
-import { Box, Typography, Button, Paper, IconButton, Collapse } from '../ui';
+import { Box, Typography, Button, Paper, IconButton } from '../ui';
 import DescriptionIcon from '@mui/icons-material/Description';
 import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
 import WebIcon from '@mui/icons-material/Web';
 import TravelExploreIcon from '@mui/icons-material/TravelExplore';
-import SearchIcon from '@mui/icons-material/Search';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import SettingsIcon from '@mui/icons-material/Settings';
 import Tooltip from '@mui/material/Tooltip';
 
@@ -27,40 +20,9 @@ export function MainContent({ className = '' }: MainContentProps) {
   const { state, openModal } = useCollectionOperations();
   const { 
     getSyncStatus, 
-    syncCollection, 
-    searchVectors,
-    searchResults: vectorSearchResults,
-    searchQuery: vectorSearchQuery,
-    searchLoading: vectorSearchLoading,
-    clearSearch: clearVectorSearch
+    syncCollection
   } = useVectorSync();
   
-  const [searchPanelOpen, setSearchPanelOpen] = React.useState(false);
-  const [useEnhancedSearch, setUseEnhancedSearch] = React.useState(true);
-
-  // Vector search handlers
-  const handleVectorSearch = async (query: string, collectionId?: string) => {
-    if (state.selectedCollection) {
-      await searchVectors(query, collectionId || state.selectedCollection);
-    }
-  };
-
-  // Enhanced vector search handler with options
-  const handleEnhancedVectorSearch = async (
-    query: string, 
-    collectionId?: string, 
-    options?: { enableContextExpansion?: boolean; similarityThreshold?: number }
-  ) => {
-    if (state.selectedCollection) {
-      // Enhanced search with additional options
-      await searchVectors(query, collectionId || state.selectedCollection, options);
-    }
-  };
-
-  const handleSearchResultClick = (result: unknown) => {
-    // TODO: Navigate to file and highlight the chunk
-    console.log('Navigate to:', result);
-  };
 
   // Vector sync handlers - bind collection name
   const handleSyncCollection = async () => {
@@ -69,10 +31,6 @@ export function MainContent({ className = '' }: MainContentProps) {
     }
   };
 
-
-  const toggleSearchPanel = () => {
-    setSearchPanelOpen(!searchPanelOpen);
-  };
 
   if (!state.selectedCollection) {
     return (
@@ -170,14 +128,13 @@ export function MainContent({ className = '' }: MainContentProps) {
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
               {/* Enhanced Vector Sync Status & Controls */}
-              {state.selectedCollection && (
+              {state.selectedCollection && getSyncStatus(state.selectedCollection) && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <EnhancedCollectionSyncStatus
                     data-testid="enhanced-sync-status"
-                    collectionId={state.selectedCollection}
-                    syncStatus={getSyncStatus(state.selectedCollection)}
-                    showDetails={true}
-                    onSync={handleSyncCollection}
+                    collectionName={state.selectedCollection}
+                    syncStatus={getSyncStatus(state.selectedCollection)!}
+                    onSyncClick={handleSyncCollection}
                   />
                   <CollectionSyncButton
                     data-testid="vector-sync-btn"
@@ -188,39 +145,6 @@ export function MainContent({ className = '' }: MainContentProps) {
                   />
                 </Box>
               )}
-
-              
-              <IconButton
-                onClick={toggleSearchPanel}
-                color={searchPanelOpen ? 'primary' : 'default'}
-                size="medium"
-                sx={{ 
-                  mr: 1,
-                  bgcolor: searchPanelOpen ? 'primary.50' : 'transparent',
-                  '&:hover': {
-                    bgcolor: searchPanelOpen ? 'primary.100' : 'action.hover'
-                  }
-                }}
-              >
-                <SearchIcon />
-              </IconButton>
-
-              <Tooltip title={useEnhancedSearch ? 'Switch to Basic Search' : 'Switch to Enhanced Search'}>
-                <IconButton
-                  onClick={() => setUseEnhancedSearch(!useEnhancedSearch)}
-                  color={useEnhancedSearch ? 'secondary' : 'default'}
-                  size="medium"
-                  sx={{ 
-                    mr: 1,
-                    bgcolor: useEnhancedSearch ? 'secondary.50' : 'transparent',
-                    '&:hover': {
-                      bgcolor: useEnhancedSearch ? 'secondary.100' : 'action.hover'
-                    }
-                  }}
-                >
-                  <AutoAwesomeIcon />
-                </IconButton>
-              </Tooltip>
 
               <Tooltip title="Enhanced RAG Settings">
                 <IconButton
@@ -282,68 +206,6 @@ export function MainContent({ className = '' }: MainContentProps) {
         }}>
           <FileExplorer />
         </Box>
-        
-        {/* Vector Search Panel */}
-        <Collapse 
-          in={searchPanelOpen} 
-          orientation="horizontal" 
-          sx={{ display: searchPanelOpen ? 'flex' : 'none' }}
-        >
-          <Box sx={{ 
-            width: 350, 
-            flexShrink: 0,
-            borderRight: 1,
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
-            position: 'relative'
-          }}>
-            {/* Toggle Button */}
-            <IconButton
-              onClick={toggleSearchPanel}
-              size="small"
-              sx={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                zIndex: 1,
-                bgcolor: 'background.paper',
-                border: 1,
-                borderColor: 'divider',
-                '&:hover': {
-                  bgcolor: 'action.hover'
-                }
-              }}
-            >
-              <ChevronLeftIcon />
-            </IconButton>
-
-            {useEnhancedSearch ? (
-              <EnhancedVectorSearchPanel
-                collectionId={state.selectedCollection}
-                collectionSyncStatus={getSyncStatus(state.selectedCollection)}
-                searchResults={vectorSearchResults}
-                searchQuery={vectorSearchQuery}
-                searchLoading={vectorSearchLoading}
-                onSearch={handleVectorSearch}
-                onEnhancedSearch={handleEnhancedVectorSearch}
-                onResultClick={handleSearchResultClick}
-                onClearSearch={clearVectorSearch}
-                showEnhancedFeatures={true}
-              />
-            ) : (
-              <VectorSearchPanel
-                collectionId={state.selectedCollection}
-                collectionSyncStatus={getSyncStatus(state.selectedCollection)}
-                searchResults={vectorSearchResults}
-                searchQuery={vectorSearchQuery}
-                searchLoading={vectorSearchLoading}
-                onSearch={handleVectorSearch}
-                onResultClick={handleSearchResultClick}
-                onClearSearch={clearVectorSearch}
-              />
-            )}
-          </Box>
-        </Collapse>
         
         {/* Editor Area */}
         <Box sx={{ flex: 1, bgcolor: 'background.default' }}>

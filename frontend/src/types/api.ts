@@ -263,6 +263,9 @@ export interface RAGQueryRequest {
   collection_name?: string;
   max_chunks?: number;
   similarity_threshold?: number;
+  // Enhanced RAG features
+  enable_context_expansion?: boolean;
+  enable_relationship_search?: boolean;
 }
 
 export interface RAGSource {
