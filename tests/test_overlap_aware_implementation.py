@@ -6,11 +6,17 @@ the overlap-aware processor meets all requirements from the plan.
 """
 
 import pytest
-from tools.knowledge_base.overlap_aware_processor import OverlapAwareMarkdownProcessor, create_overlap_aware_processor
 from tools.knowledge_base.dependencies import is_rag_available
 
 # Skip all tests if RAG dependencies are not available
 pytestmark = pytest.mark.skipif(not is_rag_available(), reason="RAG dependencies not available")
+
+# Import RAG modules only if available
+if is_rag_available():
+    from tools.knowledge_base.overlap_aware_processor import OverlapAwareMarkdownProcessor, create_overlap_aware_processor
+else:
+    OverlapAwareMarkdownProcessor = None
+    create_overlap_aware_processor = None
 
 SAMPLE_CONTENT = """# Main Title
 

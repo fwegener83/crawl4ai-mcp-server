@@ -15,12 +15,17 @@ import asyncio
 from typing import List, Dict, Any, Optional, Tuple, Set
 from dataclasses import dataclass, field
 from unittest.mock import Mock, AsyncMock, patch
-import numpy as np
 
 from tools.knowledge_base.dependencies import is_rag_available
 
 # Skip all tests if RAG dependencies are not available
 pytestmark = pytest.mark.skipif(not is_rag_available(), reason="RAG dependencies not available")
+
+# Import numpy only if RAG is available
+if is_rag_available():
+    import numpy as np
+else:
+    np = None
 
 
 @dataclass

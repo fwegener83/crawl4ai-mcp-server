@@ -17,7 +17,7 @@ class RAGDependencies:
     def _load_dependencies(self):
         """Load all RAG dependencies with error handling."""
         success_count = 0
-        total_deps = 4
+        total_deps = 5
         
         # LangChain Text Splitters
         try:
@@ -52,6 +52,14 @@ class RAGDependencies:
         except ImportError as e:
             self.missing_deps['numpy'] = str(e)
         
+        # Markdown2
+        try:
+            import markdown2
+            self.components['markdown2'] = markdown2
+            success_count += 1
+        except ImportError as e:
+            self.missing_deps['markdown2'] = str(e)
+        
         self.available = success_count == total_deps
         
         if self.available:
@@ -62,14 +70,14 @@ class RAGDependencies:
     def get_component(self, name: str) -> Any:
         """Get a dependency component by name."""
         if not self.available:
-            raise ImportError(f"RAG dependencies not available. Install with: pip install chromadb sentence-transformers langchain-text-splitters numpy")
+            raise ImportError(f"RAG dependencies not available. Install with: pip install chromadb sentence-transformers langchain-text-splitters numpy markdown2")
         return self.components[name]
     
     def check_available(self, raise_on_missing: bool = True) -> bool:
         """Check if all dependencies are available."""
         if not self.available and raise_on_missing:
             missing_list = ", ".join(self.missing_deps.keys())
-            raise ImportError(f"RAG dependencies not available. Missing: {missing_list}")
+            raise ImportError(f"RAG dependencies not available. Missing: {missing_list}. Install with: pip install chromadb sentence-transformers langchain-text-splitters numpy markdown2")
         return self.available
 
 

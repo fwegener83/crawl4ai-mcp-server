@@ -19,8 +19,7 @@ from typing import Dict, Any, List, Optional, Union, Tuple
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-import markdown2
-from .dependencies import rag_deps, ensure_rag_available
+from .dependencies import rag_deps, ensure_rag_available, is_rag_available
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +74,7 @@ class MarkdownContentProcessor:
         self.preserve_tables = preserve_tables
         
         # Initialize markdown2 parser with comprehensive extras
+        markdown2 = rag_deps.get_component('markdown2')
         self.markdown_parser = markdown2.Markdown(extras=[
             'fenced-code-blocks',    # ```python code```
             'header-ids',            # Header ID generation
@@ -263,6 +263,7 @@ class MarkdownContentProcessor:
         content = section['content']
         
         # Simple table detection - more sophisticated version could use markdown2 parsing
+        # Note: markdown2 is accessed via rag_deps.get_component('markdown2')
         table_pattern = r'(\n\|.*\|\n(\|.*\|\n)*)'
         parts = re.split(table_pattern, content)
         
