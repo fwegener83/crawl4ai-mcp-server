@@ -19,11 +19,14 @@ import {
   FormControlLabel,
   Switch,
   Chip,
-  Divider
+  Divider,
+  Tooltip,
+  IconButton
 } from '../components/ui';
 import { Select } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SearchIcon from '@mui/icons-material/Search';
+import InfoIcon from '@mui/icons-material/Info';
 import { RAGAnswer, RAGSources, RAGMetadata } from '../components/rag';
 import type { RAGQueryResponse, FileCollection } from '../types/api';
 import { ragQueryService } from '../services/ragQueryService';
@@ -187,6 +190,14 @@ const RAGQueryPage: React.FC = () => {
                         color="primary" 
                         variant="outlined"
                       />
+                      <Tooltip 
+                        title="These features improve RAG answer quality through advanced context analysis and intelligent document linking."
+                        placement="top"
+                      >
+                        <IconButton size="small" sx={{ ml: 1 }}>
+                          <InfoIcon fontSize="small" color="action" />
+                        </IconButton>
+                      </Tooltip>
                     </Typography>
                     
                     <Stack spacing={2}>
@@ -199,11 +210,19 @@ const RAGQueryPage: React.FC = () => {
                           />
                         }
                         label={
-                          <Box>
-                            <Typography variant="body2">Context Expansion</Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              Include related chunks based on semantic relationships and overlap
-                            </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box>
+                              <Typography variant="body2">Context Expansion</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Include related chunks based on semantic relationships and overlap
+                              </Typography>
+                            </Box>
+                            <Tooltip 
+                              title="Automatically expands context with related text chunks that are semantically similar or overlapping. This leads to more complete and coherent answers."
+                              placement="top"
+                            >
+                              <InfoIcon fontSize="small" color="action" sx={{ ml: 0.5 }} />
+                            </Tooltip>
                           </Box>
                         }
                       />
@@ -217,11 +236,19 @@ const RAGQueryPage: React.FC = () => {
                           />
                         }
                         label={
-                          <Box>
-                            <Typography variant="body2">Relationship-Aware Search</Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              Use chunk hierarchies and document structure for improved relevance
-                            </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box>
+                              <Typography variant="body2">Relationship-Aware Search</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Use chunk hierarchies and document structure for improved relevance
+                              </Typography>
+                            </Box>
+                            <Tooltip 
+                              title="Uses document structure and hierarchies between text chunks for more precise search. Considers headings, chapters, and logical relationships for more relevant results."
+                              placement="top"
+                            >
+                              <InfoIcon fontSize="small" color="action" sx={{ ml: 0.5 }} />
+                            </Tooltip>
                           </Box>
                         }
                       />
