@@ -1,12 +1,12 @@
-# Full-Stack Feature Plan: Enhanced RAG Chunking Strategy with Frontend Integration
+# Full-Stack Feature Plan: Enhanced RAG Chunking Strategy with UI Architecture Correction
 
 ## Planning Overview
 - **Input**: .planning/INITIAL_rag_chunking_abtest.md
 - **Branch**: feature/RAG_QUERY
-- **Complexity Score**: 6/15 (Moderate)
-- **Test Strategy**: Standard Test-First Development
+- **Complexity Score**: 7/15 (Moderate)
+- **Test Strategy**: Standard Test-First Development with UI Refactoring
 - **Generated**: 2025-08-15T14:35:00Z
-- **Modified**: 2025-08-15T17:45:00Z - A/B Testing removed, Frontend focus
+- **Modified**: 2025-08-16T10:30:00Z - UI Architecture Correction: File Collections vs RAG Query Separation
 
 ## Phase 1: Deep Exploration Results
 
@@ -60,16 +60,26 @@ Research confirmed that RecursiveCharacterTextSplitter with chunk_overlap parame
 - MCP tools enhanced with `search_with_relationships()` and `get_collection_statistics()`
 - Vector sync integration supporting overlap-aware processing
 
-#### Frontend Requirements  
-**Enhanced Search Interface:**
-- `ContextExpansionToggle`: Enable/disable context expansion in search
-- `EnhancedSearchResults`: Display relationship data, overlap sources, expansion indicators
-- `ChunkRelationshipVisualization`: Show previous/next chunk navigation
+#### Frontend Requirements (UI Architecture Correction Needed)
 
-**Collection Management Enhancement:**
-- `EnhancedSyncStatus`: Display enhanced features usage status
-- `CollectionStatistics`: Integration with get_collection_statistics MCP tool
-- `EnhancedSettingsPanel`: Configure enhanced features per collection
+**CRITICAL ISSUE IDENTIFIED**: Current UI places search functionality in File Collections area, but this violates proper separation of concerns.
+
+**File Collections Area (Content Management + Sync ONLY):**
+- ❌ REMOVE: All VectorSearchPanel, EnhancedVectorSearchPanel components 
+- ❌ REMOVE: Vector search state management and handlers
+- ❌ REMOVE: Search toggle buttons and panels
+- ✅ KEEP: EnhancedSyncStatus for sync monitoring
+- ✅ KEEP: CollectionStatistics for collection management
+- ✅ KEEP: EnhancedSettingsPanel for RAG configuration
+- ✅ KEEP: Sync buttons and status indicators
+
+**RAG Query Area (Search + AI Responses):**
+- ✅ ENHANCE: Integrate EnhancedVectorSearchPanel into RAGQueryPage
+- ✅ ADD: ContextExpansionToggle in RAG Query interface
+- ✅ ADD: EnhancedSearchResults with relationship visualization
+- ✅ ADD: ChunkRelationshipVisualization in RAG results
+- ✅ ADD: Advanced search controls and filters
+- ✅ ENHANCE: Integration with enhanced MCP search tools
 
 #### Integration Requirements
 **API Integration:**
@@ -94,18 +104,23 @@ Research confirmed that RecursiveCharacterTextSplitter with chunk_overlap parame
 - **Rationale**: Provides flexibility without impacting storage requirements significantly
 - **Alternatives**: Pre-indexing expanded chunks vs. real-time expansion (chosen) vs. hybrid approach
 
-**ADR-003: Frontend Integration Approach**
-- **Decision**: Progressive enhancement of existing UI components with enhanced RAG features
-- **Rationale**: Maintains existing user workflows while exposing new capabilities incrementally
-- **Alternatives**: Complete UI redesign vs. progressive enhancement (chosen) vs. separate enhanced interface
+**ADR-003: Frontend Integration Approach (UPDATED)**
+- **Decision**: Proper UI separation - File Collections for content management, RAG Query for search functionality
+- **Rationale**: Maintains clear separation of concerns and improves user experience by putting search features where users expect them
+- **Alternatives**: Keep mixed UI (rejected) vs. proper separation (chosen) vs. complete redesign
+
+**ADR-004: UI Architecture Correction**
+- **Decision**: Remove all search functionality from File Collections area and enhance RAG Query area instead
+- **Rationale**: File Collections should focus on content management + sync; RAG Query should handle all search + AI functionality
+- **Impact**: Requires refactoring existing integrated components but improves UX clarity
 
 ## Phase 2: Intelligent Complexity Assessment Results
 
-### Complexity Assessment Breakdown
+### Complexity Assessment Breakdown (UPDATED)
 - **Backend Complexity**: 1/5 - Backend implementation already complete
-- **Frontend Complexity**: 3/5 - Enhanced UI components for new RAG features
-- **Integration Complexity**: 2/5 - Standard MCP tool integration and API enhancement
-- **Total Score**: 6/15 - **Moderate** classification
+- **Frontend Complexity**: 4/5 - Enhanced UI components + UI refactoring for proper separation
+- **Integration Complexity**: 2/5 - Standard MCP tool integration + refactoring existing integrations
+- **Total Score**: 7/15 - **Moderate** classification
 
 ### Selected Test Strategy: Standard Test-First Development
 Moderate TDD approach focusing on frontend component testing and integration validation.
@@ -134,34 +149,34 @@ Moderate TDD approach focusing on frontend component testing and integration val
 - ✅ Vector sync integration with relationship tracking (13 + 7 tests)
 - ✅ MCP tools enhanced with search_with_relationships functionality
 
-#### Phase 3: Frontend Enhancement for Enhanced RAG (Days 1-2)
-**Enhanced Search Interface:**
+#### Phase 3: UI Architecture Correction (Days 1-2)
+**File Collections Area Cleanup:**
 1. **WRITE TESTS** → **IMPLEMENT** → **VERIFY** → **REFACTOR**
-   - Component tests for context expansion toggle
-   - User interaction tests for enhanced search results
-   - Accessibility tests for new UI elements
-   - Implement ContextExpansionToggle component
-   - Enhance SearchResults with relationship data display
+   - Tests for removal of search components without breaking collection management
+   - Remove VectorSearchPanel and EnhancedVectorSearchPanel from MainContent
+   - Remove search toggle buttons and search state management
+   - Update useVectorSync hook to remove search functionality
+   - Update CollectionContext to remove search state
 
 2. **WRITE TESTS** → **IMPLEMENT** → **VERIFY** → **REFACTOR**
-   - E2E tests for enhanced search workflow
-   - Integration tests with MCP enhanced search tools
-   - Implement ChunkRelationshipVisualization component
-   - Add overlap sources and expansion indicators
+   - Tests for enhanced sync status without search functionality
+   - Keep and enhance EnhancedSyncStatus component for sync monitoring
+   - Keep CollectionStatistics for collection management
+   - Keep EnhancedSettingsPanel for RAG configuration
 
-#### Phase 4: Collection Management Enhancement (Days 2-3)
-**Enhanced Collection Interface:**
+#### Phase 4: RAG Query Area Enhancement (Days 2-3)
+**Enhanced RAG Query Interface:**
 1. **WRITE TESTS** → **IMPLEMENT** → **VERIFY** → **REFACTOR**
-   - Component tests for enhanced sync status display
-   - Integration tests with collection statistics MCP tool
-   - Implement EnhancedSyncStatus component
-   - Add CollectionStatistics dashboard integration
+   - Component tests for enhanced RAG Query page integration
+   - Move and adapt EnhancedVectorSearchPanel to RAG Query area
+   - Add ContextExpansionToggle and advanced search controls
+   - Integration tests with enhanced MCP search tools
 
 2. **WRITE TESTS** → **IMPLEMENT** → **VERIFY** → **REFACTOR**
-   - E2E tests for collection management workflow
-   - User interaction tests for enhanced settings
-   - Implement EnhancedSettingsPanel
-   - Integration with existing collection management UI
+   - E2E tests for enhanced RAG workflow
+   - Implement ChunkRelationshipVisualization in RAG results
+   - Add enhanced search results with relationship data display
+   - Integration with existing RAG Answer/Sources/Metadata components
 
 #### Phase 5: Integration & Polish (Day 4)
 **Frontend-Backend Integration:**
@@ -184,11 +199,12 @@ Moderate TDD approach focusing on frontend component testing and integration val
 **Feature completion requirements:**
 - ✅ Enhanced chunking with 20-30% configurable overlap implemented and tested
 - ✅ Dynamic context expansion working with configurable thresholds (default: 0.75)
-- Frontend interface enabling enhanced RAG feature usage and visualization
-- Enhanced search results display with relationship data and expansion indicators
+- UI architecture properly separated: File Collections (content management) vs RAG Query (search + AI)
+- File Collections area cleaned of search functionality, focused on sync management
+- RAG Query area enhanced with advanced search features and relationship visualization
 - ✅ Full integration with existing RAG infrastructure without breaking changes
 - ✅ Performance benchmarks showing acceptable overhead (< 40% storage increase, < 25% query time)
-- 90% test coverage achieved for new frontend components
+- 90% test coverage achieved for refactored and new frontend components
 - Enhanced user experience documentation completed
 
 ## Implementation Roadmap
@@ -197,8 +213,9 @@ Moderate TDD approach focusing on frontend component testing and integration val
 1. ✅ **Backend Enhanced RAG Implementation**: Complete with comprehensive test coverage
 2. ✅ **ChromaDB Integration Enhancement**: Relationship tracking and overlap processing complete
 3. ✅ **MCP Tools Enhancement**: Enhanced search and statistics tools implemented
-4. **Test-Driven Frontend Development**: Write component tests → implement enhanced UI → verify user workflows
-5. **Test-Driven Integration**: Write E2E tests → complete frontend integration → verify enhanced RAG workflows
+4. **UI Architecture Correction**: Remove search from File Collections, maintain sync management
+5. **Enhanced RAG Query Development**: Integrate advanced search features into RAG Query area
+6. **Test-Driven Integration**: Write E2E tests → complete corrected UI integration → verify enhanced RAG workflows
 
 **KEY PRINCIPLE**: Each phase requires complete testing before moving to next phase. Never implement functionality without comprehensive test coverage first.
 
@@ -261,4 +278,20 @@ Moderate TDD approach focusing on frontend component testing and integration val
 
 **Plan Confidence Score**: 9.0/10 for supporting successful frontend integration of enhanced RAG capabilities
 
-**Remember**: This streamlined plan focuses on frontend enhancement to expose and utilize the completed enhanced RAG backend functionality, providing users with improved search capabilities, relationship visualization, and collection management features.
+**Remember**: This updated plan corrects the UI architecture by properly separating File Collections (content management + sync) from RAG Query (search + AI), then enhances the RAG Query area with the completed enhanced RAG backend functionality for improved search capabilities and relationship visualization.
+
+## UI Architecture Correction Summary
+
+### File Collections Area (Content Management Focus)
+- **REMOVE**: VectorSearchPanel, EnhancedVectorSearchPanel
+- **REMOVE**: Search toggle buttons and state management
+- **REMOVE**: Vector search handlers and results display
+- **KEEP**: EnhancedSyncStatus, CollectionStatistics, EnhancedSettingsPanel
+- **KEEP**: Collection sync buttons and status indicators
+
+### RAG Query Area (Search + AI Focus)  
+- **ENHANCE**: RAGQueryPage with EnhancedVectorSearchPanel integration
+- **ADD**: Advanced search controls and context expansion options
+- **ADD**: Relationship visualization and enhanced results display
+- **INTEGRATE**: Enhanced MCP search tools and statistics
+- **MAINTAIN**: Existing RAG Answer/Sources/Metadata components

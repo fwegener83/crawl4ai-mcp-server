@@ -1,14 +1,15 @@
-# Full-Stack Feature Execution Progress: Enhanced RAG Chunking Strategy with Frontend Integration
+# Full-Stack Feature Execution Progress: Enhanced RAG Chunking Strategy with UI Architecture Correction
 
 ## Status
-- **Current Phase**: 3 (Frontend Enhancement) - READY TO START
-- **Current Task**: Enhanced Search Interface Implementation
-- **Overall Progress**: 80% (Backend complete, Frontend remaining: 2/3 phases)
+- **Current Phase**: 3 (UI Architecture Correction) - IN PROGRESS  
+- **Current Task**: Analyzing and planning UI separation between File Collections and RAG Query
+- **Overall Progress**: 75% (Backend complete, UI refactoring and enhancement needed: 3/4 phases)
 - **Backend Components**: OverlapAwareMarkdownProcessor, DynamicContextExpander, Enhanced ChromaDB, Vector Sync Integration ✅ COMPLETE
-- **Frontend Components**: Enhanced Search Interface, Collection Management Enhancement (in progress)
+- **Frontend Components**: UI Architecture Correction (in progress), RAG Query Enhancement (pending)
 - **Integration Points**: Full vector sync integration with overlap tracking established ✅ COMPLETE
+- **Critical Issue Found**: Search functionality incorrectly placed in File Collections area
 - **Started**: 2025-08-15T14:50:00Z
-- **Last Updated**: 2025-08-15T17:50:00Z
+- **Last Updated**: 2025-08-16T10:30:00Z
 
 ## Test Coverage Metrics
 - **Backend Tests**: 95% (Phase 1: 62 tests, Phase 2: 20 tests - 82 tests total passing) ✅ COMPLETE
@@ -63,6 +64,12 @@
   - Updated VectorSyncService to support context expansion and relationship filtering
   - All vector sync overlap integration tests passing
 
+- ⚠️ Phase 3.1: Frontend Integration (INCORRECT) - NEEDS REFACTORING
+  - Enhanced RAG components integrated into File Collections area (WRONG PLACEMENT)
+  - All frontend tests passing (335 tests) but architecture needs correction
+  - Components created: EnhancedVectorSearchPanel, EnhancedCollectionSyncStatus, EnhancedSettingsPanel
+  - Issue: Search functionality should be in RAG Query area, not File Collections
+
 ## Failed Tasks
 (None yet)
 
@@ -95,7 +102,7 @@
 - [ ] Performance: All journeys meet performance requirements
 - [ ] Accessibility: All journeys accessible and compliant
 
-## Implementation Plan Phases
+## Implementation Plan Phases (UPDATED)
 ### Phase 1: Enhanced Chunking Foundation (Weeks 1-2) - ✅ COMPLETED
 - [✅] 1.1: Overlap calculation algorithms and chunk relationship tracking (WRITE TESTS → IMPLEMENT → VERIFY → REFACTOR)
 - [✅] 1.2: Dynamic context expansion logic (WRITE TESTS → IMPLEMENT → VERIFY → REFACTOR)
@@ -104,22 +111,24 @@
 - [✅] 2.1: Enhanced ChromaDB operations with metadata relationships
 - [✅] 2.2: Vector sync integration for overlap tracking
 
-### Phase 3: Frontend Enhancement for Enhanced RAG (Days 1-2)
-- [ ] 3.1: Enhanced search interface with context expansion controls
-- [ ] 3.2: Enhanced search results with relationship visualization
+### Phase 3: UI Architecture Correction (Days 1-2) - 🔄 IN PROGRESS
+- [⚠️] 3.1: Analysis of incorrect UI architecture completed  
+- [ ] 3.2: Remove search functionality from File Collections area
+- [ ] 3.3: Clean up File Collections to focus on content management + sync only
 
-### Phase 4: Collection Management Enhancement (Days 2-3)
-- [ ] 4.1: Enhanced sync status and collection statistics display
-- [ ] 4.2: Enhanced settings panel for RAG features
+### Phase 4: RAG Query Area Enhancement (Days 2-3)
+- [ ] 4.1: Move and enhance search interface in RAG Query page
+- [ ] 4.2: Integrate advanced search features and relationship visualization  
 
 ### Phase 5: Integration & Polish (Day 4)
-- [ ] 5.1: End-to-end enhanced RAG workflow testing
+- [ ] 5.1: End-to-end corrected UI workflow testing
 - [ ] 5.2: User experience optimization and documentation
 
 ## Architecture Decisions
 - ADR-001: Overlap Implementation Strategy ✅ IMPLEMENTED
-- ADR-002: Context Expansion Approach ✅ IMPLEMENTED
-- ADR-003: Frontend Integration Approach (In Progress)
+- ADR-002: Context Expansion Approach ✅ IMPLEMENTED  
+- ADR-003: Frontend Integration Approach ✅ UPDATED (Proper UI separation required)
+- ADR-004: UI Architecture Correction 🔄 IN PROGRESS (Remove search from File Collections)
 
 ## Performance Budgets
 - **Storage Increase**: Maximum 40% from overlapped chunks ✅ VALIDATED
@@ -128,10 +137,22 @@
 - **Bundle Size**: Maintain current limits for frontend components (target)
 
 ## Notes
-Backend implementation for enhanced RAG chunking complete. Transitioning to frontend integration phase.
-Key success factors achieved:
+Backend implementation for enhanced RAG chunking complete. Critical UI architecture issue discovered requiring refactoring.
+
+**Key success factors achieved:**
 1. ✅ Strict test-first development approach maintained
 2. ✅ Incremental validation completed for backend phases
 3. ✅ Performance monitoring validated - all budgets met
 4. ✅ Backward compatibility maintained with existing RAG infrastructure
-5. Frontend enhancement to provide user interface for enhanced capabilities
+
+**Critical Issue Identified:**
+- Search functionality incorrectly integrated into File Collections area
+- Violates separation of concerns principle
+- File Collections should focus on content management + sync only
+- RAG Query should handle all search + AI functionality
+
+**Next Actions Required:**
+1. Remove all search components from File Collections area
+2. Enhance RAG Query page with advanced search features
+3. Maintain sync management and collection statistics in File Collections
+4. Update tests to reflect corrected architecture
