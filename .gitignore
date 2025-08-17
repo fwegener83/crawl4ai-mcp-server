@@ -38,6 +38,10 @@ htmlcov/
 
 # RAG Database
 rag_db/
+# ChromaDB and Vector Sync Database
+${CONTEXT42_HOME}/databases/
+**/databases/chromadb/
+**/databases/vector_sync.db
 
 # Frontend specific
 frontend/dist/
