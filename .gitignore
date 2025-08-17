@@ -38,8 +38,8 @@ htmlcov/
 
 # RAG Database
 rag_db/
-# ChromaDB and Vector Sync Database
-${CONTEXT42_HOME}/databases/
+# ChromaDB and Vector Sync Database (prevent literal ${CONTEXT42_HOME} directories)
+\${CONTEXT42_HOME}/
 **/databases/chromadb/
 **/databases/vector_sync.db
 
