@@ -225,11 +225,18 @@ export const useVectorSync = (): UseVectorSyncReturn => {
     }
   }, [dispatch]);
 
-  // Sync a collection
+  // Sync a collection with hardcoded optimal strategy
   const syncCollection = useCallback(async (
     collectionId: string, 
-    request: SyncCollectionRequest = {}
+    _request?: SyncCollectionRequest // Parameter preserved for API compatibility but ignored
   ) => {
+    // Frontend Refactoring: Hard-code optimal strategy for 95% of use cases
+    // This simplifies the UI while maintaining backend API flexibility
+    const hardcodedRequest: SyncCollectionRequest = {
+      chunking_strategy: 'markdown_intelligent', // Optimal for structured content
+      force_reprocess: false                     // Efficient default
+      // Note: chunk_size and chunk_overlap are backend defaults (1000, 200)
+    };
     try {
       dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSync', value: true } });
       
@@ -245,8 +252,8 @@ export const useVectorSync = (): UseVectorSyncReturn => {
         });
       }
 
-      // Start sync operation
-      await APIService.syncCollection(collectionId, request);
+      // Start sync operation with hardcoded optimal settings
+      await APIService.syncCollection(collectionId, hardcodedRequest);
       
       // Start intelligent polling with safeguards
       const pollSyncProgress = async () => {

@@ -1,20 +1,56 @@
 import { useCollectionOperations } from '../../hooks/useCollectionOperations';
 import { useVectorSync } from '../../hooks/useVectorSync';
-import { CollectionSyncButton } from './CollectionSyncButton';
-import { EnhancedCollectionSyncStatus } from './EnhancedCollectionSyncStatus';
+import CompactSyncStatus from './CompactSyncStatus';
+import AddContentMenu from './AddContentMenu';
 import FileExplorer from './FileExplorer';
 import EditorArea from './EditorArea';
-import { Box, Typography, Button, Paper, IconButton } from '../ui';
-import DescriptionIcon from '@mui/icons-material/Description';
+import { Box, Typography, Paper, Button } from '../ui';
 import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
 import WebIcon from '@mui/icons-material/Web';
-import TravelExploreIcon from '@mui/icons-material/TravelExplore';
-import SettingsIcon from '@mui/icons-material/Settings';
-import Tooltip from '@mui/material/Tooltip';
 
 interface MainContentProps {
   className?: string;
 }
+
+// Helper function to map backend status to compact status format
+const mapSyncStatus = (status: string): 'synced' | 'syncing' | 'error' | 'never_synced' => {
+  switch (status) {
+    case 'in_sync':
+    case 'synced':
+      return 'synced';
+    case 'syncing':
+      return 'syncing';
+    case 'sync_error':
+    case 'partial_sync':
+      return 'error';
+    case 'never_synced':
+    case 'out_of_sync':
+      return 'never_synced';
+    default:
+      return 'never_synced';
+  }
+};
+
+// Helper function to format relative time
+const formatRelativeTime = (lastSync: string | null): string | undefined => {
+  if (!lastSync) return undefined;
+  
+  try {
+    const syncDate = new Date(lastSync);
+    const now = new Date();
+    const diffMs = now.getTime() - syncDate.getTime();
+    const diffMinutes = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffMinutes < 1) return 'just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+  } catch {
+    return 'unknown';
+  }
+};
 
 export function MainContent({ className = '' }: MainContentProps) {
   const { state, openModal } = useCollectionOperations();
@@ -127,68 +163,24 @@ export function MainContent({ className = '' }: MainContentProps) {
               </Box>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-              {/* Enhanced Vector Sync Status & Controls */}
+              {/* Compact Vector Sync Status */}
               {state.selectedCollection && getSyncStatus(state.selectedCollection) && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <EnhancedCollectionSyncStatus
-                    data-testid="enhanced-sync-status"
-                    collectionName={state.selectedCollection}
-                    syncStatus={getSyncStatus(state.selectedCollection)!}
-                    onSyncClick={handleSyncCollection}
-                  />
-                  <CollectionSyncButton
-                    data-testid="vector-sync-btn"
-                    collectionId={state.selectedCollection}
-                    syncStatus={getSyncStatus(state.selectedCollection)}
-                    onSync={handleSyncCollection}
-                    size="medium"
-                  />
-                </Box>
+                <CompactSyncStatus
+                  data-testid="compact-sync-status"
+                  status={mapSyncStatus(getSyncStatus(state.selectedCollection)!.status)}
+                  fileCount={getSyncStatus(state.selectedCollection)!.total_files}
+                  chunkCount={getSyncStatus(state.selectedCollection)!.chunk_count}
+                  lastSync={formatRelativeTime(getSyncStatus(state.selectedCollection)!.last_sync)}
+                  onClick={handleSyncCollection}
+                />
               )}
-
-              <Tooltip title="Enhanced RAG Settings">
-                <IconButton
-                  onClick={() => openModal('enhancedSettings')}
-                  color="default"
-                  size="medium"
-                  sx={{ 
-                    mr: 1,
-                    '&:hover': {
-                      bgcolor: 'action.hover'
-                    }
-                  }}
-                >
-                  <SettingsIcon />
-                </IconButton>
-              </Tooltip>
               
-              <Button
-                data-testid="add-page-btn"
-                onClick={() => openModal('addPage')}
-                variant="contained"
-                color="success"
-                size="medium"
-                startIcon={<WebIcon />}
-              >
-                Add Page
-              </Button>
-              <Button
-                onClick={() => openModal('addMultiplePages')}
-                variant="contained"
-                color="primary"
-                size="medium"
-                startIcon={<TravelExploreIcon />}
-              >
-                Add Multiple Pages
-              </Button>
-              <Button
-                onClick={() => openModal('newFile')}
-                variant="outlined"
-                size="medium"
-                startIcon={<DescriptionIcon />}
-              >
-                New File
-              </Button>
+              {/* Consolidated Add Content Menu */}
+              <AddContentMenu
+                onAddFile={() => openModal('newFile')}
+                onAddPage={() => openModal('addPage')}
+                onAddMultiplePages={() => openModal('addMultiplePages')}
+              />
             </Box>
           </Box>
         </Box>
