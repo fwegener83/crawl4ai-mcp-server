@@ -26,12 +26,17 @@ test.describe('File Manager - Add Page Feature', () => {
     // Wait for collection details to load
     await page.waitForSelector('[data-testid="collection-details"]', { timeout: 5000 });
     
-    console.log('🎯 SCHRITT 3: Click Add Page button IM File Manager...');
+    console.log('🎯 SCHRITT 3: Click Add Page via AddContentMenu IM File Manager...');
     
-    // Look for the "Add Page" button in the File Manager
-    await page.waitForSelector('[data-testid="add-page-btn"]', { timeout: 5000 });
-    await page.click('[data-testid="add-page-btn"]');
-    console.log('✅ Add Page button clicked');
+    // Look for the "Add Content" button (new consolidated menu)
+    await page.waitForSelector('[data-testid="add-content-button"]', { timeout: 5000 });
+    await page.click('[data-testid="add-content-button"]');
+    console.log('✅ Add Content button clicked, menu should open');
+    
+    // Wait for the menu to open and click "Add Page" item
+    await page.waitForSelector('[data-testid="add-page-item"]', { timeout: 5000 });
+    await page.click('[data-testid="add-page-item"]');
+    console.log('✅ Add Page menu item clicked');
     
     console.log('🎯 SCHRITT 4: Fill Add Page modal...');
     

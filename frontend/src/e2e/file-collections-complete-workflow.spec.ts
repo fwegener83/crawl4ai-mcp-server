@@ -62,8 +62,10 @@ test.describe('File Collections - Kompletter Workflow', () => {
     // =================================================================
     console.log('🎯 SCHRITT 4: Add Page - Crawle Seite in Collection (IM File Collections)...');
     
-    // Add Page Button im File Collections Main Content Area
-    await page.click('[data-testid="add-page-btn"]');
+    // Add Page via AddContentMenu im File Collections Main Content Area
+    await page.click('[data-testid="add-content-button"]');
+    await page.waitForSelector('[data-testid="add-page-item"]', { timeout: 5000 });
+    await page.click('[data-testid="add-page-item"]');
     await page.waitForSelector('[data-testid="add-page-url-input"]', { timeout: 5000 });
     
     console.log('✅ Add Page Modal (IM File Collections) geöffnet');
@@ -105,8 +107,8 @@ test.describe('File Collections - Kompletter Workflow', () => {
     // =================================================================
     console.log('🎯 SCHRITT 5: Vector Sync mit Test Collection (IM File Collections)...');
     
-    // Vector Sync Button im File Collections Main Content Area
-    await page.waitForSelector('[data-testid="vector-sync-btn"]', { timeout: 5000 });
+    // Compact Vector Sync Status im File Collections Main Content Area
+    await page.waitForSelector('[data-testid="compact-sync-status"]', { timeout: 5000 });
     
     // Monitor Vector Sync API Response
     let syncSuccess = false;
@@ -120,7 +122,7 @@ test.describe('File Collections - Kompletter Workflow', () => {
       }
     });
     
-    await page.click('[data-testid="vector-sync-btn"]');
+    await page.click('[data-testid="compact-sync-status"]');
     console.log('✅ Vector Sync Request gesendet');
     
     // Wait for sync completion
