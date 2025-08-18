@@ -68,11 +68,11 @@ describe('App', () => {
     expect(screen.getByTestId('file-collections-tab')).not.toHaveClass('Mui-selected');
   });
 
-  it('renders navigation and settings properly', () => {
+  it('renders navigation properly', () => {
     renderWithTheme(<App />);
     
     expect(screen.getByText('Crawl4AI File Manager')).toBeInTheDocument();
-    expect(screen.getByLabelText('Settings')).toBeInTheDocument();
+    expect(screen.getByLabelText('Information')).toBeInTheDocument();
     expect(screen.getByText('Beta')).toBeInTheDocument();
   });
 });

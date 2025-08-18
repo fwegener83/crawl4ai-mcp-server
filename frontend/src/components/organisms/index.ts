@@ -19,14 +19,6 @@ export type {
   CrawlResult 
 } from './CrawlResultsTable';
 
-export { SettingsPanel } from './SettingsPanel';
-export type { 
-  SettingsPanelProps, 
-  AllSettings, 
-  CrawlSettings, 
-  StorageSettings, 
-  UISettings 
-} from './SettingsPanel';
 
 // Dialog Components
 export { ConfirmationDialog } from './ConfirmationDialog';

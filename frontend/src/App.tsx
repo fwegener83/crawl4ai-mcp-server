@@ -3,7 +3,6 @@ import { Box, Container } from './components/ui';
 import TopNavigation from './components/navigation/TopNavigation';
 import { NotificationProvider } from './components/ui/NotificationProvider';
 import { CollectionProvider } from './contexts/CollectionContext';
-import { SettingsModal } from './components/modals';
 import FileCollectionsPage from './pages/FileCollectionsPage';
 import RAGQueryPage from './pages/RAGQueryPage';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -13,7 +12,6 @@ type Page = 'file-collections' | 'rag-query';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('file-collections');
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const renderCurrentPage = () => {
     switch (currentPage) {
@@ -43,7 +41,6 @@ function App() {
                 onNavigate={(page: string) => {
                   setCurrentPage(page as Page);
                 }}
-                onSettingsClick={() => setSettingsOpen(true)}
               />
               
               {/* Main Content Area */}
@@ -61,12 +58,6 @@ function App() {
                 </Container>
               </Box>
             </Box>
-            
-            {/* Settings Modal */}
-            <SettingsModal
-              open={settingsOpen}
-              onClose={() => setSettingsOpen(false)}
-            />
           </CollectionProvider>
         </NotificationProvider>
       </ErrorBoundary>

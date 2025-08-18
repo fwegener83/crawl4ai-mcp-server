@@ -14,11 +14,9 @@ import {
   Tab
 } from '../ui';
 import { useTheme } from '../../contexts/ThemeContext';
-import SettingsIcon from '@mui/icons-material/Settings';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import WebIcon from '@mui/icons-material/Web';
 import FolderIcon from '@mui/icons-material/Folder';
 import SearchIcon from '@mui/icons-material/Search';
@@ -27,18 +25,15 @@ export interface TopNavigationProps {
   title?: string;
   currentPage?: string;
   onNavigate?: (page: string) => void;
-  onSettingsClick?: () => void;
 }
 
 export const TopNavigation: React.FC<TopNavigationProps> = ({
   title = 'Crawl4AI File Manager',
   currentPage = 'file-collections',
-  onNavigate,
-  onSettingsClick
+  onNavigate
 }) => {
   const { mode, toggleTheme } = useTheme();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const [settingsAnchorEl, setSettingsAnchorEl] = React.useState<null | HTMLElement>(null);
 
   const navigationTabs = [
     { id: 'file-collections', label: 'File Collections', icon: <FolderIcon fontSize="small" /> },
@@ -51,21 +46,6 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
 
   const handleMenuClose = () => {
     setAnchorEl(null);
-  };
-
-  const handleSettingsMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setSettingsAnchorEl(event.currentTarget);
-  };
-
-  const handleSettingsMenuClose = () => {
-    setSettingsAnchorEl(null);
-  };
-
-  const handleSettingsClick = () => {
-    handleSettingsMenuClose();
-    if (onSettingsClick) {
-      onSettingsClick();
-    }
   };
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
@@ -169,17 +149,6 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
               <InfoOutlinedIcon />
             </IconButton>
           </Tooltip>
-
-          {/* Settings Menu */}
-          <Tooltip title="Settings">
-            <IconButton 
-              onClick={handleSettingsMenuOpen}
-              size="medium"
-              sx={{ color: 'text.primary' }}
-            >
-              <SettingsIcon />
-            </IconButton>
-          </Tooltip>
         </Box>
 
         {/* Info Menu */}
@@ -208,32 +177,6 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
           </MenuItem>
         </Menu>
 
-        {/* Settings Menu */}
-        <Menu
-          anchorEl={settingsAnchorEl}
-          open={Boolean(settingsAnchorEl)}
-          onClose={handleSettingsMenuClose}
-          transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-          anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        >
-          <MenuItem onClick={handleSettingsClick}>
-            <SettingsIcon sx={{ mr: 1.5, fontSize: 20 }} />
-            Settings
-          </MenuItem>
-          <MenuItem onClick={toggleTheme}>
-            {mode === 'light' ? (
-              <DarkModeIcon sx={{ mr: 1.5, fontSize: 20 }} />
-            ) : (
-              <LightModeIcon sx={{ mr: 1.5, fontSize: 20 }} />
-            )}
-            {mode === 'light' ? 'Dark Mode' : 'Light Mode'}
-          </MenuItem>
-          <Divider />
-          <MenuItem disabled>
-            <AccountCircleIcon sx={{ mr: 1.5, fontSize: 20 }} />
-            User Profile (Coming Soon)
-          </MenuItem>
-        </Menu>
       </Toolbar>
     </AppBar>
   );
