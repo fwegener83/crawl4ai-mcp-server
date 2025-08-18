@@ -41,6 +41,9 @@ export class RAGQueryService {
             collection_name: request.collection_name === 'all' ? undefined : request.collection_name,
             max_chunks: request.max_chunks,
             similarity_threshold: request.similarity_threshold,
+            // Enhanced RAG features
+            enable_context_expansion: request.enable_context_expansion,
+            enable_relationship_search: request.enable_relationship_search,
           }),
         }
       );

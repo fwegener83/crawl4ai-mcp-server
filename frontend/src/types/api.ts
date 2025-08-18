@@ -168,6 +168,10 @@ export interface VectorSyncStatus {
   sync_health_score: number;
   errors: string[];
   warnings: string[];
+  // Enhanced RAG features
+  enhanced_features_enabled?: boolean;
+  overlap_chunk_count?: number;
+  context_expansion_eligible_chunks?: number;
 }
 
 export interface SyncResult {
@@ -193,6 +197,12 @@ export interface VectorSearchRequest {
   similarity_threshold?: number;
 }
 
+// Enhanced Vector Search Request with relationship parameters
+export interface EnhancedVectorSearchRequest extends VectorSearchRequest {
+  enable_context_expansion?: boolean;
+  relationship_filter?: Record<string, any>;
+}
+
 export interface VectorSearchResult {
   content: string;
   score: number;
@@ -206,6 +216,23 @@ export interface VectorSearchResult {
     programming_language?: string;
     created_at: string;
   };
+}
+
+// Enhanced Vector Search Result with relationship data
+export interface EnhancedVectorSearchResult extends VectorSearchResult {
+  metadata: VectorSearchResult['metadata'] & {
+    overlap_sources?: string[];
+    context_expansion_eligible?: boolean;
+    overlap_percentage?: number;
+  };
+  relationship_data?: {
+    previous_chunk_id?: string;
+    next_chunk_id?: string;
+    overlap_percentage?: number;
+  };
+  expansion_source?: string;
+  expansion_type?: string;
+  chunk_id?: string;
 }
 
 export interface VectorSearchResponse {
@@ -236,6 +263,9 @@ export interface RAGQueryRequest {
   collection_name?: string;
   max_chunks?: number;
   similarity_threshold?: number;
+  // Enhanced RAG features
+  enable_context_expansion?: boolean;
+  enable_relationship_search?: boolean;
 }
 
 export interface RAGSource {

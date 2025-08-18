@@ -82,6 +82,7 @@ export {
   Tab,
   MenuItem,
   FormControl,
+  FormControlLabel,
   InputLabel,
   InputAdornment,
   ToggleButtonGroup,

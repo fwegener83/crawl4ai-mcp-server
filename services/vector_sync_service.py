@@ -317,7 +317,15 @@ class VectorSyncService(IVectorSyncService):
             logger.error(f"Error listing sync statuses: {str(e)}")
             return []
     
-    async def search_vectors(self, query: str, collection_id: Optional[str] = None, limit: int = 10, similarity_threshold: float = 0.7) -> List[VectorSearchResult]:
+    async def search_vectors(
+        self, 
+        query: str, 
+        collection_id: Optional[str] = None, 
+        limit: int = 10, 
+        similarity_threshold: float = 0.7,
+        enable_context_expansion: bool = False,
+        relationship_filter: Optional[Dict[str, Any]] = None
+    ) -> List[VectorSearchResult]:
         """
         Search vectors using semantic similarity.
         
@@ -391,7 +399,9 @@ class VectorSyncService(IVectorSyncService):
                 query=query,
                 collection_name=collection_id,
                 limit=limit,
-                similarity_threshold=similarity_threshold
+                similarity_threshold=similarity_threshold,
+                enable_context_expansion=enable_context_expansion,
+                relationship_filter=relationship_filter
             )
             
             # Perform vector search using the shared instance

@@ -19,7 +19,6 @@ const renderWithAllProviders = (component: React.ReactElement) => {
 describe('TopNavigation', () => {
   const defaultProps = {
     onNavigate: vi.fn(),
-    onSettingsClick: vi.fn(),
   };
 
   beforeEach(() => {
@@ -66,22 +65,9 @@ describe('TopNavigation', () => {
     expect(screen.getByLabelText(/switch to (dark|light) mode/i)).toBeInTheDocument();
   });
 
-  it('renders settings button', () => {
+  it('renders information button', () => {
     renderWithAllProviders(<TopNavigation {...defaultProps} />);
-    expect(screen.getByLabelText('Settings')).toBeInTheDocument();
-  });
-
-  it('calls onSettingsClick when settings button is clicked', async () => {
-    const user = userEvent.setup();
-    const mockSettingsClick = vi.fn();
-    
-    renderWithAllProviders(
-      <TopNavigation {...defaultProps} onSettingsClick={mockSettingsClick} />
-    );
-    
-    await user.click(screen.getByLabelText('Settings'));
-    await user.click(screen.getByText('Settings'));
-    expect(mockSettingsClick).toHaveBeenCalled();
+    expect(screen.getByLabelText('Information')).toBeInTheDocument();
   });
 
   it('shows beta label', () => {

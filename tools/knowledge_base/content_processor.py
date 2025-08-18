@@ -206,10 +206,8 @@ class ContentProcessor:
             
             chunk_id = self._generate_chunk_id(
                 chunk, i, 
-                collection_name=source_metadata.get('collection_name'),
-                file_path=source_metadata.get('file_path')
+                collection_name=collection_name
             )
-            print(f"DEBUG CONTENTPROCESSOR: Generated chunk ID {chunk_id} for collection {source_metadata.get('collection_name')}, file {source_metadata.get('file_path')}")
             
             processed_chunks.append({
                 "id": chunk_id,
@@ -287,8 +285,7 @@ class ContentProcessor:
                 chunk_id = self._generate_chunk_id(
                     chunk, chunk_index, 
                     url=base_metadata.get("url"),
-                    collection_name=source_metadata.get('collection_name'),
-                    file_path=source_metadata.get('file_path')
+                    collection_name=collection_name
                 )
                 
                 all_processed_chunks.append({

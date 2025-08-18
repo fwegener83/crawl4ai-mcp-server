@@ -1,48 +1,64 @@
-import React from 'react';
 import { useCollectionOperations } from '../../hooks/useCollectionOperations';
 import { useVectorSync } from '../../hooks/useVectorSync';
-import { CollectionSyncButton } from './CollectionSyncButton';
-import { VectorSyncIndicator } from './VectorSyncIndicator';
-import { VectorSearchPanel } from './VectorSearchPanel';
+import CompactSyncStatus from './CompactSyncStatus';
+import AddContentMenu from './AddContentMenu';
 import FileExplorer from './FileExplorer';
 import EditorArea from './EditorArea';
-import { Box, Typography, Button, Paper, IconButton, Collapse } from '../ui';
-import DescriptionIcon from '@mui/icons-material/Description';
+import { Box, Typography, Paper, Button } from '../ui';
 import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
 import WebIcon from '@mui/icons-material/Web';
-import TravelExploreIcon from '@mui/icons-material/TravelExplore';
-import SearchIcon from '@mui/icons-material/Search';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 
 interface MainContentProps {
   className?: string;
 }
 
+// Helper function to map backend status to compact status format
+const mapSyncStatus = (status: string): 'synced' | 'syncing' | 'error' | 'never_synced' => {
+  switch (status) {
+    case 'in_sync':
+    case 'synced':
+      return 'synced';
+    case 'syncing':
+      return 'syncing';
+    case 'sync_error':
+    case 'partial_sync':
+      return 'error';
+    case 'never_synced':
+    case 'out_of_sync':
+      return 'never_synced';
+    default:
+      return 'never_synced';
+  }
+};
+
+// Helper function to format relative time
+const formatRelativeTime = (lastSync: string | null): string | undefined => {
+  if (!lastSync) return undefined;
+  
+  try {
+    const syncDate = new Date(lastSync);
+    const now = new Date();
+    const diffMs = now.getTime() - syncDate.getTime();
+    const diffMinutes = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffMinutes < 1) return 'just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+  } catch {
+    return 'unknown';
+  }
+};
+
 export function MainContent({ className = '' }: MainContentProps) {
   const { state, openModal } = useCollectionOperations();
   const { 
     getSyncStatus, 
-    syncCollection, 
-    searchVectors,
-    searchResults: vectorSearchResults,
-    searchQuery: vectorSearchQuery,
-    searchLoading: vectorSearchLoading,
-    clearSearch: clearVectorSearch
+    syncCollection
   } = useVectorSync();
   
-  const [searchPanelOpen, setSearchPanelOpen] = React.useState(false);
-
-  // Vector search handlers
-  const handleVectorSearch = async (query: string, collectionId?: string) => {
-    if (state.selectedCollection) {
-      await searchVectors(query, collectionId || state.selectedCollection);
-    }
-  };
-
-  const handleSearchResultClick = (result: unknown) => {
-    // TODO: Navigate to file and highlight the chunk
-    console.log('Navigate to:', result);
-  };
 
   // Vector sync handlers - bind collection name
   const handleSyncCollection = async () => {
@@ -51,10 +67,6 @@ export function MainContent({ className = '' }: MainContentProps) {
     }
   };
 
-
-  const toggleSearchPanel = () => {
-    setSearchPanelOpen(!searchPanelOpen);
-  };
 
   if (!state.selectedCollection) {
     return (
@@ -151,69 +163,24 @@ export function MainContent({ className = '' }: MainContentProps) {
               </Box>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-              {/* Vector Sync Status & Controls */}
-              {state.selectedCollection && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <VectorSyncIndicator
-                    data-testid="vector-sync-indicator"
-                    collectionId={state.selectedCollection}
-                    syncStatus={getSyncStatus(state.selectedCollection)}
-                    showText={true}
-                    size="medium"
-                  />
-                  <CollectionSyncButton
-                    data-testid="vector-sync-btn"
-                    collectionId={state.selectedCollection}
-                    syncStatus={getSyncStatus(state.selectedCollection)}
-                    onSync={handleSyncCollection}
-                    size="medium"
-                  />
-                </Box>
+              {/* Compact Vector Sync Status */}
+              {state.selectedCollection && getSyncStatus(state.selectedCollection) && (
+                <CompactSyncStatus
+                  data-testid="compact-sync-status"
+                  status={mapSyncStatus(getSyncStatus(state.selectedCollection)!.status)}
+                  fileCount={getSyncStatus(state.selectedCollection)!.total_files}
+                  chunkCount={getSyncStatus(state.selectedCollection)!.chunk_count}
+                  lastSync={formatRelativeTime(getSyncStatus(state.selectedCollection)!.last_sync)}
+                  onClick={handleSyncCollection}
+                />
               )}
-
               
-              <IconButton
-                onClick={toggleSearchPanel}
-                color={searchPanelOpen ? 'primary' : 'default'}
-                size="medium"
-                sx={{ 
-                  mr: 1,
-                  bgcolor: searchPanelOpen ? 'primary.50' : 'transparent',
-                  '&:hover': {
-                    bgcolor: searchPanelOpen ? 'primary.100' : 'action.hover'
-                  }
-                }}
-              >
-                <SearchIcon />
-              </IconButton>
-              
-              <Button
-                data-testid="add-page-btn"
-                onClick={() => openModal('addPage')}
-                variant="contained"
-                color="success"
-                size="medium"
-                startIcon={<WebIcon />}
-              >
-                Add Page
-              </Button>
-              <Button
-                onClick={() => openModal('addMultiplePages')}
-                variant="contained"
-                color="primary"
-                size="medium"
-                startIcon={<TravelExploreIcon />}
-              >
-                Add Multiple Pages
-              </Button>
-              <Button
-                onClick={() => openModal('newFile')}
-                variant="outlined"
-                size="medium"
-                startIcon={<DescriptionIcon />}
-              >
-                New File
-              </Button>
+              {/* Consolidated Add Content Menu */}
+              <AddContentMenu
+                onAddFile={() => openModal('newFile')}
+                onAddPage={() => openModal('addPage')}
+                onAddMultiplePages={() => openModal('addMultiplePages')}
+              />
             </Box>
           </Box>
         </Box>
@@ -231,53 +198,6 @@ export function MainContent({ className = '' }: MainContentProps) {
         }}>
           <FileExplorer />
         </Box>
-        
-        {/* Vector Search Panel */}
-        <Collapse 
-          in={searchPanelOpen} 
-          orientation="horizontal" 
-          sx={{ display: searchPanelOpen ? 'flex' : 'none' }}
-        >
-          <Box sx={{ 
-            width: 350, 
-            flexShrink: 0,
-            borderRight: 1,
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
-            position: 'relative'
-          }}>
-            {/* Toggle Button */}
-            <IconButton
-              onClick={toggleSearchPanel}
-              size="small"
-              sx={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                zIndex: 1,
-                bgcolor: 'background.paper',
-                border: 1,
-                borderColor: 'divider',
-                '&:hover': {
-                  bgcolor: 'action.hover'
-                }
-              }}
-            >
-              <ChevronLeftIcon />
-            </IconButton>
-
-            <VectorSearchPanel
-              collectionId={state.selectedCollection}
-              collectionSyncStatus={getSyncStatus(state.selectedCollection)}
-              searchResults={vectorSearchResults}
-              searchQuery={vectorSearchQuery}
-              searchLoading={vectorSearchLoading}
-              onSearch={handleVectorSearch}
-              onResultClick={handleSearchResultClick}
-              onClearSearch={clearVectorSearch}
-            />
-          </Box>
-        </Collapse>
         
         {/* Editor Area */}
         <Box sx={{ flex: 1, bgcolor: 'background.default' }}>

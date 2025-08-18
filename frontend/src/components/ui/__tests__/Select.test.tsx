@@ -13,7 +13,7 @@ describe('Select', () => {
 
   it('renders select with label', () => {
     renderWithTheme(
-      <Select label="Test Select" options={mockOptions} />
+      <Select label="Test Select" options={mockOptions} value="" />
     );
     
     expect(screen.getByLabelText(/test select/i)).toBeInTheDocument();
@@ -23,7 +23,7 @@ describe('Select', () => {
     const user = userEvent.setup();
     
     renderWithTheme(
-      <Select label="Test Select" options={mockOptions} />
+      <Select label="Test Select" options={mockOptions} value="" />
     );
     
     const select = screen.getByLabelText(/test select/i);
@@ -40,6 +40,7 @@ describe('Select', () => {
         label="Test Select" 
         options={mockOptions}
         helperText="This is helper text"
+        value=""
       />
     );
     
@@ -53,6 +54,7 @@ describe('Select', () => {
         options={mockOptions}
         error
         helperText="Error message"
+        value=""
       />
     );
     
@@ -69,6 +71,7 @@ describe('Select', () => {
         label="Test Select" 
         options={mockOptions}
         onChange={handleChange}
+        value=""
       />
     );
     
@@ -85,7 +88,7 @@ describe('Select', () => {
     const user = userEvent.setup();
     
     renderWithTheme(
-      <Select label="Test Select" options={mockOptions} />
+      <Select label="Test Select" options={mockOptions} value="" />
     );
     
     const select = screen.getByLabelText(/test select/i);
