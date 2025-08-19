@@ -41,6 +41,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Chunking Strategy**: Hardcoded optimal `markdown_intelligent` strategy removing user configuration confusion
   - **Component Consolidation**: Replaced duplicate sync components with unified CompactSyncStatus component
   - **Enhanced Test Coverage**: 24 comprehensive tests for CompactSyncStatus with accessibility compliance
+- **Settings UI Complete Removal**: Eliminated entire non-functional settings system achieving massive complexity reduction
+  - **Settings Page Removal**: Removed SettingsPage.tsx (109 lines) and SettingsPanel.tsx (387 lines)
+  - **Settings Architecture Cleanup**: Removed 25+ non-functional configuration options across 4 categories
+  - **Navigation Simplification**: Removed settings menu from TopNavigation, kept only functional theme toggle
+  - **False Functionality Elimination**: Removed localStorage-only settings that provided no backend integration
+  - **Test Suite Updates**: Updated navigation and app tests to reflect simplified interface
 
 ### Architecture Decisions
 - **LLM Provider Abstraction Strategy**: Multi-provider architecture with OpenAI and Ollama support
@@ -59,6 +65,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Decision details: [ADR-002: Enhanced Settings Component Removal](docs/adr/ADR_2025-01-17_enhanced-settings-component-removal.md)
   - Decision details: [ADR-003: Compact Status Design Pattern](docs/adr/ADR_2025-01-17_compact-status-design-pattern.md)
   - Impact: 30%+ complexity reduction, 70% space savings, better defaults for 95% of users while preserving backend flexibility
+- **Settings UI Simplification**: Complete removal of non-functional settings system for user experience clarity
+  - Decision details: [ADR-004: Settings UI Simplification](docs/adr/ADR_2025-01-17_settings-ui-simplification.md)
+  - Impact: Eliminated 496+ lines of misleading UI, 90%+ of settings had no backend integration, improved user trust
   - Test cleanup: Removed 22 existing test collections and prevents future accumulation
 
 ## [1.0.0] - 2025-08-10 - Initial Release
