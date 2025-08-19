@@ -245,13 +245,14 @@ Context:
 class OllamaLLMService(LLMService):
     """Ollama LLM service implementation."""
     
-    def __init__(self, host: str = "http://localhost:11434", model: str = "llama3.1:8b"):
+    def __init__(self, host: str = "http://localhost:11434", model: str = "llama3.1:8b", timeout: float = 180.0):
         """
         Initialize Ollama service.
         
         Args:
             host: Ollama server host URL
             model: Model name to use
+            timeout: Timeout in seconds for Ollama requests
         """
         if not OLLAMA_AVAILABLE:
             raise ImportError("Ollama package not available. Install with: pip install ollama")
@@ -263,7 +264,8 @@ class OllamaLLMService(LLMService):
         self.host = host
         self.model = model
         self.provider = "ollama"
-        self._client = ollama.AsyncClient(host=host)
+        self.timeout = timeout
+        self._client = ollama.AsyncClient(host=host, timeout=timeout)
     
     async def generate_response(
         self, 
@@ -406,8 +408,9 @@ class LLMServiceFactory:
                 host = "http://localhost:11434"  # Default fallback
                 
             model = os.getenv("RAG_OLLAMA_MODEL", "llama3.1:8b")
+            timeout = float(os.getenv("RAG_OLLAMA_TIMEOUT", "180"))
             
-            return OllamaLLMService(host=host, model=model)
+            return OllamaLLMService(host=host, model=model, timeout=timeout)
         
         else:
             raise ValueError(f"Unknown LLM provider: {provider}. Supported providers: openai, ollama")

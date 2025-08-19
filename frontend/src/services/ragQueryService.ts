@@ -6,7 +6,7 @@ export class RAGQueryService {
   private async fetchWithTimeout(
     url: string,
     options: RequestInit = {},
-    timeoutMs: number = 30000
+    timeoutMs: number = 120000
   ): Promise<Response> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
