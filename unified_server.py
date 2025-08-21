@@ -231,10 +231,10 @@ class UnifiedServer:
         
         @mcp_server.tool()
         async def delete_file_collection(collection_name: str) -> str:
-            """Delete a file collection."""
+            """Delete a file collection with cascade cleanup (files + vectors)."""
             try:
                 from application_layer.collection_management import delete_collection_use_case, ValidationError
-                result = await delete_collection_use_case(collection_service, collection_name)
+                result = await delete_collection_use_case(collection_service, collection_name, vector_service)
                 return json.dumps(result)  # Use-case already returns proper format
             except ValidationError as e:
                 logger.error(f"MCP delete_file_collection validation error: {e}")
@@ -727,10 +727,10 @@ class UnifiedServer:
         
         @app.delete("/api/file-collections/{collection_id}")
         async def delete_collection(collection_id: str):
-            """Delete a file collection."""
+            """Delete a file collection with cascade cleanup (files + vectors)."""
             try:
                 from application_layer.collection_management import delete_collection_use_case, ValidationError
-                result = await delete_collection_use_case(collection_service, collection_id)
+                result = await delete_collection_use_case(collection_service, collection_id, vector_service)
                 return result
             except ValidationError as e:
                 logger.error(f"HTTP delete_collection validation error: {e}")

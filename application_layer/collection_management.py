@@ -125,14 +125,18 @@ async def get_collection_use_case(
 
 async def delete_collection_use_case(
     collection_service,
-    name: str
+    name: str,
+    vector_service=None
 ) -> Dict[str, Any]:
     """
     Shared collection deletion logic for API and MCP protocols.
     
+    Performs cascade deletion: collection → files → vectors
+    
     Args:
         collection_service: Collection service instance
         name: Collection name
+        vector_service: Optional vector service for cleanup
         
     Returns:
         Deletion result with consistent format
@@ -152,8 +156,33 @@ async def delete_collection_use_case(
     # Validate and normalize name
     name = name.strip()
     
-    # Execute collection deletion (will raise if not found)
+    # Step 1: Delete collection files (will raise if not found)
     result = await collection_service.delete_collection(name)
     
-    # Return consistent format (service already returns proper format)
+    # Step 2: Delete associated vectors if vector service is available
+    if vector_service and vector_service.vector_available:
+        try:
+            vector_result = await vector_service.delete_collection_vectors(name)
+            if vector_result.get("success", False):
+                result["vectors_deleted"] = vector_result.get("deleted_count", 0)
+                result["vector_cleanup"] = "success"
+            else:
+                result["vectors_deleted"] = 0
+                result["vector_cleanup"] = f"failed: {vector_result.get('error', 'unknown error')}"
+                # Don't fail the entire operation if vector cleanup fails
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Vector cleanup failed for collection '{name}': {vector_result.get('error')}")
+        except Exception as e:
+            # Don't fail the entire operation if vector cleanup fails
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Vector cleanup error for collection '{name}': {e}")
+            result["vectors_deleted"] = 0
+            result["vector_cleanup"] = f"error: {str(e)}"
+    else:
+        result["vectors_deleted"] = 0
+        result["vector_cleanup"] = "skipped: vector service not available"
+    
+    # Return enhanced result with vector cleanup information
     return result
