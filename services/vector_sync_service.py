@@ -572,3 +572,79 @@ class VectorSyncService(IVectorSyncService):
         except Exception as e:
             logger.error(f"Error in _delete_collection_vectors for '{collection_id}': {e}")
             # Don't raise exception - let sync continue even if vector deletion fails
+    
+    async def get_model_info(self) -> dict:
+        """
+        Get information about the current embedding model and configuration.
+        
+        Returns:
+            Dict with model information including name, device, dimension, etc.
+        """
+        if not self.vector_available:
+            return {
+                "model_name": None,
+                "device": None,
+                "model_dimension": None,
+                "error_message": "Vector dependencies not available"
+            }
+        
+        try:
+            # Create embedding service to get model information
+            from tools.knowledge_base.embeddings import EmbeddingService
+            
+            try:
+                embedding_service = EmbeddingService()
+            except Exception as e:
+                return {
+                    "model_name": None,
+                    "device": None,
+                    "model_dimension": None,
+                    "error_message": f"Could not initialize embedding service: {str(e)}"
+                }
+            
+            # Get model information
+            model_name = embedding_service.model_name
+            device = embedding_service.device
+            
+            # Try to get model dimension
+            model_dimension = None
+            if embedding_service.model:
+                try:
+                    # Get dimension from the model's configuration or by encoding a test string
+                    test_embedding = embedding_service.encode_text("test")
+                    model_dimension = len(test_embedding) if test_embedding else None
+                except Exception as e:
+                    logger.warning(f"Could not determine model dimension: {e}")
+                    model_dimension = None
+            
+            # Get additional model properties if available
+            model_properties = {}
+            if embedding_service.model:
+                try:
+                    # Try to get model max sequence length
+                    if hasattr(embedding_service.model, 'max_seq_length'):
+                        model_properties['max_sequence_length'] = embedding_service.model.max_seq_length
+                    
+                    # Try to get model name from the loaded model
+                    if hasattr(embedding_service.model, 'model_name'):
+                        model_properties['loaded_model_name'] = embedding_service.model.model_name
+                        
+                except Exception as e:
+                    logger.debug(f"Could not get additional model properties: {e}")
+            
+            return {
+                "model_name": model_name,
+                "device": device,
+                "model_dimension": model_dimension,
+                "model_properties": model_properties,
+                "error_message": None
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting model info: {e}")
+            return {
+                "model_name": None,
+                "device": None,
+                "model_dimension": None,
+                "error_message": f"Error retrieving model information: {str(e)}"
+            }

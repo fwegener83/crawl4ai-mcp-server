@@ -399,6 +399,44 @@ class UnifiedServer:
                 return json.dumps({"success": False, "error": str(e)})
         
         @mcp_server.tool()
+        async def get_vector_model_info() -> str:
+            """Get information about the current embedding model and vector service status."""
+            try:
+                if not vector_service.vector_available:
+                    return json.dumps({
+                        "success": True,
+                        "data": {
+                            "vector_service_available": False,
+                            "model_name": None,
+                            "device": None,
+                            "model_dimension": None,
+                            "error_message": "RAG dependencies not available - vector sync service disabled"
+                        }
+                    })
+                
+                model_info = await vector_service.get_model_info()
+                return json.dumps({
+                    "success": True,
+                    "data": {
+                        "vector_service_available": True,
+                        **model_info
+                    }
+                })
+                
+            except Exception as e:
+                logger.error(f"MCP get_vector_model_info error: {e}")
+                return json.dumps({
+                    "success": True,
+                    "data": {
+                        "vector_service_available": False,
+                        "model_name": None,
+                        "device": None,
+                        "model_dimension": None,
+                        "error_message": f"Error retrieving model info: {str(e)}"
+                    }
+                })
+        
+        @mcp_server.tool()
         async def search_collection_vectors(
             query: str,
             collection_name: Optional[str] = None,
@@ -1215,6 +1253,46 @@ class UnifiedServer:
             except Exception as e:
                 logger.error(f"HTTP delete_collection_vectors error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
+        
+        @app.get("/api/vector-sync/model-info")
+        async def get_model_info():
+            """Get information about the current embedding model and vector service status."""
+            try:
+                # Check if vector service is available
+                if not vector_service.vector_available:
+                    return {
+                        "success": True,
+                        "data": {
+                            "vector_service_available": False,
+                            "model_name": None,
+                            "device": None,
+                            "model_dimension": None,
+                            "error_message": "RAG dependencies not available - vector sync service disabled"
+                        }
+                    }
+                
+                # Get model information from the vector service
+                model_info = await vector_service.get_model_info()
+                return {
+                    "success": True,
+                    "data": {
+                        "vector_service_available": True,
+                        **model_info
+                    }
+                }
+                
+            except Exception as e:
+                logger.error(f"HTTP get_model_info error: {e}")
+                return {
+                    "success": True,
+                    "data": {
+                        "vector_service_available": False,
+                        "model_name": None,
+                        "device": None,
+                        "model_dimension": None,
+                        "error_message": f"Error retrieving model info: {str(e)}"
+                    }
+                }
         
         # ===== RAG QUERY ENDPOINT =====
         
