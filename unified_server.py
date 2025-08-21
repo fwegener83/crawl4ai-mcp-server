@@ -985,6 +985,63 @@ class UnifiedServer:
                 logger.error(f"HTTP sync_collection error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
         
+        @app.post("/api/vector-sync/collections/{collection_id}/force-resync")
+        async def force_resync_collection(collection_id: str, request: dict = None):
+            """Force resync a collection - delete all vectors and resync from scratch."""
+            try:
+                # Validate collection exists first
+                await _validate_collection_exists(collection_id)
+                
+                # Check if vector dependencies are available
+                if not vector_service.vector_available:
+                    raise HTTPException(
+                        status_code=503,
+                        detail={
+                            "error": {
+                                "code": "SERVICE_UNAVAILABLE",
+                                "message": "Vector sync service is not available - RAG dependencies not installed",
+                                "details": {"service": "vector_sync"}
+                            }
+                        }
+                    )
+                
+                # Prepare force resync configuration
+                config = request or {}
+                config.update({
+                    "force_delete_vectors": True,  # Always delete vectors for force resync
+                    "force_reprocess": True       # Always reprocess files for force resync
+                })
+                
+                logger.info(f"Starting force resync for collection '{collection_id}'")
+                status = await vector_service.sync_collection(collection_id, config)
+                
+                # Check sync result
+                if status.sync_status == "error":
+                    # General sync error
+                    raise HTTPException(
+                        status_code=500,
+                        detail={
+                            "error": {
+                                "code": "SYNC_FAILED",
+                                "message": status.error_message,
+                                "details": {"collection_name": collection_id}
+                            }
+                        }
+                    )
+                
+                # Success case
+                return {
+                    "success": True,
+                    "message": f"Force resync initiated for collection '{collection_id}'",
+                    "sync_result": status.model_dump()
+                }
+                
+            except HTTPException:
+                raise  # Re-raise HTTPExceptions without wrapping
+            except Exception as e:
+                logger.error(f"HTTP force_resync_collection error: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
         @app.get("/api/vector-sync/collections/{collection_id}/status")
         async def get_sync_status(collection_id: str):
             """Get synchronization status for a collection."""

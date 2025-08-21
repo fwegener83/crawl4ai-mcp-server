@@ -29,6 +29,7 @@ class SyncCollectionRequest(BaseModel):
     """Request model for syncing a collection."""
     force_reprocess: bool = Field(default=False, description="Force reprocessing of all files")
     chunking_strategy: Optional[str] = Field(None, description="Override chunking strategy")
+    force_delete_vectors: bool = Field(default=False, description="Delete all existing vectors before syncing (force resync)")
 
 
 class SyncCollectionResponse(BaseModel):

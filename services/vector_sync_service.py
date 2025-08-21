@@ -120,11 +120,18 @@ class VectorSyncService(IVectorSyncService):
                 collection_manager=self.collection_service.collection_manager if self.collection_service else None
             )
             
+            # Handle force vector deletion if requested
+            force_delete_vectors = config.get("force_delete_vectors", False) if config else False
+            if force_delete_vectors:
+                logger.info(f"Force resync requested - deleting all vectors for collection '{collection_id}'")
+                await self._delete_collection_vectors(collection_id, vector_sync_api.vector_store)
+            
             # Prepare sync request
             from tools.vector_sync_api import SyncCollectionRequest
             sync_request = SyncCollectionRequest(
                 force_reprocess=config.get("force_reprocess", False) if config else False,
-                chunking_strategy=config.get("chunking_strategy") if config else None
+                chunking_strategy=config.get("chunking_strategy") if config else None,
+                force_delete_vectors=force_delete_vectors
             )
             
             # Perform sync operation
@@ -521,3 +528,47 @@ class VectorSyncService(IVectorSyncService):
                 "error": str(e),
                 "deleted_count": 0
             }
+    
+    async def _delete_collection_vectors(self, collection_id: str, vector_store=None):
+        """
+        Internal helper to delete all vectors for a collection.
+        Used by force resync functionality.
+        
+        Args:
+            collection_id: ID of the collection
+            vector_store: Optional vector store instance
+        """
+        try:
+            logger.info(f"Deleting all vectors for collection '{collection_id}'")
+            
+            # Use provided vector store or default
+            if not vector_store and not self.vector_store:
+                from tools.knowledge_base.vector_store import VectorStore
+                # Use centralized vector database path
+                vector_db_path = str(Context42Config.get_vector_db_path())
+                vector_store = VectorStore(persist_directory=vector_db_path)
+            else:
+                vector_store = vector_store or self.vector_store
+            
+            # Try to delete collection from ChromaDB
+            try:
+                # Get or create collection client
+                client = vector_store.get_chroma_client()
+                
+                # Delete collection if it exists
+                try:
+                    client.delete_collection(name=collection_id)
+                    logger.info(f"Successfully deleted ChromaDB collection '{collection_id}'")
+                except Exception as e:
+                    if "does not exist" in str(e).lower():
+                        logger.info(f"Collection '{collection_id}' doesn't exist in ChromaDB - nothing to delete")
+                    else:
+                        logger.warning(f"Error deleting ChromaDB collection '{collection_id}': {e}")
+                        
+            except Exception as e:
+                logger.error(f"Error accessing ChromaDB for collection '{collection_id}': {e}")
+                # Don't fail the entire operation if ChromaDB access fails
+                
+        except Exception as e:
+            logger.error(f"Error in _delete_collection_vectors for '{collection_id}': {e}")
+            # Don't raise exception - let sync continue even if vector deletion fails
