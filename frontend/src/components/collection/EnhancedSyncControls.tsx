@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Box,
   Button,
-  ButtonGroup,
   IconButton,
   Menu,
   MenuItem,
@@ -47,7 +46,7 @@ interface EnhancedSyncControlsProps {
 
 export const EnhancedSyncControls: React.FC<EnhancedSyncControlsProps> = ({
   collectionId,
-  collectionName,
+  collectionName: _collectionName,
   syncStatus,
   onSyncStarted,
   onSyncCompleted,

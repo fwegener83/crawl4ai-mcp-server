@@ -31,12 +31,7 @@ export function MainContent({ className = '' }: MainContentProps) {
     }
   }, [state.selectedCollection, loadSyncStatuses]);
 
-  // Vector sync handlers - bind collection name
-  const handleSyncCollection = async () => {
-    if (state.selectedCollection) {
-      await syncCollection(state.selectedCollection);
-    }
-  };
+  // Vector sync handlers managed by EnhancedSyncControls
 
   // Manual refresh handler
   const handleManualRefresh = async () => {
