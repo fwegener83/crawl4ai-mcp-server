@@ -441,7 +441,7 @@ class UnifiedServer:
             query: str,
             collection_name: Optional[str] = None,
             limit: int = 10,
-            similarity_threshold: float = 0.7
+            similarity_threshold: float = 0.2
         ) -> str:
             """Search vectors using semantic similarity."""
             try:
@@ -465,7 +465,7 @@ class UnifiedServer:
         # ===== RAG QUERY TOOL =====
         
         @mcp_server.tool()
-        async def rag_query(query: str, collection_name: str = None, max_chunks: int = 5, similarity_threshold: float = 0.7) -> str:
+        async def rag_query(query: str, collection_name: str = None, max_chunks: int = 5, similarity_threshold: float = 0.2) -> str:
             """Execute RAG query combining vector search with LLM response generation."""
             try:
                 # Get services from container
@@ -1023,66 +1023,10 @@ class UnifiedServer:
                 logger.error(f"HTTP sync_collection error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
         
-        @app.post("/api/vector-sync/collections/{collection_id}/force-resync")
-        async def force_resync_collection(collection_id: str, request: dict = None):
-            """Force resync a collection - delete all vectors and resync from scratch."""
-            try:
-                # Validate collection exists first
-                await _validate_collection_exists(collection_id)
-                
-                # Check if vector dependencies are available
-                if not vector_service.vector_available:
-                    raise HTTPException(
-                        status_code=503,
-                        detail={
-                            "error": {
-                                "code": "SERVICE_UNAVAILABLE",
-                                "message": "Vector sync service is not available - RAG dependencies not installed",
-                                "details": {"service": "vector_sync"}
-                            }
-                        }
-                    )
-                
-                # Prepare force resync configuration
-                config = request or {}
-                config.update({
-                    "force_delete_vectors": True,  # Always delete vectors for force resync
-                    "force_reprocess": True       # Always reprocess files for force resync
-                })
-                
-                logger.info(f"Starting force resync for collection '{collection_id}'")
-                status = await vector_service.sync_collection(collection_id, config)
-                
-                # Check sync result
-                if status.sync_status == "error":
-                    # General sync error
-                    raise HTTPException(
-                        status_code=500,
-                        detail={
-                            "error": {
-                                "code": "SYNC_FAILED",
-                                "message": status.error_message,
-                                "details": {"collection_name": collection_id}
-                            }
-                        }
-                    )
-                
-                # Success case
-                return {
-                    "success": True,
-                    "message": f"Force resync initiated for collection '{collection_id}'",
-                    "sync_result": status.model_dump()
-                }
-                
-            except HTTPException:
-                raise  # Re-raise HTTPExceptions without wrapping
-            except Exception as e:
-                logger.error(f"HTTP force_resync_collection error: {e}")
-                raise HTTPException(status_code=500, detail=str(e))
         
         @app.get("/api/vector-sync/collections/{collection_id}/status")
         async def get_sync_status(collection_id: str):
-            """Get synchronization status for a collection."""
+            """Get synchronization status for a collection with model info."""
             try:
                 # Validate collection exists first
                 await _validate_collection_exists(collection_id)
@@ -1102,9 +1046,24 @@ class UnifiedServer:
                         }
                     )
                 
+                # Get model information
+                try:
+                    model_info = await vector_service.get_model_info()
+                    model_info_data = {
+                        "vector_service_available": True,
+                        **model_info
+                    }
+                except Exception as e:
+                    logger.warning(f"Failed to get model info: {e}")
+                    model_info_data = {
+                        "vector_service_available": False,
+                        "error_message": f"Error retrieving model info: {str(e)}"
+                    }
+                
                 return {
                     "success": True,
-                    "status": status.model_dump()
+                    "status": status.model_dump(),
+                    "model_info": model_info_data
                 }
             except HTTPException:
                 raise  # Re-raise HTTPExceptions without wrapping
@@ -1136,7 +1095,7 @@ class UnifiedServer:
                 query = request.get("query")
                 collection_name = request.get("collection_name")
                 limit = request.get("limit", 10)
-                similarity_threshold = request.get("similarity_threshold", 0.7)
+                similarity_threshold = request.get("similarity_threshold", 0.2)
                 
                 # Use shared use-case function
                 results = await search_vectors_use_case(
@@ -1254,45 +1213,6 @@ class UnifiedServer:
                 logger.error(f"HTTP delete_collection_vectors error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
         
-        @app.get("/api/vector-sync/model-info")
-        async def get_model_info():
-            """Get information about the current embedding model and vector service status."""
-            try:
-                # Check if vector service is available
-                if not vector_service.vector_available:
-                    return {
-                        "success": True,
-                        "data": {
-                            "vector_service_available": False,
-                            "model_name": None,
-                            "device": None,
-                            "model_dimension": None,
-                            "error_message": "RAG dependencies not available - vector sync service disabled"
-                        }
-                    }
-                
-                # Get model information from the vector service
-                model_info = await vector_service.get_model_info()
-                return {
-                    "success": True,
-                    "data": {
-                        "vector_service_available": True,
-                        **model_info
-                    }
-                }
-                
-            except Exception as e:
-                logger.error(f"HTTP get_model_info error: {e}")
-                return {
-                    "success": True,
-                    "data": {
-                        "vector_service_available": False,
-                        "model_name": None,
-                        "device": None,
-                        "model_dimension": None,
-                        "error_message": f"Error retrieving model info: {str(e)}"
-                    }
-                }
         
         # ===== RAG QUERY ENDPOINT =====
         
@@ -1331,7 +1251,7 @@ class UnifiedServer:
                         query=request.get("query"),
                         collection_name=request.get("collection_name"),
                         max_chunks=request.get("max_chunks", 5),
-                        similarity_threshold=request.get("similarity_threshold", 0.7)
+                        similarity_threshold=request.get("similarity_threshold", 0.2)
                     )
                 except ValidationError as ve:
                     # Handle Pydantic validation errors with proper 422 status

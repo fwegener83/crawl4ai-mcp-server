@@ -181,7 +181,7 @@ Erstelle optional eine `.env` Datei für Konfiguration:
 ```env
 # RAG Knowledge Base Konfiguration
 RAG_DB_PATH=./my_knowledge_base    # Pfad zur ChromaDB Datenbank
-RAG_MODEL_NAME=all-MiniLM-L6-v2    # Embedding Model
+RAG_MODEL_NAME=distiluse-base-multilingual-cased-v1    # Embedding Model
 RAG_CHUNK_SIZE=1000                # Text Chunk Größe
 RAG_CHUNK_OVERLAP=200              # Overlap zwischen Chunks
 RAG_DEVICE=cpu                     # cpu oder cuda

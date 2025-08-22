@@ -247,6 +247,7 @@ export interface VectorSearchResponse {
 export interface SyncCollectionRequest {
   force_reprocess?: boolean;
   chunking_strategy?: 'baseline' | 'markdown_intelligent' | 'auto';
+  force_delete_vectors?: boolean;
 }
 
 export interface SyncCollectionResponse {

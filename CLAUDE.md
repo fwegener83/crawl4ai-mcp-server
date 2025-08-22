@@ -179,7 +179,7 @@ File collections are the primary focus for the frontend interface, providing a f
 ```bash
 # RAG Configuration (optional)
 RAG_DB_PATH=./rag_db              # ChromaDB storage path
-RAG_MODEL_NAME=all-MiniLM-L6-v2   # Embedding model
+RAG_MODEL_NAME=distiluse-base-multilingual-cased-v1   # Embedding model
 RAG_CHUNK_SIZE=1000               # Text chunking
 RAG_DEVICE=cpu                    # cpu or cuda
 

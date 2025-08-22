@@ -329,7 +329,7 @@ class VectorSyncService(IVectorSyncService):
         query: str, 
         collection_id: Optional[str] = None, 
         limit: int = 10, 
-        similarity_threshold: float = 0.7,
+        similarity_threshold: float = 0.2,
         enable_context_expansion: bool = False,
         relationship_filter: Optional[Dict[str, Any]] = None
     ) -> List[VectorSearchResult]:

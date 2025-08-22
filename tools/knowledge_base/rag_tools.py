@@ -58,7 +58,7 @@ class RAGService:
             chunk_overlap: Overlap between chunks.
         """
         self.persist_directory = persist_directory or os.getenv("RAG_DB_PATH", "./rag_db")
-        self.model_name = model_name or os.getenv("RAG_MODEL_NAME", "all-MiniLM-L6-v2")
+        self.model_name = model_name or os.getenv("RAG_MODEL_NAME", "distiluse-base-multilingual-cased-v1")
         
         # Initialize components
         try:

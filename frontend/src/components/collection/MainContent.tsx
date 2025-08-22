@@ -1,6 +1,7 @@
+import React from 'react';
 import { useCollectionOperations } from '../../hooks/useCollectionOperations';
 import { useVectorSync } from '../../hooks/useVectorSync';
-import CompactSyncStatus from './CompactSyncStatus';
+import { EnhancedSyncControls } from './EnhancedSyncControls';
 import AddContentMenu from './AddContentMenu';
 import FileExplorer from './FileExplorer';
 import EditorArea from './EditorArea';
@@ -12,59 +13,45 @@ interface MainContentProps {
   className?: string;
 }
 
-// Helper function to map backend status to compact status format
-const mapSyncStatus = (status: string): 'synced' | 'syncing' | 'error' | 'never_synced' => {
-  switch (status) {
-    case 'in_sync':
-    case 'synced':
-      return 'synced';
-    case 'syncing':
-      return 'syncing';
-    case 'sync_error':
-    case 'partial_sync':
-      return 'error';
-    case 'never_synced':
-    case 'out_of_sync':
-      return 'never_synced';
-    default:
-      return 'never_synced';
-  }
-};
-
-// Helper function to format relative time
-const formatRelativeTime = (lastSync: string | null): string | undefined => {
-  if (!lastSync) return undefined;
-  
-  try {
-    const syncDate = new Date(lastSync);
-    const now = new Date();
-    const diffMs = now.getTime() - syncDate.getTime();
-    const diffMinutes = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMinutes / 60);
-    const diffDays = Math.floor(diffHours / 24);
-    
-    if (diffMinutes < 1) return 'just now';
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    return `${diffDays}d ago`;
-  } catch {
-    return 'unknown';
-  }
-};
 
 export function MainContent({ className = '' }: MainContentProps) {
   const { state, openModal } = useCollectionOperations();
   const { 
     getSyncStatus, 
-    syncCollection
+    syncCollection,
+    loadSyncStatuses,
+    refreshSyncStatus
   } = useVectorSync();
   
+  // Load sync statuses when collection is selected
+  React.useEffect(() => {
+    if (state.selectedCollection) {
+      console.log('🔄 Collection selected, loading sync statuses:', state.selectedCollection);
+      loadSyncStatuses();
+    }
+  }, [state.selectedCollection, loadSyncStatuses]);
 
   // Vector sync handlers - bind collection name
   const handleSyncCollection = async () => {
     if (state.selectedCollection) {
       await syncCollection(state.selectedCollection);
     }
+  };
+
+  // Manual refresh handler
+  const handleManualRefresh = async () => {
+    if (state.selectedCollection) {
+      await refreshSyncStatus(state.selectedCollection);
+    }
+  };
+
+  // Simplified sync callbacks
+  const handleSyncStarted = () => {
+    console.log('🚀 Sync started');
+  };
+
+  const handleSyncCompleted = () => {
+    console.log('✅ Sync completed');
   };
 
 
@@ -163,15 +150,16 @@ export function MainContent({ className = '' }: MainContentProps) {
               </Box>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-              {/* Compact Vector Sync Status */}
-              {state.selectedCollection && getSyncStatus(state.selectedCollection) && (
-                <CompactSyncStatus
-                  data-testid="compact-sync-status"
-                  status={mapSyncStatus(getSyncStatus(state.selectedCollection)!.status)}
-                  fileCount={getSyncStatus(state.selectedCollection)!.total_files}
-                  chunkCount={getSyncStatus(state.selectedCollection)!.chunk_count}
-                  lastSync={formatRelativeTime(getSyncStatus(state.selectedCollection)!.last_sync)}
-                  onClick={handleSyncCollection}
+              {/* Enhanced Vector Sync Controls */}
+              {state.selectedCollection && (
+                <EnhancedSyncControls
+                  collectionId={state.selectedCollection}
+                  collectionName={selectedCollection?.name || state.selectedCollection}
+                  syncStatus={getSyncStatus(state.selectedCollection)}
+                  onSyncStarted={handleSyncStarted}
+                  onSyncCompleted={handleSyncCompleted}
+                  onRefresh={handleManualRefresh}
+                  size="small"
                 />
               )}
               

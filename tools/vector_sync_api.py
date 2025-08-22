@@ -53,7 +53,7 @@ class VectorSearchRequest(BaseModel):
     query: str = Field(..., description="Search query")
     collection_name: Optional[str] = Field(None, description="Specific collection to search")
     limit: int = Field(default=10, description="Maximum number of results")
-    similarity_threshold: float = Field(default=0.7, description="Minimum similarity score")
+    similarity_threshold: float = Field(default=0.2, description="Minimum similarity score")
     enable_context_expansion: bool = Field(default=False, description="Enable context expansion using chunk relationships")
     relationship_filter: Optional[Dict[str, Any]] = Field(None, description="Filter based on chunk relationships")
 

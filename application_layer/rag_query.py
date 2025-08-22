@@ -56,7 +56,7 @@ class RAGQueryRequest(BaseModel):
         description="Maximum number of document chunks to use for context"
     )
     similarity_threshold: float = Field(
-        0.7, 
+        0.2, 
         ge=0.0, 
         le=1.0, 
         description="Minimum similarity score for including chunks"

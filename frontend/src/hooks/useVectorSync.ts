@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 import { useCollection } from '../contexts/CollectionContext';
 import { APIService } from '../services/api';
 import type { 
@@ -18,10 +18,9 @@ interface UseVectorSyncReturn {
   
   // Actions
   getSyncStatus: (collectionId: string) => VectorSyncStatus | undefined;
+  loadSyncStatuses: () => Promise<void>;
   refreshSyncStatus: (collectionId: string) => Promise<void>;
-  refreshAllSyncStatuses: () => Promise<void>;
   syncCollection: (collectionId: string, request?: SyncCollectionRequest) => Promise<void>;
-  deleteVectors: (collectionId: string) => Promise<void>;
   
   // Utilities
   canSync: (collectionId: string) => boolean;
@@ -49,109 +48,37 @@ const getErrorMessage = (error: unknown): string => {
 export const useVectorSync = (): UseVectorSyncReturn => {
   const { state, dispatch } = useCollection();
   const { vectorSync } = state;
-  
-  // Track active polling intervals for sync operations
-  const pollingIntervals = useRef<Map<string, NodeJS.Timeout>>(new Map());
-  const pollingSafeguards = useRef<Map<string, { startTime: number; attempts: number }>>(new Map());
-
-  // UNIFIED RECOVERY FUNCTION - prevent multiple recovery functions per collection
-  const createRecoveryPollingFunction = useCallback((collectionId: string) => {
-    return async () => {
-      try {
-        console.log(`🔄 Recovery polling check for ${collectionId}`);
-        const currentStatus = await APIService.getCollectionSyncStatus(collectionId);
-        
-        dispatch({ 
-          type: 'SET_VECTOR_SYNC_STATUS', 
-          payload: { collectionName: collectionId, status: currentStatus } 
-        });
-        
-        // Stop recovery polling if sync is complete or failed
-        if (currentStatus.status !== 'syncing') {
-          console.log(`✅ Recovery complete for ${collectionId}, final status: ${currentStatus.status}`);
-          stopPolling(collectionId);
-          return;
-        }
-
-        // Check safeguards for recovery polling
-        const safeguard = pollingSafeguards.current.get(collectionId);
-        if (safeguard) {
-          const elapsed = Date.now() - safeguard.startTime;
-          const maxTime = 5 * 60 * 1000; // 5 minutes for recovery
-          const maxAttempts = 30; // 30 attempts = 5 minutes at 10s intervals
-          
-          if (elapsed > maxTime || safeguard.attempts > maxAttempts) {
-            console.warn(`⏰ Recovery timeout for ${collectionId}: ${elapsed}ms elapsed, ${safeguard.attempts} attempts`);
-            console.log(`🔧 Forcing status reset for stuck collection ${collectionId}`);
-            
-            // Force status reset for permanently stuck collections
-            dispatch({
-              type: 'SET_VECTOR_SYNC_STATUS',
-              payload: {
-                collectionName: collectionId,
-                status: { ...currentStatus, status: 'sync_error' }
-              }
-            });
-            
-            stopPolling(collectionId);
-            return;
-          }
-        }
-        
-      } catch (error) {
-        console.error(`❌ Recovery polling failed for ${collectionId}:`, error);
-        stopPolling(collectionId);
-      }
-    };
-  }, [dispatch]);
-
-  // Utility functions for polling management
-  const startPolling = useCallback((collectionId: string, pollFunction: () => void, interval: number = 10000) => {
-    console.log('🟢 Starting polling for', collectionId, 'every', interval, 'ms');
-    
-    // Clear any existing polling first
-    const existingInterval = pollingIntervals.current.get(collectionId);
-    if (existingInterval) {
-      console.log('🔄 Clearing existing polling for', collectionId);
-      clearInterval(existingInterval);
-      pollingIntervals.current.delete(collectionId);
-    }
-    
-    const intervalId = setInterval(pollFunction, interval);
-    pollingIntervals.current.set(collectionId, intervalId);
-    console.log('✅ Polling started for', collectionId, 'with interval ID:', intervalId);
-  }, []);
-
-  const stopPolling = useCallback((collectionId: string) => {
-    const intervalId = pollingIntervals.current.get(collectionId);
-    if (intervalId) {
-      console.log('🛑 Stopping polling for', collectionId, 'interval ID:', intervalId);
-      clearInterval(intervalId);
-      pollingIntervals.current.delete(collectionId);
-    } else {
-      console.log('⚠️ No active polling found for', collectionId);
-    }
-    // Clear safeguards too
-    pollingSafeguards.current.delete(collectionId);
-  }, []);
-
-  // Cleanup all polling on unmount
-  useEffect(() => {
-    const currentIntervals = pollingIntervals.current;
-    return () => {
-      currentIntervals.forEach((intervalId) => clearInterval(intervalId));
-      currentIntervals.clear();
-    };
-  }, []);
 
   // Get sync status for a collection
   const getSyncStatus = useCallback((collectionId: string): VectorSyncStatus | undefined => {
     return vectorSync.statuses[collectionId];
   }, [vectorSync.statuses]);
 
-  // Refresh sync status for a specific collection
+  // Load sync statuses for all collections (called when collection is clicked)
+  const loadSyncStatuses = useCallback(async () => {
+    try {
+      console.log('🔄 Loading sync statuses for all collections...');
+      dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSync', value: true } });
+      
+      const statuses = await APIService.listCollectionSyncStatuses();
+      console.log('📊 Received statuses:', statuses);
+      
+      dispatch({ type: 'SET_VECTOR_SYNC_STATUSES', payload: statuses });
+    } catch (error) {
+      console.error('❌ Failed to load sync statuses:', error);
+      dispatch({ 
+        type: 'SET_ERROR', 
+        payload: getErrorMessage(error) 
+      });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSync', value: false } });
+    }
+  }, [dispatch]);
+
+  // Refresh sync status for a specific collection (manual refresh)
   const refreshSyncStatus = useCallback(async (collectionId: string) => {
     try {
+      console.log('🔄 Refreshing sync status for collection:', collectionId);
       dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSync', value: true } });
       
       const status = await APIService.getCollectionSyncStatus(collectionId);
@@ -160,6 +87,7 @@ export const useVectorSync = (): UseVectorSyncReturn => {
         payload: { collectionName: collectionId, status } 
       });
     } catch (error) {
+      console.error('❌ Failed to refresh sync status:', error);
       dispatch({ 
         type: 'SET_ERROR', 
         payload: getErrorMessage(error) 
@@ -169,139 +97,40 @@ export const useVectorSync = (): UseVectorSyncReturn => {
     }
   }, [dispatch]);
 
-  // Refresh sync statuses for all collections
-  const refreshAllSyncStatuses = useCallback(async () => {
-    try {
-      console.log('🔄 Refreshing all sync statuses...');
-      dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSync', value: true } });
-      
-      const statuses = await APIService.listCollectionSyncStatuses();
-      console.log('📊 Received statuses:', statuses);
-      
-      // COMPREHENSIVE RECOVERY: Check ALL collections for orphaned "syncing" status - NOT just first one
-      const orphanedCollections = Object.entries(statuses).filter(([collectionId, status]) => {
-        if (status.status === 'syncing') {
-          const hasActivePolling = pollingIntervals.current.has(collectionId);
-          console.log(`🔍 Collection ${collectionId} is syncing, active polling: ${hasActivePolling}`);
-          
-          if (!hasActivePolling) {
-            console.warn(`⚠️ ORPHANED: Collection ${collectionId} shows "syncing" but has no active polling!`);
-            return true; // Mark as orphaned
-          }
-        }
-        return false;
-      });
-
-      // Start recovery polling for ALL orphaned collections
-      if (orphanedCollections.length > 0) {
-        console.log(`🚀 COMPREHENSIVE RECOVERY: Starting polling for ${orphanedCollections.length} orphaned collections:`, 
-                   orphanedCollections.map(([id]) => id));
-        
-        orphanedCollections.forEach(([collectionId]) => {          
-          // Initialize safeguards for recovery polling
-          pollingSafeguards.current.set(collectionId, { 
-            startTime: Date.now(), 
-            attempts: 0 
-          });
-          
-          // Use UNIFIED recovery function to prevent conflicts
-          const recoveryFunction = createRecoveryPollingFunction(collectionId);
-          
-          // Start recovery polling immediately, then every 10s
-          recoveryFunction();
-          startPolling(collectionId, recoveryFunction, 10000);
-        });
-      }
-      
-      dispatch({ type: 'SET_VECTOR_SYNC_STATUSES', payload: statuses });
-    } catch (error) {
-      console.error('❌ Failed to refresh sync statuses:', error);
-      dispatch({ 
-        type: 'SET_ERROR', 
-        payload: getErrorMessage(error) 
-      });
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSync', value: false } });
-    }
-  }, [dispatch]);
-
-  // Sync a collection with hardcoded optimal strategy
+  // Sync a collection with simplified strategy
   const syncCollection = useCallback(async (
     collectionId: string, 
-    _request?: SyncCollectionRequest // Parameter preserved for API compatibility but ignored
+    request?: SyncCollectionRequest
   ) => {
-    // Frontend Refactoring: Hard-code optimal strategy for 95% of use cases
-    // This simplifies the UI while maintaining backend API flexibility
-    const hardcodedRequest: SyncCollectionRequest = {
-      chunking_strategy: 'markdown_intelligent', // Optimal for structured content
-      force_reprocess: false                     // Efficient default
-      // Note: chunk_size and chunk_overlap are backend defaults (1000, 200)
-    };
     try {
+      console.log('🚀 Starting sync for collection:', collectionId);
       dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSync', value: true } });
       
-      // Set syncing status immediately
+      // Set syncing status immediately for UI feedback
       const currentStatus = getSyncStatus(collectionId);
       if (currentStatus) {
         dispatch({
           type: 'SET_VECTOR_SYNC_STATUS',
           payload: {
             collectionName: collectionId,
-            status: { ...currentStatus, status: 'syncing', sync_progress: 0 }
+            status: { ...currentStatus, status: 'syncing' }
           }
         });
       }
 
-      // Start sync operation with hardcoded optimal settings
-      await APIService.syncCollection(collectionId, hardcodedRequest);
-      
-      // Start intelligent polling with safeguards
-      const pollSyncProgress = async () => {
-        try {
-          // Get or initialize safeguard data - with proper initialization
-          let safeguard = pollingSafeguards.current.get(collectionId);
-          if (!safeguard) {
-            safeguard = { startTime: Date.now(), attempts: 0 };
-            pollingSafeguards.current.set(collectionId, safeguard);
-          }
-          safeguard.attempts += 1;
-          
-          // Safety checks: Stop polling after 2 minutes or 12 attempts
-          const elapsed = Date.now() - safeguard.startTime;
-          const maxTime = 2 * 60 * 1000; // 2 minutes
-          const maxAttempts = 12; // 12 attempts = 2 minutes at 10s intervals
-          
-          if (elapsed > maxTime || safeguard.attempts > maxAttempts) {
-            console.warn(`Stopping polling for ${collectionId}: timeout or max attempts reached`);
-            stopPolling(collectionId);
-            return;
-          }
-          
-          const status = await APIService.getCollectionSyncStatus(collectionId);
-          dispatch({ 
-            type: 'SET_VECTOR_SYNC_STATUS', 
-            payload: { collectionName: collectionId, status } 
-          });
-          
-          // Stop polling if sync is complete or failed
-          if (status.status !== 'syncing') {
-            console.log(`Sync completed for ${collectionId}, status: ${status.status}`);
-            stopPolling(collectionId);
-          }
-        } catch (error) {
-          console.error('Error polling sync progress:', error);
-          stopPolling(collectionId);
-        }
+      // Use provided request or default to markdown_intelligent strategy
+      const syncRequest = request || {
+        chunking_strategy: 'markdown_intelligent',
+        force_reprocess: false
       };
 
-      // Initialize safeguards and start polling
-      pollingSafeguards.current.set(collectionId, { 
-        startTime: Date.now(), 
-        attempts: 0 
-      });
-      startPolling(collectionId, pollSyncProgress, 10000);
+      await APIService.syncCollection(collectionId, syncRequest);
+      
+      // Refresh status after sync completes
+      await refreshSyncStatus(collectionId);
       
     } catch (error) {
+      console.error('❌ Sync failed:', error);
       dispatch({ 
         type: 'SET_ERROR', 
         payload: getErrorMessage(error) 
@@ -312,30 +141,7 @@ export const useVectorSync = (): UseVectorSyncReturn => {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSync', value: false } });
     }
-  }, [dispatch, getSyncStatus, refreshSyncStatus, startPolling, stopPolling]);
-
-  // Note: Enable/disable sync functions removed - sync is now manual trigger only
-
-  // Delete vectors for a collection
-  const deleteVectors = useCallback(async (collectionId: string) => {
-    try {
-      dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSync', value: true } });
-      
-      // Stop any active polling for this collection
-      stopPolling(collectionId);
-      
-      await APIService.deleteCollectionVectors(collectionId);
-      await refreshSyncStatus(collectionId);
-    } catch (error) {
-      dispatch({ 
-        type: 'SET_ERROR', 
-        payload: getErrorMessage(error) 
-      });
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: { key: 'vectorSync', value: false } });
-    }
-  }, [dispatch, refreshSyncStatus, stopPolling]);
-
+  }, [dispatch, getSyncStatus, refreshSyncStatus]);
 
   // Utility functions
   const canSync = useCallback((collectionId: string): boolean => {
@@ -355,76 +161,15 @@ export const useVectorSync = (): UseVectorSyncReturn => {
     return status?.status === 'syncing' || false;
   }, [getSyncStatus]);
 
-  // Load sync statuses on mount or when collections change
-  useEffect(() => {
-    if (state.collections.length > 0) {
-      console.log('🔄 Loading sync statuses for', state.collections.length, 'collections');
-      refreshAllSyncStatuses();
-    }
-  }, [state.collections.length, refreshAllSyncStatuses]);
-
-  // Debug: Log active polling intervals + Continuous orphaned detection
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      const activePolling = Array.from(pollingIntervals.current.keys());
-      const activeSafeguards = Array.from(pollingSafeguards.current.entries());
-      
-      if (activePolling.length > 0) {
-        console.log('🟡 Active polling:', activePolling);
-        console.log('🛡️ Safeguards:', activeSafeguards);
-      }
-      
-      // CONTINUOUS ORPHANED DETECTION: Check every 30s for new orphaned collections
-      try {
-        const currentStatuses = await APIService.listCollectionSyncStatuses();
-        const newOrphanedCollections = Object.entries(currentStatuses).filter(([collectionId, status]) => {
-          if (status.status === 'syncing') {
-            const hasActivePolling = pollingIntervals.current.has(collectionId);
-            if (!hasActivePolling) {
-              console.warn(`🆘 CONTINUOUS DETECTION: Found new orphaned collection ${collectionId}`);
-              return true;
-            }
-          }
-          return false;
-        });
-        
-        // Start polling for newly discovered orphaned collections
-        if (newOrphanedCollections.length > 0) {
-          console.log(`🔄 CONTINUOUS RECOVERY: Starting polling for ${newOrphanedCollections.length} newly discovered orphaned collections`);
-          
-          newOrphanedCollections.forEach(([collectionId]) => {
-            // Initialize safeguards for continuous recovery  
-            pollingSafeguards.current.set(collectionId, { 
-              startTime: Date.now(), 
-              attempts: 0 
-            });
-            
-            // Use UNIFIED recovery function to prevent conflicts with initial recovery
-            const recoveryFunction = createRecoveryPollingFunction(collectionId);
-            
-            recoveryFunction();
-            startPolling(collectionId, recoveryFunction, 10000);
-          });
-        }
-        
-      } catch (error) {
-        console.error('❌ Continuous orphaned detection failed:', error);
-      }
-    }, 30000); // Check every 30 seconds
-    
-    return () => clearInterval(interval);
-  }, [dispatch, startPolling, stopPolling, createRecoveryPollingFunction]);
-
   return {
     // State
     syncStatuses: vectorSync.statuses,
     
     // Actions
     getSyncStatus,
+    loadSyncStatuses,
     refreshSyncStatus,
-    refreshAllSyncStatuses,
     syncCollection,
-    deleteVectors,
     
     // Utilities
     canSync,

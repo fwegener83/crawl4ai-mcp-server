@@ -62,11 +62,11 @@ def test_model_loading():
         print(f"Actual embedding dimension: {dimension}")
         
         # Expected dimensions:
-        # - all-MiniLM-L6-v2: 384 dimensions
+        # - all-MiniLM-L6-v2: 384 dimensions (deprecated)
         # - distiluse-base-multilingual-cased-v1: 512 dimensions
         
         if dimension == 384:
-            print("⚠️  WARNING: Model appears to be all-MiniLM-L6-v2 (384D)")
+            print("⚠️  WARNING: Model appears to be all-MiniLM-L6-v2 (384D, deprecated)")
         elif dimension == 512:
             print("✅ SUCCESS: Model appears to be distiluse-base-multilingual-cased-v1 (512D)")
         else:
@@ -101,7 +101,7 @@ def test_cross_language_similarity(embedding_service):
         
         # Expected results:
         # - With distiluse-base-multilingual-cased-v1: ~0.881 (from notebook)
-        # - With all-MiniLM-L6-v2: Much lower similarity
+        # - With all-MiniLM-L6-v2: Much lower similarity (deprecated model)
         
         if similarity > 0.8:
             print("✅ EXCELLENT: High cross-language similarity - multilingual model working")
