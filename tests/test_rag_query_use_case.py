@@ -32,7 +32,7 @@ class TestRAGQueryRequest:
         assert request.query == "What is AI?"
         assert request.collection_name is None
         assert request.max_chunks == 5
-        assert request.similarity_threshold == 0.7
+        assert request.similarity_threshold == 0.2
     
     def test_valid_request_full(self):
         """Test valid request with all parameters."""
@@ -271,7 +271,7 @@ class TestRAGQueryUseCase:
                 query="What is AI?",
                 collection_name=None,
                 limit=5,
-                similarity_threshold=0.7
+                similarity_threshold=0.2
             )
     
     @pytest.mark.asyncio

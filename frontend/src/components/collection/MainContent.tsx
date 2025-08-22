@@ -18,7 +18,6 @@ export function MainContent({ className = '' }: MainContentProps) {
   const { state, openModal } = useCollectionOperations();
   const { 
     getSyncStatus, 
-    syncCollection,
     loadSyncStatuses,
     refreshSyncStatus
   } = useVectorSync();
