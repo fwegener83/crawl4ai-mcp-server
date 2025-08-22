@@ -389,10 +389,10 @@ export class APIService {
   // Note: These will be integrated with MCP server tools in the backend
 
   /**
-   * Get vector sync status for a specific collection
+   * Get vector sync status for a specific collection (now includes model info)
    */
   static async getCollectionSyncStatus(collectionId: string): Promise<VectorSyncStatus> {
-    const response: AxiosResponse<{ success: boolean; status: any; error?: string }> = 
+    const response: AxiosResponse<{ success: boolean; status: any; model_info?: any; error?: string }> = 
       await api.get(`/vector-sync/collections/${collectionId}/status`);
     
     if (!response.data.success) {
@@ -401,6 +401,23 @@ export class APIService {
     
     // Transform backend response format to frontend format
     return APIService.transformVectorSyncStatus(response.data.status);
+  }
+
+  /**
+   * Get collection sync status with model information
+   */
+  static async getCollectionSyncStatusWithModel(collectionId: string): Promise<{ status: VectorSyncStatus; modelInfo: any }> {
+    const response: AxiosResponse<{ success: boolean; status: any; model_info?: any; error?: string }> = 
+      await api.get(`/vector-sync/collections/${collectionId}/status`);
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to get sync status');
+    }
+    
+    return {
+      status: APIService.transformVectorSyncStatus(response.data.status),
+      modelInfo: response.data.model_info
+    };
   }
 
   /**
@@ -443,6 +460,32 @@ export class APIService {
     return response.data;
   }
 
+  /**
+   * Force resync a collection - deletes all existing vectors and resyncs from scratch
+   * Uses the same sync endpoint with force flags
+   */
+  static async forceResyncCollection(
+    collectionId: string,
+    request: SyncCollectionRequest = {}
+  ): Promise<SyncCollectionResponse> {
+    // Force resync uses the same sync endpoint with force flags
+    const forceResyncRequest = {
+      ...request,
+      force_reprocess: true,
+      force_delete_vectors: true
+    };
+    
+    const response: AxiosResponse<SyncCollectionResponse> = await api.post(
+      `/vector-sync/collections/${collectionId}/sync`,
+      forceResyncRequest
+    );
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to force resync collection');
+    }
+    
+    return response.data;
+  }
 
   /**
    * Delete all vectors for a collection
@@ -469,6 +512,7 @@ export class APIService {
     
     return response.data;
   }
+
 }
 
 export default APIService;

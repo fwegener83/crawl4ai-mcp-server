@@ -120,11 +120,18 @@ class VectorSyncService(IVectorSyncService):
                 collection_manager=self.collection_service.collection_manager if self.collection_service else None
             )
             
+            # Handle force vector deletion if requested
+            force_delete_vectors = config.get("force_delete_vectors", False) if config else False
+            if force_delete_vectors:
+                logger.info(f"Force resync requested - deleting all vectors for collection '{collection_id}'")
+                await self._delete_collection_vectors(collection_id, vector_sync_api.vector_store)
+            
             # Prepare sync request
             from tools.vector_sync_api import SyncCollectionRequest
             sync_request = SyncCollectionRequest(
                 force_reprocess=config.get("force_reprocess", False) if config else False,
-                chunking_strategy=config.get("chunking_strategy") if config else None
+                chunking_strategy=config.get("chunking_strategy") if config else None,
+                force_delete_vectors=force_delete_vectors
             )
             
             # Perform sync operation
@@ -322,7 +329,7 @@ class VectorSyncService(IVectorSyncService):
         query: str, 
         collection_id: Optional[str] = None, 
         limit: int = 10, 
-        similarity_threshold: float = 0.7,
+        similarity_threshold: float = 0.2,
         enable_context_expansion: bool = False,
         relationship_filter: Optional[Dict[str, Any]] = None
     ) -> List[VectorSearchResult]:
@@ -520,4 +527,124 @@ class VectorSyncService(IVectorSyncService):
                 "success": False,
                 "error": str(e),
                 "deleted_count": 0
+            }
+    
+    async def _delete_collection_vectors(self, collection_id: str, vector_store=None):
+        """
+        Internal helper to delete all vectors for a collection.
+        Used by force resync functionality.
+        
+        Args:
+            collection_id: ID of the collection
+            vector_store: Optional vector store instance
+        """
+        try:
+            logger.info(f"Deleting all vectors for collection '{collection_id}'")
+            
+            # Use provided vector store or default
+            if not vector_store and not self.vector_store:
+                from tools.knowledge_base.vector_store import VectorStore
+                # Use centralized vector database path
+                vector_db_path = str(Context42Config.get_vector_db_path())
+                vector_store = VectorStore(persist_directory=vector_db_path)
+            else:
+                vector_store = vector_store or self.vector_store
+            
+            # Try to delete collection from ChromaDB
+            try:
+                # Get or create collection client
+                client = vector_store.get_chroma_client()
+                
+                # Delete collection if it exists
+                try:
+                    client.delete_collection(name=collection_id)
+                    logger.info(f"Successfully deleted ChromaDB collection '{collection_id}'")
+                except Exception as e:
+                    if "does not exist" in str(e).lower():
+                        logger.info(f"Collection '{collection_id}' doesn't exist in ChromaDB - nothing to delete")
+                    else:
+                        logger.warning(f"Error deleting ChromaDB collection '{collection_id}': {e}")
+                        
+            except Exception as e:
+                logger.error(f"Error accessing ChromaDB for collection '{collection_id}': {e}")
+                # Don't fail the entire operation if ChromaDB access fails
+                
+        except Exception as e:
+            logger.error(f"Error in _delete_collection_vectors for '{collection_id}': {e}")
+            # Don't raise exception - let sync continue even if vector deletion fails
+    
+    async def get_model_info(self) -> dict:
+        """
+        Get information about the current embedding model and configuration.
+        
+        Returns:
+            Dict with model information including name, device, dimension, etc.
+        """
+        if not self.vector_available:
+            return {
+                "model_name": None,
+                "device": None,
+                "model_dimension": None,
+                "error_message": "Vector dependencies not available"
+            }
+        
+        try:
+            # Create embedding service to get model information
+            from tools.knowledge_base.embeddings import EmbeddingService
+            
+            try:
+                embedding_service = EmbeddingService()
+            except Exception as e:
+                return {
+                    "model_name": None,
+                    "device": None,
+                    "model_dimension": None,
+                    "error_message": f"Could not initialize embedding service: {str(e)}"
+                }
+            
+            # Get model information
+            model_name = embedding_service.model_name
+            device = embedding_service.device
+            
+            # Try to get model dimension
+            model_dimension = None
+            if embedding_service.model:
+                try:
+                    # Get dimension from the model's configuration or by encoding a test string
+                    test_embedding = embedding_service.encode_text("test")
+                    model_dimension = len(test_embedding) if test_embedding else None
+                except Exception as e:
+                    logger.warning(f"Could not determine model dimension: {e}")
+                    model_dimension = None
+            
+            # Get additional model properties if available
+            model_properties = {}
+            if embedding_service.model:
+                try:
+                    # Try to get model max sequence length
+                    if hasattr(embedding_service.model, 'max_seq_length'):
+                        model_properties['max_sequence_length'] = embedding_service.model.max_seq_length
+                    
+                    # Try to get model name from the loaded model
+                    if hasattr(embedding_service.model, 'model_name'):
+                        model_properties['loaded_model_name'] = embedding_service.model.model_name
+                        
+                except Exception as e:
+                    logger.debug(f"Could not get additional model properties: {e}")
+            
+            return {
+                "model_name": model_name,
+                "device": device,
+                "model_dimension": model_dimension,
+                "model_properties": model_properties,
+                "error_message": None
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting model info: {e}")
+            return {
+                "model_name": None,
+                "device": None,
+                "model_dimension": None,
+                "error_message": f"Error retrieving model information: {str(e)}"
             }

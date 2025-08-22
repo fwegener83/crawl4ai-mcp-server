@@ -113,6 +113,43 @@ class MCPServerClient:
             except Exception as e:
                 return json.dumps({"success": False, "error": str(e)})
         
+        async def get_vector_model_info() -> str:
+            """Get information about the current embedding model and vector service status."""
+            try:
+                if not vector_service.vector_available:
+                    return json.dumps({
+                        "success": True,
+                        "data": {
+                            "vector_service_available": False,
+                            "model_name": None,
+                            "device": None,
+                            "model_dimension": None,
+                            "error_message": "RAG dependencies not available - vector sync service disabled"
+                        }
+                    })
+                
+                model_info = await vector_service.get_model_info()
+                return json.dumps({
+                    "success": True,
+                    "data": {
+                        "vector_service_available": True,
+                        **model_info
+                    }
+                })
+                
+            except Exception as e:
+                logger.error(f"Error in get_vector_model_info: {e}")
+                return json.dumps({
+                    "success": True,
+                    "data": {
+                        "vector_service_available": False,
+                        "model_name": None,
+                        "device": None,
+                        "model_dimension": None,
+                        "error_message": f"Error retrieving model info: {str(e)}"
+                    }
+                })
+        
         async def save_to_collection(collection_name: str, filename: str, content: str, folder: str = "") -> str:
             try:
                 file_info = await collection_service.save_file(collection_name, filename, content, folder)
@@ -189,7 +226,8 @@ class MCPServerClient:
             'read_from_collection': read_from_collection,
             'sync_collection_to_vectors': sync_collection_to_vectors,
             'get_collection_sync_status': get_collection_sync_status,
-            'search_collection_vectors': search_collection_vectors
+            'search_collection_vectors': search_collection_vectors,
+            'get_vector_model_info': get_vector_model_info
         }
     
     async def call_tool(self, tool_name: str, **kwargs) -> Dict[str, Any]:
@@ -698,6 +736,52 @@ class TestMCPToolCompatibility:
                 )
             except:
                 pass  # Ignore cleanup errors
+
+
+class TestMCPModelInfo:
+    """Tests for MCP model information functionality."""
+    
+    @pytest.mark.asyncio
+    async def test_get_vector_model_info(self, mcp_client: MCPServerClient):
+        """Test retrieving vector model information via MCP."""
+        
+        # Test the model info tool
+        model_info_result = await mcp_client.call_tool("get_vector_model_info")
+        
+        # Verify response structure
+        assert model_info_result["success"] is True
+        assert "data" in model_info_result
+        
+        data = model_info_result["data"]
+        expected_fields = ["vector_service_available", "model_name", "device", "model_dimension", "error_message"]
+        
+        for field in expected_fields:
+            assert field in data, f"Missing field: {field}"
+        
+        # If vector service is available, verify model info
+        if data["vector_service_available"]:
+            logger.info(f"Vector service available with model: {data['model_name']}")
+            
+            # Verify fields are populated
+            assert data["model_name"] is not None
+            assert data["device"] is not None
+            assert data["model_dimension"] is not None
+            assert isinstance(data["model_dimension"], int)
+            assert data["model_dimension"] > 0
+            assert data["error_message"] is None
+            
+            # Verify this is the multilingual model from Phase 1 fix
+            if data["model_name"] == "distiluse-base-multilingual-cased-v1":
+                logger.info("✅ Multilingual model correctly loaded")
+                assert data["model_dimension"] == 512, "Multilingual model should have dimension 512"
+            
+        else:
+            logger.info(f"Vector service not available: {data['error_message']}")
+            # Verify error case fields
+            assert data["model_name"] is None
+            assert data["device"] is None
+            assert data["model_dimension"] is None
+            assert data["error_message"] is not None
 
 
 @pytest.mark.slow

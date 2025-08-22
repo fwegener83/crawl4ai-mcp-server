@@ -25,7 +25,7 @@ class EmbeddingService:
         """
         ensure_rag_available()
         
-        self.model_name = model_name or os.getenv("RAG_MODEL_NAME", "all-MiniLM-L6-v2")
+        self.model_name = model_name or os.getenv("RAG_MODEL_NAME", "distiluse-base-multilingual-cased-v1")
         self.device = device or os.getenv("RAG_DEVICE", "cpu")
         self.cache_folder = cache_folder
         self.model = None

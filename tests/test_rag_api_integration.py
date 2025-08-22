@@ -88,7 +88,7 @@ class TestRAGHTTPEndpoint:
             "query": "What is machine learning?",
             "collection_name": "ai_docs",
             "max_chunks": 5,
-            "similarity_threshold": 0.7
+            "similarity_threshold": 0.2
         }
         
         # Act
@@ -142,7 +142,7 @@ class TestRAGHTTPEndpoint:
         # Verify defaults were applied
         call_args = mock_rag_use_case.call_args[1]
         assert call_args["request"].max_chunks == 5  # default
-        assert call_args["request"].similarity_threshold == 0.7  # default
+        assert call_args["request"].similarity_threshold == 0.2  # default
     
     def test_post_query_validation_error(self, client, mock_rag_use_case):
         """Test HTTP validation error handling."""
@@ -403,7 +403,7 @@ class TestRAGMCPTool:
         
         # Verify defaults were applied in request
         assert request.max_chunks == 5  # default
-        assert request.similarity_threshold == 0.7  # default
+        assert request.similarity_threshold == 0.2  # default
     
     @pytest.mark.asyncio
     async def test_rag_query_tool_validation_error(self, mock_mcp_server, mock_rag_use_case):

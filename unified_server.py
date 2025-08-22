@@ -231,10 +231,10 @@ class UnifiedServer:
         
         @mcp_server.tool()
         async def delete_file_collection(collection_name: str) -> str:
-            """Delete a file collection."""
+            """Delete a file collection with cascade cleanup (files + vectors)."""
             try:
                 from application_layer.collection_management import delete_collection_use_case, ValidationError
-                result = await delete_collection_use_case(collection_service, collection_name)
+                result = await delete_collection_use_case(collection_service, collection_name, vector_service)
                 return json.dumps(result)  # Use-case already returns proper format
             except ValidationError as e:
                 logger.error(f"MCP delete_file_collection validation error: {e}")
@@ -399,11 +399,49 @@ class UnifiedServer:
                 return json.dumps({"success": False, "error": str(e)})
         
         @mcp_server.tool()
+        async def get_vector_model_info() -> str:
+            """Get information about the current embedding model and vector service status."""
+            try:
+                if not vector_service.vector_available:
+                    return json.dumps({
+                        "success": True,
+                        "data": {
+                            "vector_service_available": False,
+                            "model_name": None,
+                            "device": None,
+                            "model_dimension": None,
+                            "error_message": "RAG dependencies not available - vector sync service disabled"
+                        }
+                    })
+                
+                model_info = await vector_service.get_model_info()
+                return json.dumps({
+                    "success": True,
+                    "data": {
+                        "vector_service_available": True,
+                        **model_info
+                    }
+                })
+                
+            except Exception as e:
+                logger.error(f"MCP get_vector_model_info error: {e}")
+                return json.dumps({
+                    "success": True,
+                    "data": {
+                        "vector_service_available": False,
+                        "model_name": None,
+                        "device": None,
+                        "model_dimension": None,
+                        "error_message": f"Error retrieving model info: {str(e)}"
+                    }
+                })
+        
+        @mcp_server.tool()
         async def search_collection_vectors(
             query: str,
             collection_name: Optional[str] = None,
             limit: int = 10,
-            similarity_threshold: float = 0.7
+            similarity_threshold: float = 0.2
         ) -> str:
             """Search vectors using semantic similarity."""
             try:
@@ -427,7 +465,7 @@ class UnifiedServer:
         # ===== RAG QUERY TOOL =====
         
         @mcp_server.tool()
-        async def rag_query(query: str, collection_name: str = None, max_chunks: int = 5, similarity_threshold: float = 0.7) -> str:
+        async def rag_query(query: str, collection_name: str = None, max_chunks: int = 5, similarity_threshold: float = 0.2) -> str:
             """Execute RAG query combining vector search with LLM response generation."""
             try:
                 # Get services from container
@@ -727,10 +765,10 @@ class UnifiedServer:
         
         @app.delete("/api/file-collections/{collection_id}")
         async def delete_collection(collection_id: str):
-            """Delete a file collection."""
+            """Delete a file collection with cascade cleanup (files + vectors)."""
             try:
                 from application_layer.collection_management import delete_collection_use_case, ValidationError
-                result = await delete_collection_use_case(collection_service, collection_id)
+                result = await delete_collection_use_case(collection_service, collection_id, vector_service)
                 return result
             except ValidationError as e:
                 logger.error(f"HTTP delete_collection validation error: {e}")
@@ -985,9 +1023,10 @@ class UnifiedServer:
                 logger.error(f"HTTP sync_collection error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
         
+        
         @app.get("/api/vector-sync/collections/{collection_id}/status")
         async def get_sync_status(collection_id: str):
-            """Get synchronization status for a collection."""
+            """Get synchronization status for a collection with model info."""
             try:
                 # Validate collection exists first
                 await _validate_collection_exists(collection_id)
@@ -1007,9 +1046,24 @@ class UnifiedServer:
                         }
                     )
                 
+                # Get model information
+                try:
+                    model_info = await vector_service.get_model_info()
+                    model_info_data = {
+                        "vector_service_available": True,
+                        **model_info
+                    }
+                except Exception as e:
+                    logger.warning(f"Failed to get model info: {e}")
+                    model_info_data = {
+                        "vector_service_available": False,
+                        "error_message": f"Error retrieving model info: {str(e)}"
+                    }
+                
                 return {
                     "success": True,
-                    "status": status.model_dump()
+                    "status": status.model_dump(),
+                    "model_info": model_info_data
                 }
             except HTTPException:
                 raise  # Re-raise HTTPExceptions without wrapping
@@ -1041,7 +1095,7 @@ class UnifiedServer:
                 query = request.get("query")
                 collection_name = request.get("collection_name")
                 limit = request.get("limit", 10)
-                similarity_threshold = request.get("similarity_threshold", 0.7)
+                similarity_threshold = request.get("similarity_threshold", 0.2)
                 
                 # Use shared use-case function
                 results = await search_vectors_use_case(
@@ -1159,6 +1213,7 @@ class UnifiedServer:
                 logger.error(f"HTTP delete_collection_vectors error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
         
+        
         # ===== RAG QUERY ENDPOINT =====
         
         @app.post("/api/query")
@@ -1196,7 +1251,7 @@ class UnifiedServer:
                         query=request.get("query"),
                         collection_name=request.get("collection_name"),
                         max_chunks=request.get("max_chunks", 5),
-                        similarity_threshold=request.get("similarity_threshold", 0.7)
+                        similarity_threshold=request.get("similarity_threshold", 0.2)
                     )
                 except ValidationError as ve:
                     # Handle Pydantic validation errors with proper 422 status

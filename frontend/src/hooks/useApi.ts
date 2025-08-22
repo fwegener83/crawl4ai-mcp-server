@@ -146,7 +146,7 @@ export function useCollections() {
         query,
         collection_name: collectionName || selectedCollection,
         limit: nResults || 10,
-        similarity_threshold: similarityThreshold || 0.7
+        similarity_threshold: similarityThreshold || 0.2
       })
     );
   }, [searchApi, selectedCollection]);

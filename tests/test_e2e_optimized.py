@@ -287,8 +287,8 @@ class TestSystemIntegration:
                     assert len(tools) >= 17
                 elif collection_available and vector_sync_available and rag_query_available:
                     # Original 3 + 6 collection tools + 3 vector sync tools + 1 RAG query = 13 tools (current unified server)  
-                    # But apparently we have more tools - adjusting to actual count
-                    assert len(tools) == 17
+                    # But apparently we have more tools - adjusting to actual count (18 as of latest update)
+                    assert len(tools) == 18
                 elif collection_available:
                     # Original 3 + 6 collection tools = 9 tools (RAG and vector sync not available)
                     assert len(tools) == 9
