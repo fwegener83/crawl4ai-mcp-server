@@ -19,12 +19,20 @@ const mockProps = {
 
 const mockSyncStatus: VectorSyncStatus = {
   collection_name: 'test-collection',
-  is_enabled: true,
+  sync_enabled: true,
   status: 'in_sync',
-  file_count: 5,
-  vector_count: 50,
+  total_files: 5,
+  synced_files: 5,
+  changed_files_count: 0,
+  chunk_count: 50,
+  total_chunks: 50,
   last_sync: new Date().toISOString(),
-  error_message: null,
+  last_sync_attempt: new Date().toISOString(),
+  last_sync_duration: null,
+  sync_progress: null,
+  sync_health_score: 1.0,
+  errors: [],
+  warnings: []
 };
 
 describe('EnhancedSyncControls', () => {
@@ -36,8 +44,8 @@ describe('EnhancedSyncControls', () => {
     render(<EnhancedSyncControls {...mockProps} />);
     
     // Use more specific selectors
-    expect(screen.getByRole('button', { name: /^sync$/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/sync options/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sync/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/more options/i)).toBeInTheDocument();
   });
 
   it('shows sync status when provided', () => {
@@ -105,8 +113,8 @@ describe('EnhancedSyncControls', () => {
 
   it('shows model info when requested', async () => {
     const mockModelInfo = {
-      success: true,
-      data: {
+      status: mockSyncStatus,
+      modelInfo: {
         vector_service_available: true,
         model_name: 'distiluse-base-multilingual-cased-v1',
         device: 'cpu',
@@ -117,7 +125,7 @@ describe('EnhancedSyncControls', () => {
       }
     };
 
-    mockAPIService.getModelInfo.mockResolvedValueOnce(mockModelInfo);
+    mockAPIService.getCollectionSyncStatusWithModel.mockResolvedValueOnce(mockModelInfo);
 
     render(<EnhancedSyncControls {...mockProps} />);
     
@@ -139,7 +147,7 @@ describe('EnhancedSyncControls', () => {
   });
 
   it('handles model info error gracefully', async () => {
-    mockAPIService.getModelInfo.mockRejectedValueOnce(new Error('API Error'));
+    mockAPIService.getCollectionSyncStatusWithModel.mockRejectedValueOnce(new Error('API Error'));
 
     render(<EnhancedSyncControls {...mockProps} />);
     

@@ -9,6 +9,14 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+# Check if RAG dependencies are available
+from tools.knowledge_base.dependencies import is_rag_available
+
+pytestmark = pytest.mark.skipif(
+    not is_rag_available(),
+    reason="RAG dependencies not available"
+)
+
 
 def test_embedding_service_loads_correct_model():
     """Test that EmbeddingService loads the correct multilingual model from .env."""
