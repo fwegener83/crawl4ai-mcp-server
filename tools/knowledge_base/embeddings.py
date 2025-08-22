@@ -6,9 +6,32 @@ from .dependencies import rag_deps, ensure_rag_available
 
 logger = logging.getLogger(__name__)
 
+# Global singleton instance
+_embedding_service_instance = None
 
 class EmbeddingService:
-    """SentenceTransformers-based embedding service."""
+    """SentenceTransformers-based embedding service with singleton pattern."""
+    
+    def __new__(cls, model_name: Optional[str] = None, device: Optional[str] = None, cache_folder: Optional[str] = None):
+        """Singleton pattern: return existing instance with same config or create new one."""
+        global _embedding_service_instance
+        
+        # Get the configuration that would be used
+        final_model_name = model_name or os.getenv("RAG_MODEL_NAME", "distiluse-base-multilingual-cased-v1")
+        final_device = device or os.getenv("RAG_DEVICE", "cpu")
+        
+        # Check if we already have an instance with the same configuration
+        if (_embedding_service_instance is not None and
+            _embedding_service_instance.model_name == final_model_name and
+            _embedding_service_instance.device == final_device):
+            logger.info(f"Reusing existing EmbeddingService instance with model: {final_model_name}")
+            return _embedding_service_instance
+        
+        # Create new instance
+        logger.info(f"Creating new EmbeddingService instance with model: {final_model_name}")
+        instance = super().__new__(cls)
+        _embedding_service_instance = instance
+        return instance
     
     def __init__(
         self,
@@ -23,6 +46,10 @@ class EmbeddingService:
             device: Device to run the model on ('cpu', 'cuda', etc.).
             cache_folder: Folder to cache the model.
         """
+        # Skip initialization if already initialized (singleton reuse)
+        if hasattr(self, 'model') and self.model is not None:
+            return
+            
         ensure_rag_available()
         
         self.model_name = model_name or os.getenv("RAG_MODEL_NAME", "distiluse-base-multilingual-cased-v1")
@@ -222,3 +249,8 @@ class EmbeddingService:
         
         logger.info(f"Reloading model: {self.model_name}")
         self._load_model()
+
+def reset_embedding_service_singleton():
+    """Reset the global singleton instance. Useful for tests."""
+    global _embedding_service_instance
+    _embedding_service_instance = None
