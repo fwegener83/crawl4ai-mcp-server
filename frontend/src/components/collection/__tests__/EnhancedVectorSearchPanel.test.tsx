@@ -118,7 +118,7 @@ describe('EnhancedVectorSearchPanel', () => {
         expect(defaultProps.onEnhancedSearch).toHaveBeenCalledWith(
           'test query',
           'test-collection',
-          { enableContextExpansion: true, relationshipFilter: null, similarityThreshold: 0.7 }
+          { enableContextExpansion: true, relationshipFilter: null, similarityThreshold: 0.2 }
         );
       });
     });

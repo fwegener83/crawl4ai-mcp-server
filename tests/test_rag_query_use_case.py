@@ -194,7 +194,8 @@ class TestRAGQueryUseCase:
                 query="What is machine learning?",
                 collection_name="ai_docs",
                 max_chunks=3,
-                similarity_threshold=0.8
+                similarity_threshold=0.8,
+                enable_reranking=False  # Disable re-ranking to keep simple limit behavior
             )
             
             # Act
@@ -226,7 +227,9 @@ class TestRAGQueryUseCase:
                 query="What is machine learning?",
                 collection_name="ai_docs",
                 limit=3,
-                similarity_threshold=0.8
+                similarity_threshold=0.8,
+                enable_query_expansion=None,
+                max_query_variants=None
             )
             
             mock_llm_service.generate_response.assert_called_once()
@@ -250,7 +253,10 @@ class TestRAGQueryUseCase:
             ]
             mock_llm_service.generate_response.return_value = sample_llm_response
             
-            request = RAGQueryRequest(query="What is AI?")
+            request = RAGQueryRequest(
+                query="What is AI?",
+                enable_reranking=False  # Disable re-ranking to keep simple limit behavior
+            )
             
             # Act
             response = await rag_query_use_case(
@@ -271,7 +277,9 @@ class TestRAGQueryUseCase:
                 query="What is AI?",
                 collection_name=None,
                 limit=5,
-                similarity_threshold=0.2
+                similarity_threshold=0.2,
+                enable_query_expansion=None,
+                max_query_variants=None
             )
     
     @pytest.mark.asyncio

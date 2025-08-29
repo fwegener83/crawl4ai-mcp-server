@@ -4,7 +4,7 @@
 **Status**: Accepted  
 **Decision Date**: 2025-01-17  
 **Context**: Frontend Enhanced RAG Simplification  
-**Related**: [PLAN_FRONTEND_REFACTORING.md](../../.planning/PLAN_FRONTEND_REFACTORING.md)
+**Related**: [PLAN_FRONTEND_REFACTORING.md](../../.planning/archive/PLAN_FRONTEND_REFACTORING.md)
 
 ## Context
 
@@ -277,6 +277,6 @@ The hardcoding approach proved successful in providing optimal defaults while ma
 
 ## References
 
-- [Frontend Refactoring Plan](../../.planning/PLAN_FRONTEND_REFACTORING.md)
+- [Frontend Refactoring Plan](../../.planning/archive/PLAN_FRONTEND_REFACTORING.md)
 - [RAG System Overview](../rag_overview.md)
 - [Chunking Configuration Documentation](../../tools/knowledge_base/chunking_config.py)

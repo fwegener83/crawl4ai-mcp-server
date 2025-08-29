@@ -4,7 +4,7 @@
 **Status**: Accepted  
 **Decision Date**: 2025-01-17  
 **Context**: Frontend Enhanced RAG Simplification  
-**Related**: [PLAN_FRONTEND_REFACTORING.md](../../.planning/PLAN_FRONTEND_REFACTORING.md)
+**Related**: [PLAN_FRONTEND_REFACTORING.md](../../.planning/archive/PLAN_FRONTEND_REFACTORING.md)
 
 ## Context
 
@@ -390,6 +390,6 @@ The removal successfully simplified the user experience for 95% of users while m
 
 ## References
 
-- [Frontend Refactoring Plan](../../.planning/PLAN_FRONTEND_REFACTORING.md)
+- [Frontend Refactoring Plan](../../.planning/archive/PLAN_FRONTEND_REFACTORING.md)
 - [EnhancedSettingsPanel.tsx Source](../../frontend/src/components/collection/EnhancedSettingsPanel.tsx) (removed)
 - [RAG System Overview](../rag_overview.md)

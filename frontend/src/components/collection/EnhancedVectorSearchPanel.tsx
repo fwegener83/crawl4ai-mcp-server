@@ -72,7 +72,7 @@ export const EnhancedVectorSearchPanel: React.FC<EnhancedVectorSearchPanelProps>
   const [localQuery, setLocalQuery] = useState(searchQuery);
   const [contextExpansion, setContextExpansion] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [similarityThreshold, setSimilarityThreshold] = useState(0.7);
+  const [similarityThreshold, setSimilarityThreshold] = useState(0.2);
   const [enhancedFeaturesError, setEnhancedFeaturesError] = useState<string | null>(null);
   
   const debouncedQuery = useDebounce(localQuery, 300);
@@ -94,7 +94,7 @@ export const EnhancedVectorSearchPanel: React.FC<EnhancedVectorSearchPanelProps>
     try {
       setEnhancedFeaturesError(null);
       
-      if (showEnhancedFeatures && onEnhancedSearch && (contextExpansion || similarityThreshold !== 0.7)) {
+      if (showEnhancedFeatures && onEnhancedSearch && (contextExpansion || similarityThreshold !== 0.2)) {
         await onEnhancedSearch(query, collectionId, searchOptions);
       } else {
         await onSearch(query, collectionId);

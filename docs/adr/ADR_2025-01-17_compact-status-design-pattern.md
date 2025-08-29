@@ -4,7 +4,7 @@
 **Status**: Accepted  
 **Decision Date**: 2025-01-17  
 **Context**: Frontend Enhanced RAG Simplification  
-**Related**: [PLAN_FRONTEND_REFACTORING.md](../../.planning/PLAN_FRONTEND_REFACTORING.md)
+**Related**: [PLAN_FRONTEND_REFACTORING.md](../../.planning/archive/PLAN_FRONTEND_REFACTORING.md)
 
 ## Context
 
@@ -553,6 +553,6 @@ The pattern proved highly successful and demonstrates effective UI simplificatio
 
 ## References
 
-- [Frontend Refactoring Plan](../../.planning/PLAN_FRONTEND_REFACTORING.md)
+- [Frontend Refactoring Plan](../../.planning/archive/PLAN_FRONTEND_REFACTORING.md)
 - [Material-UI Chip Component Documentation](https://mui.com/components/chips/)
 - [Web Accessibility Guidelines for Status Indicators](https://www.w3.org/WAI/WCAG21/Understanding/info-and-relationships.html)

@@ -62,6 +62,28 @@ class RAGQueryRequest(BaseModel):
         description="Minimum similarity score for including chunks"
     )
     
+    # Enhanced RAG Configuration
+    enable_query_expansion: Optional[bool] = Field(
+        None,
+        description="Enable LLM-based query expansion (overrides env var if set)"
+    )
+    max_query_variants: Optional[int] = Field(
+        None,
+        ge=1,
+        le=10,
+        description="Maximum number of query variants to generate"
+    )
+    enable_reranking: Optional[bool] = Field(
+        None,
+        description="Enable LLM-based result re-ranking (overrides env var if set)"
+    )
+    reranking_threshold: Optional[int] = Field(
+        None,
+        ge=1,
+        le=50,
+        description="Minimum results count to trigger re-ranking"
+    )
+    
     @field_validator('query')
     @classmethod
     def query_must_not_be_empty(cls, v):
@@ -122,13 +144,26 @@ async def rag_query_use_case(
     
     try:
         # Step 1: Perform vector search to find relevant documents
+        # Request more results initially if re-ranking is enabled to allow for better selection
+        
+        # Smart defaults for optimal search quality (no environment variables needed)
+        reranking_enabled = request.enable_reranking if request.enable_reranking is not None else True
+        reranking_threshold = request.reranking_threshold if request.reranking_threshold is not None else 8
+        
+        # If re-ranking enabled, request more results to have candidates for re-ranking
+        search_limit = request.max_chunks
+        if reranking_enabled and request.max_chunks <= reranking_threshold:
+            search_limit = min(reranking_threshold + 5, 20)  # Request more but cap at 20
+            
         vector_results = await search_vectors_use_case(
             vector_service=vector_service,
             collection_service=collection_service,
             query=request.query,
             collection_name=request.collection_name,
-            limit=request.max_chunks,
-            similarity_threshold=request.similarity_threshold
+            limit=search_limit,
+            similarity_threshold=request.similarity_threshold,
+            enable_query_expansion=request.enable_query_expansion,
+            max_query_variants=request.max_query_variants
         )
         
         # Step 2: Check if we found any relevant documents
@@ -144,6 +179,12 @@ async def rag_query_use_case(
                     "response_time_ms": int((time.time() - start_time) * 1000)
                 }
             )
+        
+        # Step 2.5: Optional LLM-based re-ranking of results
+        vector_results = await _apply_reranking_if_enabled(
+            llm_service, request.query, vector_results, request.max_chunks,
+            reranking_enabled, reranking_threshold
+        )
         
         # Step 3: Build context from vector results
         context_parts = []
@@ -306,3 +347,163 @@ def calculate_context_stats(sources: List[Dict[str, Any]]) -> Dict[str, Any]:
         "total_chars": total_chars,
         "unique_collections": len(collections)
     }
+
+
+async def _apply_reranking_if_enabled(
+    llm_service: LLMService, 
+    query: str, 
+    vector_results: List[Dict[str, Any]], 
+    max_chunks: int,
+    reranking_enabled: bool,
+    reranking_threshold: int
+) -> List[Dict[str, Any]]:
+    """
+    Apply LLM-based re-ranking to vector search results if enabled and above threshold.
+    
+    Args:
+        llm_service: LLM service instance for re-ranking
+        query: Original user query
+        vector_results: Results from vector search
+        max_chunks: Maximum number of chunks to return
+        reranking_enabled: Whether re-ranking is enabled
+        reranking_threshold: Minimum number of results to trigger re-ranking
+        
+    Returns:
+        Re-ranked results or original results if re-ranking disabled/failed
+    """
+    
+    # Check if re-ranking is enabled
+    if not reranking_enabled:
+        return vector_results
+    
+    # Check if results exceed threshold for re-ranking
+    if len(vector_results) <= reranking_threshold:
+        return vector_results
+    
+    try:
+        # Perform LLM-based re-ranking
+        reranked_results = await _rerank_with_llm(
+            llm_service, query, vector_results, max_chunks
+        )
+        return reranked_results
+    except Exception:
+        # Graceful fallback to original results on any re-ranking error
+        return vector_results
+
+
+async def _rerank_with_llm(
+    llm_service: LLMService,
+    query: str,
+    results: List[Dict[str, Any]],
+    target_count: int
+) -> List[Dict[str, Any]]:
+    """
+    Re-rank search results using LLM-based relevance scoring.
+    
+    Args:
+        llm_service: LLM service instance
+        query: Original user query
+        results: Vector search results to re-rank
+        target_count: Target number of results to return
+        
+    Returns:
+        Re-ranked results limited to target_count
+        
+    Raises:
+        Exception: When LLM re-ranking fails
+    """
+    
+    if len(results) <= target_count:
+        return results
+    
+    # Build re-ranking prompt with chunks
+    chunks_text = ""
+    for i, result in enumerate(results):
+        content = result.get('content', '')[:400]  # Limit content for token efficiency
+        source = result.get('metadata', {}).get('source', f'Doc{i+1}')
+        chunks_text += f"\n\nChunk {i+1} ({source}):\n{content}"
+    
+    rerank_prompt = f"""Query: "{query}"
+
+Please rank these text chunks by their relevance to the query. Consider:
+- Direct answer potential
+- Contextual relevance to the question
+- Information completeness and quality
+
+Text chunks:{chunks_text}
+
+Return only the chunk numbers in order of relevance (most relevant first), separated by commas.
+Example: 3, 1, 5, 2, 4
+
+Ranking:"""
+    
+    # Get LLM ranking
+    try:
+        llm_response = await llm_service.generate_response(
+            query=rerank_prompt,
+            context="",  # No additional context needed
+            max_tokens=100,  # Short response expected
+            temperature=0.1  # Low temperature for consistent ranking
+        )
+        
+        if not llm_response.get("success"):
+            raise Exception("LLM re-ranking returned unsuccessful response")
+        
+        # Parse ranking from LLM response
+        ranking_text = llm_response.get("answer", "").strip()
+        ranking_indices = _parse_ranking_response(ranking_text, len(results))
+        
+        # Reorder results based on LLM ranking
+        reranked_results = []
+        for idx in ranking_indices[:target_count]:
+            if 0 <= idx < len(results):
+                reranked_results.append(results[idx])
+        
+        # Fill remaining slots with original order if needed
+        used_indices = set(ranking_indices[:target_count])
+        for i, result in enumerate(results):
+            if len(reranked_results) >= target_count:
+                break
+            if i not in used_indices:
+                reranked_results.append(result)
+        
+        return reranked_results[:target_count]
+        
+    except Exception as e:
+        # Re-raise to trigger fallback in calling function
+        raise Exception(f"LLM re-ranking failed: {str(e)}")
+
+
+def _parse_ranking_response(ranking_text: str, total_chunks: int) -> List[int]:
+    """
+    Parse LLM ranking response to extract chunk indices.
+    
+    Args:
+        ranking_text: LLM response with ranking
+        total_chunks: Total number of chunks that were ranked
+        
+    Returns:
+        List of 0-indexed chunk positions in ranked order
+    """
+    
+    # Extract numbers from the response
+    import re
+    numbers = re.findall(r'\d+', ranking_text)
+    
+    # Convert to 0-indexed and validate
+    ranking_indices = []
+    for num_str in numbers:
+        try:
+            # Convert to 0-indexed (LLM uses 1-indexed)
+            idx = int(num_str) - 1
+            if 0 <= idx < total_chunks and idx not in ranking_indices:
+                ranking_indices.append(idx)
+        except ValueError:
+            continue
+    
+    # Fill missing indices with original order
+    for i in range(total_chunks):
+        if i not in ranking_indices:
+            ranking_indices.append(i)
+    
+    return ranking_indices

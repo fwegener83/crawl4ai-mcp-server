@@ -3,7 +3,7 @@
 **Date**: 2025-01-17  
 **Status**: Proposed  
 **Context**: Frontend Settings Cleanup Initiative  
-**Related**: [Frontend Refactoring Plan](../../.planning/PLAN_FRONTEND_REFACTORING.md)
+**Related**: [Frontend Refactoring Plan](../../.planning/archive/PLAN_FRONTEND_REFACTORING.md)
 
 ## Context
 
@@ -362,6 +362,6 @@ const ThemeToggle = () => {
 
 ## References
 
-- [Frontend Refactoring Plan](../../.planning/PLAN_FRONTEND_REFACTORING.md)
+- [Frontend Refactoring Plan](../../.planning/archive/PLAN_FRONTEND_REFACTORING.md)
 - [Settings UI Analysis](../../frontend/src/pages/SettingsPage.tsx)
 - [Theme Context Implementation](../../frontend/src/contexts/ThemeContext.tsx)
