@@ -150,31 +150,29 @@ class TestCompleteIntegration:
             query="machine learning applications",
             collection_name="tech_docs",
             max_chunks=5,
-            similarity_threshold=0.2
+            similarity_threshold=0.2,
+            enable_query_expansion=True,  # Explicitly enable for test
+            max_query_variants=3,
+            enable_reranking=True,
+            reranking_threshold=8
         )
         
-        with patch.dict(os.environ, {
-            'RAG_QUERY_EXPANSION_ENABLED': 'true',
-            'RAG_MAX_QUERY_VARIANTS': '3',
-            'RAG_AUTO_RERANKING_ENABLED': 'true',
-            'RAG_RERANKING_THRESHOLD': '8'
-        }):
-            with patch('application_layer.vector_search.LLMServiceFactory') as mock_factory:
-                with patch('application_layer.vector_search.QueryExpansionService') as mock_expansion_service:
-                    # Mock expansion service
-                    expansion_service_mock = Mock()
-                    expansion_service_mock.expand_query_intelligently = AsyncMock(
-                        return_value=['machine learning applications', 'ML systems', 'AI applications']
-                    )
-                    mock_expansion_service.return_value = expansion_service_mock
-                    mock_factory.create_service.return_value = llm_service
-                    
-                    response = await rag_query_use_case(
-                        vector_service=vector_service,
-                        collection_service=collection_service,
-                        llm_service=llm_service,
-                        request=request
-                    )
+        with patch('application_layer.vector_search.LLMServiceFactory') as mock_factory:
+            with patch('application_layer.vector_search.QueryExpansionService') as mock_expansion_service:
+                # Mock expansion service
+                expansion_service_mock = Mock()
+                expansion_service_mock.expand_query_intelligently = AsyncMock(
+                    return_value=['machine learning applications', 'ML systems', 'AI applications']
+                )
+                mock_expansion_service.return_value = expansion_service_mock
+                mock_factory.create_service.return_value = llm_service
+                
+                response = await rag_query_use_case(
+                    vector_service=vector_service,
+                    collection_service=collection_service,
+                    llm_service=llm_service,
+                    request=request
+                )
         
         # Verify the complete pipeline worked
         assert response.success is True
@@ -210,30 +208,28 @@ class TestCompleteIntegration:
             query="artificial intelligence",
             collection_name="ai_docs",
             max_chunks=8,  # Above re-ranking threshold but disabled
-            similarity_threshold=0.3
+            similarity_threshold=0.3,
+            enable_query_expansion=True,
+            max_query_variants=2,
+            enable_reranking=False,  # Disabled
+            reranking_threshold=5
         )
         
-        with patch.dict(os.environ, {
-            'RAG_QUERY_EXPANSION_ENABLED': 'true',
-            'RAG_MAX_QUERY_VARIANTS': '2',
-            'RAG_AUTO_RERANKING_ENABLED': 'false',  # Disabled
-            'RAG_RERANKING_THRESHOLD': '5'
-        }):
-            with patch('application_layer.vector_search.LLMServiceFactory') as mock_factory:
-                with patch('application_layer.vector_search.QueryExpansionService') as mock_expansion_service:
-                    expansion_service_mock = Mock()
-                    expansion_service_mock.expand_query_intelligently = AsyncMock(
-                        return_value=['artificial intelligence', 'AI systems']
-                    )
-                    mock_expansion_service.return_value = expansion_service_mock
-                    mock_factory.create_service.return_value = llm_service
-                    
-                    response = await rag_query_use_case(
-                        vector_service=vector_service,
-                        collection_service=collection_service,
-                        llm_service=llm_service,
-                        request=request
-                    )
+        with patch('application_layer.vector_search.LLMServiceFactory') as mock_factory:
+            with patch('application_layer.vector_search.QueryExpansionService') as mock_expansion_service:
+                expansion_service_mock = Mock()
+                expansion_service_mock.expand_query_intelligently = AsyncMock(
+                    return_value=['artificial intelligence', 'AI systems']
+                )
+                mock_expansion_service.return_value = expansion_service_mock
+                mock_factory.create_service.return_value = llm_service
+                
+                response = await rag_query_use_case(
+                    vector_service=vector_service,
+                    collection_service=collection_service,
+                    llm_service=llm_service,
+                    request=request
+                )
         
         # Verify response
         assert response.success is True
