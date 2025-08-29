@@ -44,6 +44,11 @@ export class RAGQueryService {
             // Enhanced RAG features
             enable_context_expansion: request.enable_context_expansion,
             enable_relationship_search: request.enable_relationship_search,
+            // Advanced API Enhancement parameters
+            enable_query_expansion: request.enable_query_expansion,
+            max_query_variants: request.max_query_variants,
+            enable_reranking: request.enable_reranking,
+            reranking_threshold: request.reranking_threshold,
           }),
         }
       );

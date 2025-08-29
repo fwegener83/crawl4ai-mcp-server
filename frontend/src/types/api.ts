@@ -267,6 +267,11 @@ export interface RAGQueryRequest {
   // Enhanced RAG features
   enable_context_expansion?: boolean;
   enable_relationship_search?: boolean;
+  // Advanced API Enhancement parameters
+  enable_query_expansion?: boolean | null;
+  max_query_variants?: number | null;
+  enable_reranking?: boolean | null;
+  reranking_threshold?: number | null;
 }
 
 export interface RAGSource {

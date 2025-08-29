@@ -36,16 +36,22 @@ const RAGQueryPage: React.FC = () => {
   const [query, setQuery] = useState('');
   const [collection, setCollection] = useState('all');
   const [maxChunks, setMaxChunks] = useState(5);
-  const [similarityThreshold, setSimilarityThreshold] = useState(0.7);
+  const [similarityThreshold, setSimilarityThreshold] = useState(0.2);
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<RAGQueryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [collections, setCollections] = useState<FileCollection[]>([]);
   const [loadingCollections, setLoadingCollections] = useState(true);
   
-  // Enhanced RAG Features
+  // Enhanced RAG Features  
   const [enableContextExpansion, setEnableContextExpansion] = useState(false);
   const [enableRelationshipSearch, setEnableRelationshipSearch] = useState(false);
+  
+  // Advanced Features (API Enhancement Parameters) - Best search quality by default
+  const [enableQueryExpansion, setEnableQueryExpansion] = useState<boolean | null>(true);  // Default ON for best search
+  const [maxQueryVariants, setMaxQueryVariants] = useState<number | null>(3);
+  const [enableReranking, setEnableReranking] = useState<boolean | null>(true);  // Default ON for best search
+  const [rerankingThreshold, setRerankingThreshold] = useState<number | null>(8);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -62,6 +68,11 @@ const RAGQueryPage: React.FC = () => {
         // Enhanced RAG features
         enable_context_expansion: enableContextExpansion,
         enable_relationship_search: enableRelationshipSearch,
+        // Advanced API Enhancement parameters
+        enable_query_expansion: enableQueryExpansion,
+        max_query_variants: maxQueryVariants,
+        enable_reranking: enableReranking,
+        reranking_threshold: rerankingThreshold,
       });
       
       setResults(response);
@@ -254,9 +265,169 @@ const RAGQueryPage: React.FC = () => {
                       />
                     </Stack>
                   </Box>
+                  
+                  <Divider sx={{ my: 2 }} />
+                  
+                  {/* AI Enhancement Features */}
+                  <Box>
+                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      AI Enhancement Features
+                      <Chip 
+                        label="ON" 
+                        size="small" 
+                        color="success" 
+                        variant="outlined"
+                      />
+                      <Tooltip 
+                        title="Advanced AI features for query expansion and result re-ranking to provide the best possible search results. Enabled by default for optimal performance."
+                        placement="top"
+                      >
+                        <InfoIcon fontSize="small" color="action" sx={{ ml: 0.5 }} />
+                      </Tooltip>
+                    </Typography>
+                    
+                    <Stack spacing={3}>
+                      {/* Query Expansion */}
+                      <Box>
+                        <FormControlLabel
+                          control={
+                            <Switch 
+                              checked={enableQueryExpansion !== null ? enableQueryExpansion : true}
+                              onChange={(e) => setEnableQueryExpansion(e.target.checked)}
+                              data-testid="query-expansion-toggle"
+                            />
+                          }
+                          label={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Box>
+                                <Typography variant="body2">Query Expansion</Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  Generate semantic query variants using AI to find more relevant results
+                                </Typography>
+                              </Box>
+                              <Tooltip 
+                                title="Uses AI to automatically generate alternative search queries that are semantically similar to your original query. This helps find relevant documents that might use different terminology."
+                                placement="top"
+                              >
+                                <InfoIcon fontSize="small" color="action" sx={{ ml: 0.5 }} />
+                              </Tooltip>
+                            </Box>
+                          }
+                        />
+                        
+                        {/* Max Query Variants (only shown when Query Expansion is enabled) */}
+                        {(enableQueryExpansion !== null && enableQueryExpansion) && (
+                          <Box sx={{ ml: 4, mt: 2 }}>
+                            <Typography gutterBottom>
+                              Max Query Variants: {maxQueryVariants || 3}
+                            </Typography>
+                            <Slider
+                              value={maxQueryVariants || 3}
+                              onChange={(_, value) => setMaxQueryVariants(value as number)}
+                              min={1}
+                              max={10}
+                              step={1}
+                              marks={[
+                                { value: 1, label: '1' },
+                                { value: 3, label: '3' },
+                                { value: 5, label: '5' },
+                                { value: 10, label: '10' }
+                              ]}
+                              valueLabelDisplay="auto"
+                            />
+                            <Typography variant="caption" color="text.secondary">
+                              Number of alternative query variants to generate
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                      
+                      {/* Result Re-ranking */}
+                      <Box>
+                        <FormControlLabel
+                          control={
+                            <Switch 
+                              checked={enableReranking !== null ? enableReranking : true}
+                              onChange={(e) => setEnableReranking(e.target.checked)}
+                              data-testid="reranking-toggle"
+                            />
+                          }
+                          label={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Box>
+                                <Typography variant="body2">AI Result Re-ranking</Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  Use AI to intelligently re-order search results by relevance
+                                </Typography>
+                              </Box>
+                              <Tooltip 
+                                title="When many results are found, uses AI to analyze and re-order them by relevance to your specific query. This ensures the most relevant results appear first."
+                                placement="top"
+                              >
+                                <InfoIcon fontSize="small" color="action" sx={{ ml: 0.5 }} />
+                              </Tooltip>
+                            </Box>
+                          }
+                        />
+                        
+                        {/* Re-ranking Threshold (only shown when Re-ranking is enabled) */}
+                        {(enableReranking !== null && enableReranking) && (
+                          <Box sx={{ ml: 4, mt: 2 }}>
+                            <Typography gutterBottom>
+                              Re-ranking Threshold: {rerankingThreshold || 8}
+                            </Typography>
+                            <Slider
+                              value={rerankingThreshold || 8}
+                              onChange={(_, value) => setRerankingThreshold(value as number)}
+                              min={1}
+                              max={50}
+                              step={1}
+                              marks={[
+                                { value: 1, label: '1' },
+                                { value: 8, label: '8' },
+                                { value: 20, label: '20' },
+                                { value: 50, label: '50' }
+                              ]}
+                              valueLabelDisplay="auto"
+                            />
+                            <Typography variant="caption" color="text.secondary">
+                              Minimum number of results needed to trigger AI re-ranking
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Stack>
+                  </Box>
+                  
+                  {/* Reset All Advanced Settings */}
+                  <Box sx={{ pt: 2 }}>
+                    <Button 
+                      variant="outlined" 
+                      size="small"
+                      onClick={() => {
+                        // Reset basic settings
+                        setMaxChunks(5);
+                        setSimilarityThreshold(0.2);
+                        // Reset enhanced features
+                        setEnableContextExpansion(false);
+                        setEnableRelationshipSearch(false);
+                        // Reset AI features to optimal defaults
+                        setEnableQueryExpansion(true);
+                        setMaxQueryVariants(3);
+                        setEnableReranking(true);
+                        setRerankingThreshold(8);
+                      }}
+                    >
+                      Reset All to Optimal Defaults
+                    </Button>
+                    <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                      Resets to recommended settings for best search quality
+                    </Typography>
+                  </Box>
                 </Stack>
               </AccordionDetails>
             </Accordion>
+
 
             {/* Search Button */}
             <Button
