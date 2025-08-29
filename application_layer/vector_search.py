@@ -5,7 +5,6 @@ Contains protocol-agnostic business logic for vector search operations
 that can be shared between API and MCP endpoints.
 """
 
-import os
 import hashlib
 from typing import Optional, List, Dict, Any
 from services.query_expansion_service import QueryExpansionService
@@ -68,10 +67,8 @@ async def search_vectors_use_case(
     if not vector_service.vector_available:
         raise RuntimeError("Vector sync service is not available")
     
-    # Check if query expansion is enabled (API parameter overrides env var)
-    expansion_enabled = (enable_query_expansion 
-                        if enable_query_expansion is not None 
-                        else os.getenv('RAG_QUERY_EXPANSION_ENABLED', 'false').lower() == 'true')
+    # Smart default for optimal search quality (no environment variables needed)
+    expansion_enabled = enable_query_expansion if enable_query_expansion is not None else True
     
     if expansion_enabled:
         try:
@@ -123,10 +120,8 @@ async def _execute_enhanced_vector_search(
         # If LLM service creation fails, fall back to original search
         raise Exception("LLM service not available for query expansion")
     
-    # Configure expansion parameters (API parameter overrides env var)
-    max_variants = (max_query_variants 
-                   if max_query_variants is not None 
-                   else int(os.getenv('RAG_MAX_QUERY_VARIANTS', '3')))
+    # Smart default for optimal search quality (no environment variables needed)
+    max_variants = max_query_variants if max_query_variants is not None else 3
     
     # Expand query with collection context
     expanded_queries = await expansion_service.expand_query_intelligently(

@@ -123,23 +123,18 @@ class TestResultReranking:
             query="test query",
             collection_name="test_collection",
             max_chunks=5,
-            similarity_threshold=0.2
+            similarity_threshold=0.2,
+            enable_reranking=True,  # Explicitly enabled
+            reranking_threshold=8,  # Trigger when > 8 results
+            enable_query_expansion=False  # Disable query expansion for simpler testing
         )
         
-        with patch.dict(os.environ, {
-            'RAG_AUTO_RERANKING_ENABLED': 'true',
-            'RAG_RERANKING_THRESHOLD': '8',  # Trigger when > 8 results
-            'RAG_QUERY_EXPANSION_ENABLED': 'false'  # Disable query expansion for simpler testing
-        }):
-            with patch('application_layer.rag_query.LLMService') as mock_llm_class:
-                mock_llm_class.return_value = llm_service
-                
-                response = await rag_query_use_case(
-                    vector_service=vector_service,
-                    collection_service=collection_service,
-                    llm_service=llm_service,
-                    request=request
-                )
+        response = await rag_query_use_case(
+            vector_service=vector_service,
+            collection_service=collection_service,
+            llm_service=llm_service,
+            request=request
+        )
         
         # Should have triggered re-ranking
         assert len(llm_service.reranking_calls) == 1
@@ -162,19 +157,17 @@ class TestResultReranking:
             query="test query",
             collection_name="test_collection",
             max_chunks=5,
-            similarity_threshold=0.2
+            similarity_threshold=0.2,
+            enable_reranking=True,  # Enabled but below threshold
+            reranking_threshold=8   # No trigger when <= 8 results
         )
         
-        with patch.dict(os.environ, {
-            'RAG_AUTO_RERANKING_ENABLED': 'true',
-            'RAG_RERANKING_THRESHOLD': '8'  # No trigger when <= 8 results
-        }):
-            response = await rag_query_use_case(
-                vector_service=vector_service,
-                collection_service=collection_service,
-                llm_service=llm_service,
-                request=request
-            )
+        response = await rag_query_use_case(
+            vector_service=vector_service,
+            collection_service=collection_service,
+            llm_service=llm_service,
+            request=request
+        )
         
         # Should NOT have triggered re-ranking
         assert len(llm_service.reranking_calls) == 0
@@ -186,7 +179,7 @@ class TestResultReranking:
 
     @pytest.mark.asyncio
     async def test_reranking_disabled_by_configuration(self):
-        """Test that re-ranking can be disabled via configuration."""
+        """Test that re-ranking can be disabled via API parameters."""
         
         vector_service = MockVectorService(results_count=15)  # Above threshold
         collection_service = MockCollectionService()
@@ -196,19 +189,16 @@ class TestResultReranking:
             query="test query",
             collection_name="test_collection",
             max_chunks=5,
-            similarity_threshold=0.2
+            similarity_threshold=0.2,
+            enable_reranking=False  # Explicitly disabled via API
         )
         
-        with patch.dict(os.environ, {
-            'RAG_AUTO_RERANKING_ENABLED': 'false',  # Disabled
-            'RAG_RERANKING_THRESHOLD': '8'
-        }):
-            response = await rag_query_use_case(
-                vector_service=vector_service,
-                collection_service=collection_service,
-                llm_service=llm_service,
-                request=request
-            )
+        response = await rag_query_use_case(
+            vector_service=vector_service,
+            collection_service=collection_service,
+            llm_service=llm_service,
+            request=request
+        )
         
         # Should NOT have triggered re-ranking even with many results
         assert len(llm_service.reranking_calls) == 0
@@ -229,19 +219,17 @@ class TestResultReranking:
             query="test query",
             collection_name="test_collection", 
             max_chunks=5,
-            similarity_threshold=0.2
+            similarity_threshold=0.2,
+            enable_reranking=True,
+            reranking_threshold=8
         )
         
-        with patch.dict(os.environ, {
-            'RAG_AUTO_RERANKING_ENABLED': 'true',
-            'RAG_RERANKING_THRESHOLD': '8'
-        }):
-            response = await rag_query_use_case(
-                vector_service=vector_service,
-                collection_service=collection_service,
-                llm_service=llm_service,
-                request=request
-            )
+        response = await rag_query_use_case(
+            vector_service=vector_service,
+            collection_service=collection_service,
+            llm_service=llm_service,
+            request=request
+        )
         
         # Should have attempted re-ranking
         assert len(llm_service.reranking_calls) == 1
@@ -268,16 +256,13 @@ class TestResultReranking:
             similarity_threshold=0.2
         )
         
-        with patch.dict(os.environ, {
-            'RAG_AUTO_RERANKING_ENABLED': 'true',
-            'RAG_RERANKING_THRESHOLD': '8'
-        }):
-            response = await rag_query_use_case(
-                vector_service=vector_service,
-                collection_service=collection_service,
-                llm_service=llm_service,
-                request=request
-            )
+        # Use default re-ranking settings (enabled by default)
+        response = await rag_query_use_case(
+            vector_service=vector_service,
+            collection_service=collection_service,
+            llm_service=llm_service,
+            request=request
+        )
         
         # Should have re-ranked results
         assert len(llm_service.reranking_calls) == 1
@@ -305,16 +290,14 @@ class TestResultReranking:
             similarity_threshold=0.2
         )
         
-        with patch.dict(os.environ, {
-            'RAG_AUTO_RERANKING_ENABLED': 'true',
-            'RAG_RERANKING_THRESHOLD': '5'
-        }):
-            response = await rag_query_use_case(
-                vector_service=vector_service,
-                collection_service=collection_service,
-                llm_service=llm_service,
-                request=request
-            )
+        request.reranking_threshold = 5  # Override threshold for test
+        
+        response = await rag_query_use_case(
+            vector_service=vector_service,
+            collection_service=collection_service,
+            llm_service=llm_service,
+            request=request
+        )
         
         # Should respect max_chunks limit
         assert len(response.sources) == 3
@@ -337,16 +320,14 @@ class TestResultReranking:
             similarity_threshold=0.2
         )
         
-        with patch.dict(os.environ, {
-            'RAG_AUTO_RERANKING_ENABLED': 'true',
-            'RAG_RERANKING_THRESHOLD': '6'
-        }):
-            response = await rag_query_use_case(
-                vector_service=vector_service,
-                collection_service=collection_service,
-                llm_service=llm_service,
-                request=request
-            )
+        request.reranking_threshold = 6  # Override threshold for test
+        
+        response = await rag_query_use_case(
+            vector_service=vector_service,
+            collection_service=collection_service,
+            llm_service=llm_service,
+            request=request
+        )
         
         # Check that re-ranking was called with proper parameters
         assert len(llm_service.reranking_calls) == 1
@@ -361,25 +342,6 @@ class TestResultReranking:
 class TestReranKingHelpers:
     """Test helper functions for result re-ranking."""
     
-    def test_reranking_configuration_parsing(self):
-        """Test parsing of re-ranking configuration variables."""
-        
-        # Test boolean parsing
-        with patch.dict(os.environ, {'RAG_AUTO_RERANKING_ENABLED': 'true'}):
-            assert os.getenv('RAG_AUTO_RERANKING_ENABLED', 'false').lower() == 'true'
-            
-        with patch.dict(os.environ, {'RAG_AUTO_RERANKING_ENABLED': 'false'}):
-            assert os.getenv('RAG_AUTO_RERANKING_ENABLED', 'false').lower() == 'false'
-            
-        # Test threshold parsing
-        with patch.dict(os.environ, {'RAG_RERANKING_THRESHOLD': '10'}):
-            assert int(os.getenv('RAG_RERANKING_THRESHOLD', '8')) == 10
-            
-        # Test defaults
-        with patch.dict(os.environ, {}, clear=True):
-            assert os.getenv('RAG_AUTO_RERANKING_ENABLED', 'false').lower() == 'false'
-            assert int(os.getenv('RAG_RERANKING_THRESHOLD', '8')) == 8
-
     def test_chunk_selection_for_reranking(self):
         """Test logic for selecting chunks for re-ranking."""
         

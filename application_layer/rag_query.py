@@ -5,7 +5,6 @@ Orchestrates vector search and LLM response generation to provide
 comprehensive question-answering capabilities with source attribution.
 """
 
-import os
 import time
 from typing import Optional, List, Dict, Any, Union
 from pydantic import BaseModel, Field, field_validator
@@ -147,13 +146,9 @@ async def rag_query_use_case(
         # Step 1: Perform vector search to find relevant documents
         # Request more results initially if re-ranking is enabled to allow for better selection
         
-        # Determine enhancement settings: API parameters override environment variables
-        reranking_enabled = (request.enable_reranking 
-                           if request.enable_reranking is not None 
-                           else os.getenv('RAG_AUTO_RERANKING_ENABLED', 'false').lower() == 'true')
-        reranking_threshold = (request.reranking_threshold 
-                             if request.reranking_threshold is not None 
-                             else int(os.getenv('RAG_RERANKING_THRESHOLD', '8')))
+        # Smart defaults for optimal search quality (no environment variables needed)
+        reranking_enabled = request.enable_reranking if request.enable_reranking is not None else True
+        reranking_threshold = request.reranking_threshold if request.reranking_threshold is not None else 8
         
         # If re-ranking enabled, request more results to have candidates for re-ranking
         search_limit = request.max_chunks
@@ -187,7 +182,8 @@ async def rag_query_use_case(
         
         # Step 2.5: Optional LLM-based re-ranking of results
         vector_results = await _apply_reranking_if_enabled(
-            llm_service, request.query, vector_results, request.max_chunks
+            llm_service, request.query, vector_results, request.max_chunks,
+            reranking_enabled, reranking_threshold
         )
         
         # Step 3: Build context from vector results
@@ -357,7 +353,9 @@ async def _apply_reranking_if_enabled(
     llm_service: LLMService, 
     query: str, 
     vector_results: List[Dict[str, Any]], 
-    max_chunks: int
+    max_chunks: int,
+    reranking_enabled: bool,
+    reranking_threshold: int
 ) -> List[Dict[str, Any]]:
     """
     Apply LLM-based re-ranking to vector search results if enabled and above threshold.
@@ -367,18 +365,18 @@ async def _apply_reranking_if_enabled(
         query: Original user query
         vector_results: Results from vector search
         max_chunks: Maximum number of chunks to return
+        reranking_enabled: Whether re-ranking is enabled
+        reranking_threshold: Minimum number of results to trigger re-ranking
         
     Returns:
         Re-ranked results or original results if re-ranking disabled/failed
     """
     
     # Check if re-ranking is enabled
-    reranking_enabled = os.getenv('RAG_AUTO_RERANKING_ENABLED', 'false').lower() == 'true'
     if not reranking_enabled:
         return vector_results
     
     # Check if results exceed threshold for re-ranking
-    reranking_threshold = int(os.getenv('RAG_RERANKING_THRESHOLD', '8'))
     if len(vector_results) <= reranking_threshold:
         return vector_results
     
