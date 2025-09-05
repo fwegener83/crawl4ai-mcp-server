@@ -789,7 +789,17 @@ class UnifiedServer:
             try:
                 from application_layer.file_management import list_files_use_case, ValidationError
                 
+                # Get files through use case for consistency
                 files = await list_files_use_case(collection_service, collection_id)
+                
+                # Get raw data directly from collection manager to access folders
+                raw_result = await collection_service.collection_manager.list_files_in_collection(collection_id)
+                
+                # Parse JSON result if it's a string
+                if isinstance(raw_result, str):
+                    import json
+                    raw_result = json.loads(raw_result)
+                
                 # Transform files to include filename field for backward compatibility
                 files_data = []
                 for f in files:
@@ -797,13 +807,16 @@ class UnifiedServer:
                     file_dict["filename"] = file_dict.get("name", file_dict.get("path", ""))
                     files_data.append(file_dict)
                 
+                # Extract folders from raw result
+                folders_data = raw_result.get("folders", []) if raw_result.get("success", False) else []
+                
                 return {
                     "success": True,
                     "data": {
                         "files": files_data,
-                        "folders": [],  # Placeholder - implement if needed
+                        "folders": folders_data,
                         "total_files": len(files),
-                        "total_folders": 0
+                        "total_folders": len(folders_data)
                     }
                 }
             except ValidationError as e:

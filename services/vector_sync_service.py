@@ -48,6 +48,10 @@ class VectorSyncService(IVectorSyncService):
         self.collections_db_path = str(Context42Config.get_collections_db_path())
         logger.info(f"Using collections database: {self.collections_db_path}")
         
+        # Get collection storage configuration for universal sync support
+        self.storage_config = Context42Config.get_collection_storage_config()
+        logger.info(f"Vector sync working with {self.storage_config['storage_mode']} collection storage")
+        
         # Limited cache to prevent memory leaks - fixes unbounded cache issue
         from tools.knowledge_base.persistent_sync_manager import LimitedCache
         self._sync_manager_cache = LimitedCache(max_size=50)
@@ -103,13 +107,21 @@ class VectorSyncService(IVectorSyncService):
             cache_key = f"sync_{collection_id}"
             sync_manager = self._sync_manager_cache.get(cache_key)
             if sync_manager is None:
-                # Create database-only collection manager with centralized path
-                from tools.knowledge_base.database_collection_adapter import DatabaseCollectionAdapter
-                db_collection_manager = DatabaseCollectionAdapter(self.collections_db_path)
+                # Determine which collection manager to use for sync
+                sync_collection_manager = None
+                if self.collection_service and self.storage_config['storage_mode'] == 'filesystem':
+                    # Use the filesystem collection manager for syncing
+                    sync_collection_manager = self.collection_service.collection_manager
+                    logger.info(f"Using filesystem collection manager for sync: {type(sync_collection_manager)}")
+                else:
+                    # Fallback to database collection manager for backward compatibility
+                    from tools.knowledge_base.database_collection_adapter import DatabaseCollectionAdapter
+                    sync_collection_manager = DatabaseCollectionAdapter(self.collections_db_path)
+                    logger.info(f"Using database collection manager for sync: {type(sync_collection_manager)}")
                 
                 sync_manager = IntelligentSyncManager(
                     vector_store=self.vector_store,
-                    collection_manager=db_collection_manager,
+                    collection_manager=sync_collection_manager,
                     persistent_db_path=self.collections_db_path  # Use centralized path
                 )
                 self._sync_manager_cache.set(cache_key, sync_manager)
@@ -211,13 +223,21 @@ class VectorSyncService(IVectorSyncService):
             cache_key = f"sync_{collection_id}"
             sync_manager = self._sync_manager_cache.get(cache_key)
             if sync_manager is None:
-                # Create database-only collection manager with centralized path
-                from tools.knowledge_base.database_collection_adapter import DatabaseCollectionAdapter
-                db_collection_manager = DatabaseCollectionAdapter(self.collections_db_path)
+                # Determine which collection manager to use for sync
+                sync_collection_manager = None
+                if self.collection_service and self.storage_config['storage_mode'] == 'filesystem':
+                    # Use the filesystem collection manager for syncing
+                    sync_collection_manager = self.collection_service.collection_manager
+                    logger.info(f"Using filesystem collection manager for sync: {type(sync_collection_manager)}")
+                else:
+                    # Fallback to database collection manager for backward compatibility
+                    from tools.knowledge_base.database_collection_adapter import DatabaseCollectionAdapter
+                    sync_collection_manager = DatabaseCollectionAdapter(self.collections_db_path)
+                    logger.info(f"Using database collection manager for sync: {type(sync_collection_manager)}")
                 
                 sync_manager = IntelligentSyncManager(
                     vector_store=self.vector_store,
-                    collection_manager=db_collection_manager,
+                    collection_manager=sync_collection_manager,
                     persistent_db_path=self.collections_db_path  # Use centralized path
                 )
                 self._sync_manager_cache.set(cache_key, sync_manager)
@@ -475,13 +495,21 @@ class VectorSyncService(IVectorSyncService):
             cache_key = f"sync_{collection_id}"
             sync_manager = self._sync_manager_cache.get(cache_key)
             if sync_manager is None:
-                # Create database-only collection manager with centralized path
-                from tools.knowledge_base.database_collection_adapter import DatabaseCollectionAdapter
-                db_collection_manager = DatabaseCollectionAdapter(self.collections_db_path)
+                # Determine which collection manager to use for sync
+                sync_collection_manager = None
+                if self.collection_service and self.storage_config['storage_mode'] == 'filesystem':
+                    # Use the filesystem collection manager for syncing
+                    sync_collection_manager = self.collection_service.collection_manager
+                    logger.info(f"Using filesystem collection manager for sync: {type(sync_collection_manager)}")
+                else:
+                    # Fallback to database collection manager for backward compatibility
+                    from tools.knowledge_base.database_collection_adapter import DatabaseCollectionAdapter
+                    sync_collection_manager = DatabaseCollectionAdapter(self.collections_db_path)
+                    logger.info(f"Using database collection manager for sync: {type(sync_collection_manager)}")
                 
                 sync_manager = IntelligentSyncManager(
                     vector_store=self.vector_store,
-                    collection_manager=db_collection_manager,
+                    collection_manager=sync_collection_manager,
                     persistent_db_path=self.collections_db_path  # Use centralized path
                 )
                 self._sync_manager_cache.set(cache_key, sync_manager)
@@ -647,4 +675,111 @@ class VectorSyncService(IVectorSyncService):
                 "device": None,
                 "model_dimension": None,
                 "error_message": f"Error retrieving model information: {str(e)}"
+            }
+    
+    async def get_collection_sync_summary(self, collection_name: str) -> Dict[str, Any]:
+        """
+        Get universal vector sync status summary for collection (works with both storage modes).
+        
+        This method works with both SQLite and filesystem storage modes by using the
+        collection service's unified interface for file metadata.
+        
+        Args:
+            collection_name: Name of the collection
+            
+        Returns:
+            Dict with sync status summary including file counts by status
+        """
+        try:
+            logger.info(f"Getting sync summary for collection: {collection_name}")
+            
+            if not self.collection_service:
+                return {
+                    "success": False,
+                    "error": "Collection service not available",
+                    "collection_name": collection_name
+                }
+            
+            # Get file metadata using the universal interface
+            # Both SQLite and filesystem modes support this method
+            files_result = await self.collection_service.list_files_in_collection(collection_name)
+            
+            if not files_result.get("success", False):
+                return {
+                    "success": False,
+                    "error": files_result.get("error", "Failed to get collection files"),
+                    "collection_name": collection_name
+                }
+            
+            files = files_result.get("files", [])
+            
+            # Count files by sync status
+            status_counts = {
+                "not_synced": 0,
+                "syncing": 0,
+                "synced": 0,
+                "sync_error": 0
+            }
+            
+            for file in files:
+                # Get vector sync status from file metadata
+                # Both storage modes include this in their file info
+                sync_status = file.get("vector_sync_status", "not_synced")
+                if sync_status in status_counts:
+                    status_counts[sync_status] += 1
+                else:
+                    # Unknown status, treat as not_synced
+                    status_counts["not_synced"] += 1
+            
+            # Determine overall collection status
+            # Priority order: syncing > not_synced > sync_error > fully_synced > empty
+            total_files = sum(status_counts.values())
+            if total_files == 0:
+                overall_status = "empty"
+                sync_available = False
+            elif status_counts["syncing"] > 0:
+                overall_status = "sync_in_progress"
+                sync_available = False
+            elif status_counts["not_synced"] > 0:
+                overall_status = "has_unsynced_files"
+                sync_available = True
+            elif status_counts["sync_error"] > 0:
+                overall_status = "has_sync_errors"
+                sync_available = True
+            else:
+                overall_status = "fully_synced"
+                sync_available = False
+            
+            # Additional details for filesystem mode
+            additional_info = {}
+            if self.storage_config["storage_mode"] == "filesystem":
+                # For filesystem mode, we might have reconciliation info
+                try:
+                    # Check if the collection manager has reconciler info
+                    if hasattr(self.collection_service.collection_manager, 'reconciler'):
+                        reconciler = self.collection_service.collection_manager.reconciler
+                        reconciliation_summary = await reconciler.get_collection_sync_summary(collection_name)
+                        if reconciliation_summary.get("success", False):
+                            additional_info["last_reconciliation"] = reconciliation_summary.get("last_reconciliation")
+                except Exception as e:
+                    logger.debug(f"Could not get reconciliation info: {e}")
+            
+            return {
+                "success": True,
+                "collection_name": collection_name,
+                "storage_mode": self.storage_config["storage_mode"],
+                "overall_status": overall_status,
+                "sync_available": sync_available and self.vector_available,
+                "vector_available": self.vector_available,
+                "total_files": total_files,
+                "status_counts": status_counts,
+                **additional_info
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting collection sync summary for '{collection_name}': {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "collection_name": collection_name
             }

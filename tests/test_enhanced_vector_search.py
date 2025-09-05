@@ -137,7 +137,8 @@ class TestEnhancedVectorSearchUseCase:
                 query='test query',
                 collection_name='test_collection',
                 limit=5,
-                similarity_threshold=0.2
+                similarity_threshold=0.2,
+                enable_query_expansion=False  # Explicitly disable expansion
             )
         
         # Should only call vector search once with original query
@@ -346,7 +347,8 @@ class TestEnhancedVectorSearchUseCase:
                 query='test query',
                 collection_name='test_collection',
                 limit=5,
-                similarity_threshold=0.2
+                similarity_threshold=0.2,
+                enable_query_expansion=False  # Explicitly disable expansion
             )
         
         # Results should maintain original format

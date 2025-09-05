@@ -5,22 +5,33 @@ argument-hint: <feature> [--complexity simple|moderate|complex] [--scope fronten
 
 # Intelligent Feature Planning
 
-## Usage Examples
-```bash
-# Full analysis mode
-/plan ./planning/initial-auth.md --complexity moderate --scope fullstack --hyperthink --research
+## STEP 1: IMMEDIATE SETUP ACTIONS
 
-# Quick and simple
-/plan issue-123 --complexity simple --scope backend
+**FIRST: Parse the input and create feature branch immediately**
 
-# Auto-detect everything
-/plan "Add user authentication"
+1. **Extract the base feature from arguments:**
+   Remove all --flags from $ARGUMENTS to get the core feature input
 
-# Minimal planning (just tasks, no deep analysis)
-/plan ./planning/feature.md --minimal
-```
+2. **Generate SUFFIX for branch name:**
+   - If input is a file path like `./planning/INITIAL_AUTH.md` → extract `AUTH`
+   - If input is issue reference like `issue-123` or `123` → use the number or generate from issue title
+   - If input is plain text like "Add user authentication" → convert to kebab-case like `user-authentication`
 
-## Parameter Processing
+3. **Create and switch to feature branch NOW:**
+   ```bash
+   git checkout -b feature/{SUFFIX}
+   ```
+   Or if branch exists:
+   ```bash
+   git checkout feature/{SUFFIX}
+   ```
+
+4. **Create planning directory:**
+   ```bash
+   mkdir -p .planning
+   ```
+
+## STEP 2: PARAMETER ANALYSIS
 
 Parse arguments from: $ARGUMENTS
 
@@ -257,28 +268,41 @@ The generated plan adapts its structure based on the selected options:
 
 ## EXECUTION INSTRUCTIONS
 
-**CRITICAL**: After analyzing the requirements and generating the plan, you MUST:
+**AFTER completing the analysis above, you MUST immediately execute these steps:**
 
-1. **Create the planning directory if it doesn't exist:**
-   ```bash
-   mkdir -p .planning
-   ```
+### Step 1: Branch Setup (if not done already)
+```bash
+# Check current branch
+git branch --show-current
 
-2. **Extract or generate SUFFIX from the feature input:**
-   - File path: Extract from `INITIAL_FEATURE_SUFFIX.md` → use `SUFFIX`
-   - Issue: `issue-123` → use `123` or generate from issue title
-   - Text: Convert to kebab-case, e.g., "Add user auth" → `user-auth`
+# Create or switch to feature branch using the SUFFIX you determined
+git checkout -b feature/{SUFFIX}  # Or git checkout feature/{SUFFIX} if exists
+```
 
-3. **Save the complete plan as:** `.planning/PLAN_{SUFFIX}.md`
+### Step 2: Create Planning Directory
+```bash
+mkdir -p .planning
+```
 
-4. **Use the appropriate plan structure** based on the selected mode (minimal/standard/deep)
+### Step 3: Generate and Save Plan Document
+**Write the complete plan document to:** `.planning/PLAN_{SUFFIX}.md`
 
-5. **Include the execution instruction at the end:**
-   ```markdown
-   ## Execution
-   ```bash
-   /execute .planning/PLAN_{SUFFIX}.md
-   ```
-   ```
+**Use the appropriate plan structure** (minimal/standard/deep) based on the selected mode.
 
-**The plan document must be created and saved. This is not optional.**
+**The plan document must include:**
+- Clear feature description and requirements
+- Task breakdown with specific, actionable steps
+- Success criteria and quality gates
+- Execution instruction at the end
+
+### Step 4: Confirm Execution Path
+**End your response with:**
+```
+Plan saved to .planning/PLAN_{SUFFIX}.md
+Branch: feature/{SUFFIX}
+
+To execute:
+/execute .planning/PLAN_{SUFFIX}.md
+```
+
+**CRITICAL**: The planning document must be created and saved. This is not optional - it's the core output of this command.
