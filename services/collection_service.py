@@ -7,11 +7,11 @@ and focuses purely on collection business logic.
 """
 import logging
 from typing import Dict, Any, List
-# pathlib.Path removed - no filesystem dependencies in database-only architecture
+# Supports both database-only and filesystem-based storage architectures
 from .interfaces import ICollectionService, CollectionInfo, FileInfo
 
-# Import database-only collection manager
-from tools.knowledge_base.database_collection_adapter import DatabaseCollectionAdapter
+# Import configurable storage factory
+from tools.storage_manager_factory import CollectionStorageFactory
 # Import centralized configuration
 from config.paths import Context42Config
 
@@ -28,23 +28,35 @@ class CollectionService(ICollectionService):
     
     def __init__(self):
         """
-        Initialize the collection service with database-only storage.
+        Initialize the collection service with configurable storage.
         
         Uses ~/.context42/ directory structure with automatic migration.
-        No filesystem dependencies - all data stored in SQLite database.
+        Supports both SQLite and filesystem storage modes based on configuration.
         """
-        logger.info("Initializing CollectionService with ~/.context42/ configuration")
+        logger.info("Initializing CollectionService with configurable storage")
         
         # Ensure directory structure exists and migrate legacy data
         Context42Config.ensure_directory_structure()
         Context42Config.migrate_legacy_data()
         
-        # Use centralized configuration for database path
-        db_path = Context42Config.get_collections_db_path()
-        logger.info(f"Using collections database: {db_path}")
+        # Get collection storage configuration from environment
+        storage_config = Context42Config.get_collection_storage_config()
+        logger.info(f"Collection storage configuration: {storage_config}")
         
-        # CRITICAL: Use same database as VectorSyncService for consistency
-        self.collection_manager = DatabaseCollectionAdapter(str(db_path))
+        # Validate configuration
+        validation_result = CollectionStorageFactory.validate_config(storage_config)
+        if not validation_result.get("success", False):
+            error_msg = f"Invalid collection storage configuration: {validation_result.get('error')}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        
+        # Create collection manager using factory
+        try:
+            self.collection_manager = CollectionStorageFactory.create_manager(storage_config)
+            logger.info(f"Successfully initialized {storage_config['storage_mode']} collection storage")
+        except Exception as e:
+            logger.error(f"Failed to initialize collection storage: {e}")
+            raise
     
     async def list_collections(self) -> List[CollectionInfo]:
         """
@@ -56,21 +68,23 @@ class CollectionService(ICollectionService):
         try:
             logger.info("Listing all collections")
             
-            # Use database collection manager
-            collection_data = self.collection_manager.list_collections()
+            # Use configurable collection manager (may be async)
+            collection_result = await self.collection_manager.list_collections()
             
             collections = []
-            for col_data in collection_data:
-                collection_info = CollectionInfo(
-                    id=col_data.get("name", ""),  # Use name as unique identifier
-                    name=col_data.get("name", ""),
-                    description=col_data.get("description", ""),
-                    file_count=col_data.get("file_count", 0),
-                    created_at=col_data.get("created_at", ""),
-                    updated_at=col_data.get("updated_at", ""),
-                    metadata=col_data.get("metadata", {})
-                )
-                collections.append(collection_info)
+            if collection_result.get("success", False):
+                collection_data = collection_result.get("collections", [])
+                for col_data in collection_data:
+                    collection_info = CollectionInfo(
+                        id=col_data.get("name", ""),  # Use name as unique identifier
+                        name=col_data.get("name", ""),
+                        description=col_data.get("description", ""),
+                        file_count=col_data.get("file_count", 0),
+                        created_at=col_data.get("created_at", ""),
+                        updated_at=col_data.get("updated_at", ""),
+                        metadata=col_data.get("metadata", {})
+                    )
+                    collections.append(collection_info)
             
             logger.info(f"Found {len(collections)} collections")
             return collections
@@ -93,8 +107,8 @@ class CollectionService(ICollectionService):
         try:
             logger.info(f"Creating collection: {name}")
             
-            # Use database collection manager
-            result = self.collection_manager.create_collection(name, description)
+            # Use configurable collection manager (may be async)
+            result = await self.collection_manager.create_collection(name, description)
             
             if result.get("success", False):
                 # Get current time for timestamps since database creates them
@@ -130,8 +144,8 @@ class CollectionService(ICollectionService):
         try:
             logger.info(f"Getting collection info: {name}")
             
-            # Use existing collection manager
-            result = self.collection_manager.get_collection_info(name)
+            # Use configurable collection manager (may be async)
+            result = await self.collection_manager.get_collection_info(name)
             
             # Parse JSON result if it's a string
             if isinstance(result, str):
@@ -169,8 +183,8 @@ class CollectionService(ICollectionService):
         try:
             logger.info(f"Deleting collection: {name}")
             
-            # Use existing collection manager
-            result = self.collection_manager.delete_collection(name)
+            # Use configurable collection manager (may be async)
+            result = await self.collection_manager.delete_collection(name)
             
             # Parse JSON result if it's a string
             if isinstance(result, str):
@@ -204,8 +218,8 @@ class CollectionService(ICollectionService):
         try:
             logger.info(f"Listing files in collection: {collection_name}, folder: {folder_path}")
             
-            # Use existing collection manager
-            result = self.collection_manager.list_files(collection_name, folder_path)
+            # Use configurable collection manager (may be async)
+            result = await self.collection_manager.list_files_in_collection(collection_name)
             
             # Parse JSON result if it's a string
             if isinstance(result, str):
@@ -234,8 +248,8 @@ class CollectionService(ICollectionService):
         try:
             logger.info(f"Listing files in collection {collection_name}")
             
-            # Use existing collection manager
-            result = self.collection_manager.list_files_in_collection(collection_name)
+            # Use configurable collection manager (may be async)
+            result = await self.collection_manager.list_files_in_collection(collection_name)
             
             # Parse JSON result if it's a string
             if isinstance(result, str):
@@ -280,8 +294,8 @@ class CollectionService(ICollectionService):
         try:
             logger.info(f"Saving file {file_path} in collection {collection_name}")
             
-            # Use existing collection manager
-            result = self.collection_manager.save_file(
+            # Use configurable collection manager (may be async)
+            result = await self.collection_manager.save_file(
                 collection_name, file_path, content, folder_path
             )
             
@@ -321,8 +335,8 @@ class CollectionService(ICollectionService):
         try:
             logger.info(f"Getting file {file_path} from collection {collection_name}")
             
-            # Use existing collection manager
-            result = self.collection_manager.read_file(
+            # Use configurable collection manager (may be async)
+            result = await self.collection_manager.read_file(
                 collection_name, file_path, folder_path
             )
             
@@ -386,8 +400,8 @@ class CollectionService(ICollectionService):
         try:
             logger.info(f"Deleting file {file_path} from collection {collection_name}")
             
-            # Use existing collection manager
-            result = self.collection_manager.delete_file(
+            # Use configurable collection manager (may be async)
+            result = await self.collection_manager.delete_file(
                 collection_name, file_path, folder_path
             )
             

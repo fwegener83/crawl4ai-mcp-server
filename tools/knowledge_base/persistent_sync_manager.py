@@ -449,6 +449,13 @@ class PersistentSyncManager:
         """Save sync status to database."""
         try:
             with self.get_connection() as conn:
+                # Ensure collection exists in vector sync database to satisfy foreign key constraint
+                # This is needed when using filesystem collections that aren't in the vector sync DB
+                conn.execute("""
+                    INSERT OR IGNORE INTO collections (name, description, created_at)
+                    VALUES (?, ?, CURRENT_TIMESTAMP)
+                """, (status.collection_name, f"Vector sync reference for {status.collection_name}"))
+                
                 conn.execute("""
                     INSERT OR REPLACE INTO vector_sync_status 
                     (collection_name, sync_status, sync_enabled, last_sync, last_sync_attempt,

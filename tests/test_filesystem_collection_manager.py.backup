@@ -1,0 +1,436 @@
+"""
+Unit tests for FilesystemCollectionManager.
+
+Tests the filesystem-based collection manager with SQLite metadata storage.
+"""
+
+import pytest
+import tempfile
+from pathlib import Path
+from unittest.mock import patch, MagicMock, AsyncMock
+
+from tools.filesystem_collection_manager import FilesystemCollectionManager
+
+
+class TestFilesystemCollectionManager:
+    """Test FilesystemCollectionManager functionality."""
+
+    @pytest.fixture
+    def temp_filesystem_base(self):
+        """Create temporary filesystem base directory."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            yield Path(temp_dir)
+
+    @pytest.fixture
+    def temp_metadata_db(self):
+        """Create temporary metadata database path."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            yield Path(temp_dir) / "metadata.db"
+
+    @pytest.fixture
+    def manager(self, temp_filesystem_base, temp_metadata_db):
+        """Create FilesystemCollectionManager instance."""
+        manager = FilesystemCollectionManager(
+            filesystem_base=temp_filesystem_base,
+            metadata_db_path=temp_metadata_db,
+            auto_reconcile=False  # Disable for predictable testing
+        )
+        return manager
+
+    def test_initialization(self, temp_filesystem_base, temp_metadata_db):
+        """Test manager initialization creates necessary directories."""
+        manager = FilesystemCollectionManager(
+            filesystem_base=temp_filesystem_base,
+            metadata_db_path=temp_metadata_db,
+            auto_reconcile=True
+        )
+        
+        assert manager.fs_base == temp_filesystem_base
+        assert manager.metadata_db_path == temp_metadata_db
+        assert manager.auto_reconcile is True
+        assert temp_filesystem_base.exists()
+
+    def test_validate_file_extension_valid(self, manager):
+        """Test file extension validation for allowed extensions."""
+        assert manager._validate_file_extension("test.md") is True
+        assert manager._validate_file_extension("test.txt") is True
+        assert manager._validate_file_extension("test.json") is True
+        assert manager._validate_file_extension("test.yaml") is True
+        assert manager._validate_file_extension("test.yml") is True
+        assert manager._validate_file_extension("test.csv") is True
+
+    def test_validate_file_extension_invalid(self, manager):
+        """Test file extension validation for disallowed extensions."""
+        assert manager._validate_file_extension("test.exe") is False
+        assert manager._validate_file_extension("test.py") is False
+        assert manager._validate_file_extension("test.js") is False
+        assert manager._validate_file_extension("test") is False
+
+    def test_sanitize_collection_name_valid(self, manager):
+        """Test collection name sanitization for valid names."""
+        assert manager._sanitize_collection_name("valid_name") == "valid_name"
+        assert manager._sanitize_collection_name("  test  ") == "test"
+        assert manager._sanitize_collection_name("with-dashes") == "with-dashes"
+
+    def test_sanitize_collection_name_dangerous_chars(self, manager):
+        """Test collection name sanitization removes dangerous characters."""
+        assert manager._sanitize_collection_name("with/slash") == "with_slash"
+        assert manager._sanitize_collection_name("with\\backslash") == "with_backslash"
+        assert manager._sanitize_collection_name("with..dots") == "with__dots"
+        assert manager._sanitize_collection_name("with:colon") == "with_colon"
+
+    def test_sanitize_collection_name_empty(self, manager):
+        """Test collection name sanitization raises error for empty names."""
+        with pytest.raises(ValueError, match="Collection name cannot be empty"):
+            manager._sanitize_collection_name("")
+        
+        with pytest.raises(ValueError, match="Collection name becomes empty after sanitization"):
+            manager._sanitize_collection_name("   ")
+
+    def test_sanitize_collection_name_long(self, manager):
+        """Test collection name truncation for long names."""
+        long_name = "a" * 150
+        result = manager._sanitize_collection_name(long_name)
+        assert len(result) == 100
+        assert result == "a" * 100
+
+    def test_sanitize_folder_path(self, manager):
+        """Test folder path sanitization."""
+        assert manager._sanitize_folder_path("") == ""
+        assert manager._sanitize_folder_path("folder") == "folder"
+        assert manager._sanitize_folder_path("folder/subfolder") == "folder/subfolder"
+        assert manager._sanitize_folder_path("/folder/") == "folder"
+        assert manager._sanitize_folder_path("../danger") == "danger"
+        assert manager._sanitize_folder_path("folder\\with\\backslash") == "folder/with/backslash"
+
+    @patch.object(FilesystemCollectionManager, '_sanitize_collection_name')
+    @pytest.mark.asyncio
+    @pytest.mark.asyncio
+    async def test_create_collection_success(self, mock_sanitize, manager):
+        """Test successful collection creation."""
+        mock_sanitize.return_value = "test_collection"
+        
+        # Mock metadata store
+        manager.metadata_store.create_collection = AsyncMock(return_value={
+            "success": True,
+            "name": "test_collection"
+        })
+        
+        result = await manager.create_collection("test collection", "Test description")
+        
+        assert result["success"] is True
+        assert result["name"] == "test_collection"
+        assert "Test description" in result.get("description", "")
+        
+        # Check filesystem directory was created
+        collection_path = manager.fs_base / "test_collection"
+        assert collection_path.exists()
+        assert collection_path.is_dir()
+
+    @patch.object(FilesystemCollectionManager, '_sanitize_collection_name')
+    @pytest.mark.asyncio
+    @pytest.mark.asyncio
+    async def test_create_collection_metadata_error(self, mock_sanitize, manager):
+        """Test collection creation failure from metadata store."""
+        mock_sanitize.return_value = "test_collection"
+        
+        # Mock metadata store failure
+        manager.metadata_store.create_collection = AsyncMock(return_value={
+            "success": False,
+            "error": "Collection already exists"
+        })
+        
+        result = await manager.create_collection("test collection")
+        
+        assert result["success"] is False
+    @pytest.mark.asyncio
+        assert "Collection already exists" in result["error"]
+
+    async def test_save_file_success(self, manager):
+        """Test successful file saving."""
+        content = "# Test Content\nThis is a test file."
+        
+        # Mock dependencies
+        manager.metadata_store.collection_exists = AsyncMock(return_value=True)
+        manager.metadata_store.update_file_metadata = AsyncMock(return_value={
+            "success": True,
+            "content_hash": "test_hash"
+        })
+        
+        result = await manager.save_file("test_collection", "test.md", content)
+        
+        assert result["success"] is True
+        assert "test.md" in result["message"]
+        
+        # Check file was written to filesystem
+        file_path = manager.fs_base / "test_collection" / "test.md"
+    @pytest.mark.asyncio
+        assert file_path.exists()
+        assert file_path.read_text(encoding='utf-8') == content
+
+    async def test_save_file_invalid_extension(self, manager):
+        """Test file saving with invalid extension."""
+        result = await manager.save_file("test_collection", "test.exe", "content")
+    @pytest.mark.asyncio
+        
+        assert result["success"] is False
+        assert "extension not allowed" in result["error"]
+
+    async def test_save_file_collection_not_exists(self, manager):
+        """Test file saving when collection doesn't exist."""
+        manager.metadata_store.collection_exists = AsyncMock(return_value=False)
+        
+    @pytest.mark.asyncio
+        result = await manager.save_file("nonexistent", "test.md", "content")
+        
+        assert result["success"] is False
+        assert "does not exist" in result["error"]
+
+    async def test_save_file_with_folder(self, manager):
+        """Test file saving in a subfolder."""
+        content = "test content"
+        
+        # Mock dependencies
+        manager.metadata_store.collection_exists = AsyncMock(return_value=True)
+        manager.metadata_store.update_file_metadata = AsyncMock(return_value={
+            "success": True,
+            "content_hash": "test_hash"
+        })
+        
+        result = await manager.save_file("test_collection", "test.md", content, "subfolder")
+        
+        assert result["success"] is True
+    @pytest.mark.asyncio
+        
+        # Check file was written to correct location
+        file_path = manager.fs_base / "test_collection" / "subfolder" / "test.md"
+        assert file_path.exists()
+        assert file_path.read_text(encoding='utf-8') == content
+
+    async def test_read_file_success(self, manager):
+        """Test successful file reading."""
+        content = "# Test Content\nThis is a test file."
+        
+        # Create test file
+        collection_path = manager.fs_base / "test_collection"
+        collection_path.mkdir(parents=True)
+        file_path = collection_path / "test.md"
+        file_path.write_text(content, encoding='utf-8')
+        
+        # Mock metadata
+        manager.metadata_store.get_file_metadata = AsyncMock(return_value={
+            "success": True,
+            "metadata": {"content_hash": "test_hash"}
+        })
+    @pytest.mark.asyncio
+        
+        result = await manager.read_file("test_collection", "test.md")
+        
+        assert result["success"] is True
+        assert result["content"] == content
+        assert "test_hash" in str(result["metadata"])
+    @pytest.mark.asyncio
+
+    async def test_read_file_not_found(self, manager):
+        """Test reading non-existent file."""
+        result = await manager.read_file("test_collection", "nonexistent.md")
+        
+        assert result["success"] is False
+        assert "not found" in result["error"]
+
+    async def test_read_file_with_folder(self, manager):
+        """Test reading file from subfolder."""
+        content = "test content"
+        
+        # Create test file in subfolder
+        collection_path = manager.fs_base / "test_collection" / "subfolder"
+        collection_path.mkdir(parents=True)
+        file_path = collection_path / "test.md"
+        file_path.write_text(content, encoding='utf-8')
+        
+        # Mock metadata
+        manager.metadata_store.get_file_metadata = AsyncMock(return_value={
+    @pytest.mark.asyncio
+            "success": True,
+            "metadata": {}
+        })
+        
+        result = await manager.read_file("test_collection", "test.md", "subfolder")
+        
+        assert result["success"] is True
+        assert result["content"] == content
+
+    async def test_list_collections(self, manager):
+        """Test listing collections."""
+        # Mock metadata store
+        manager.metadata_store.list_collections = AsyncMock(return_value={
+            "success": True,
+            "collections": [
+                {
+                    "name": "collection1",
+                    "description": "First collection",
+                    "file_count": 5
+                },
+                {
+                    "name": "collection2", 
+                    "description": "Second collection",
+                    "file_count": 3
+                }
+            ]
+        })
+        
+        result = await manager.list_collections()
+    @pytest.mark.asyncio
+        
+        assert result["success"] is True
+        assert len(result["collections"]) == 2
+        assert result["total"] == 2
+        
+        # Check filesystem paths are added
+        for collection in result["collections"]:
+            assert "path" in collection
+            assert str(manager.fs_base) in collection["path"]
+
+    async def test_delete_collection_success(self, manager):
+        """Test successful collection deletion."""
+        # Create test collection directory
+        collection_path = manager.fs_base / "test_collection"
+        collection_path.mkdir()
+        test_file = collection_path / "test.md"
+        test_file.write_text("content")
+        
+        # Mock metadata store
+        manager.metadata_store.delete_collection = AsyncMock(return_value={
+            "success": True,
+    @pytest.mark.asyncio
+            "deleted_files": 1
+        })
+        
+        result = await manager.delete_collection("test_collection")
+        
+        assert result["success"] is True
+        assert result["deleted_files"] == 1
+        
+        # Check filesystem directory was deleted
+        assert not collection_path.exists()
+
+    async def test_delete_file_success(self, manager):
+        """Test successful file deletion."""
+        # Create test file
+        collection_path = manager.fs_base / "test_collection"
+        collection_path.mkdir()
+        file_path = collection_path / "test.md"
+    @pytest.mark.asyncio
+        file_path.write_text("content")
+        
+        # Mock metadata store
+        manager.metadata_store.delete_file_metadata = AsyncMock(return_value={
+            "success": True
+        })
+        
+        result = await manager.delete_file("test_collection", "test.md")
+        
+        assert result["success"] is True
+        assert not file_path.exists()
+
+    async def test_delete_file_with_folder(self, manager):
+        """Test file deletion from subfolder."""
+        # Create test file in subfolder
+        collection_path = manager.fs_base / "test_collection" / "subfolder"
+        collection_path.mkdir(parents=True)
+    @pytest.mark.asyncio
+        file_path = collection_path / "test.md"
+        file_path.write_text("content")
+        
+        # Mock metadata store
+        manager.metadata_store.delete_file_metadata = AsyncMock(return_value={
+            "success": True
+        })
+        
+        result = await manager.delete_file("test_collection", "test.md", "subfolder")
+        
+        assert result["success"] is True
+        assert not file_path.exists()
+
+    async def test_list_files_with_auto_reconcile(self, manager):
+        """Test file listing with auto-reconcile enabled."""
+        # Enable auto-reconcile for this test
+        manager.auto_reconcile = True
+        
+        # Mock reconciler and metadata store
+        manager.reconciler.reconcile_collection = AsyncMock()
+        manager.metadata_store.get_collection_files = AsyncMock(return_value={
+            "success": True,
+            "files": [
+                {
+                    "file_path": "test.md",
+                    "file_size": 100,
+                    "created_at": "2024-01-01T00:00:00Z",
+                    "modified_at": "2024-01-01T00:00:00Z",
+                    "vector_sync_status": "synced"
+                },
+                {
+                    "file_path": "folder/nested.md",
+                    "file_size": 200,
+                    "created_at": "2024-01-01T00:00:00Z", 
+                    "modified_at": "2024-01-01T00:00:00Z",
+                    "vector_sync_status": "not_synced"
+                }
+            ]
+        })
+        
+        result = await manager.list_files_in_collection("test_collection")
+        
+        assert result["success"] is True
+        assert len(result["files"]) == 2
+        assert len(result["folders"]) == 1
+        assert result["total_files"] == 2
+        assert result["total_folders"] == 1
+    @pytest.mark.asyncio
+        
+        # Check reconciler was called
+        manager.reconciler.reconcile_collection.assert_called_once_with("test_collection")
+        
+        # Check file info structure
+        file1 = result["files"][0] 
+        assert file1["name"] == "test.md"
+        assert file1["type"] == "file"
+        assert file1["vector_sync_status"] == "synced"
+        
+        folder1 = result["folders"][0]
+        assert folder1["name"] == "folder"
+        assert folder1["type"] == "folder"
+
+    async def test_get_collection_info(self, manager):
+        """Test getting detailed collection information."""
+        # Mock metadata store
+        manager.metadata_store.get_collection = AsyncMock(return_value={
+            "success": True,
+            "collection": {
+                "name": "test_collection",
+                "description": "Test collection",
+                "created_at": "2024-01-01T00:00:00Z",
+                "updated_at": "2024-01-01T00:00:00Z"
+            }
+        })
+        
+        # Mock file listing
+        manager.list_files_in_collection = AsyncMock(return_value={
+            "success": True,
+            "files": [
+                {"size": 100}, {"size": 200}
+            ],
+            "folders": [
+                {"name": "folder1"}
+            ]
+        })
+        
+        result = await manager.get_collection_info("test_collection")
+        
+        assert result["success"] is True
+        collection = result["collection"]
+        assert collection["name"] == "test_collection"
+        assert collection["file_count"] == 2
+        assert collection["total_size"] == 300
+        assert len(collection["folders"]) == 1
+        assert "path" in collection

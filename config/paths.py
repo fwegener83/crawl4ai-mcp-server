@@ -139,6 +139,39 @@ class Context42Config:
         return cls.get_databases_dir() / cls.CHROMADB_DIR_NAME
     
     @classmethod
+    def get_collection_storage_config(cls) -> dict:
+        """
+        Get collection storage configuration based on environment variables.
+        
+        Returns:
+            dict: Storage configuration for CollectionStorageFactory
+        """
+        storage_mode = os.getenv("COLLECTION_STORAGE_MODE", "sqlite").lower()
+        
+        if storage_mode == "sqlite":
+            return {
+                "storage_mode": "sqlite",
+                "database_path": str(cls.get_collections_db_path())
+            }
+        elif storage_mode == "filesystem":
+            filesystem_path = os.getenv("FILESYSTEM_COLLECTIONS_PATH", "~/.context42/collections")
+            metadata_db_path = os.getenv("FILESYSTEM_METADATA_DB_PATH", "~/.context42/databases/filesystem_metadata.db")
+            auto_reconcile = os.getenv("FILESYSTEM_AUTO_RECONCILE", "true").lower() == "true"
+            
+            return {
+                "storage_mode": "filesystem",
+                "filesystem_path": str(Path(filesystem_path).expanduser().resolve()),
+                "metadata_db_path": str(Path(metadata_db_path).expanduser().resolve()),
+                "auto_reconcile": auto_reconcile
+            }
+        else:
+            logger.warning(f"Unknown collection storage mode: {storage_mode}, falling back to sqlite")
+            return {
+                "storage_mode": "sqlite",
+                "database_path": str(cls.get_collections_db_path())
+            }
+    
+    @classmethod
     def ensure_directory_structure(cls) -> None:
         """
         Create the complete ~/.context42/ directory structure.
@@ -253,10 +286,15 @@ class Context42Config:
             "collections_db_exists": cls.get_collections_db_path().exists(),
             "vector_db_exists": cls.get_vector_db_path().exists(),
             "base_dir_writable": cls._can_create_directory(cls.get_base_dir() / "test_write"),
+            "collection_storage_config": cls.get_collection_storage_config(),
             "env_overrides": {
                 "CONTEXT42_HOME": os.getenv("CONTEXT42_HOME"),
                 "COLLECTIONS_DB_PATH": os.getenv("COLLECTIONS_DB_PATH"), 
                 "VECTOR_DB_PATH": os.getenv("VECTOR_DB_PATH"),
                 "RAG_DB_PATH": os.getenv("RAG_DB_PATH"),  # Legacy
+                "COLLECTION_STORAGE_MODE": os.getenv("COLLECTION_STORAGE_MODE"),
+                "FILESYSTEM_COLLECTIONS_PATH": os.getenv("FILESYSTEM_COLLECTIONS_PATH"),
+                "FILESYSTEM_METADATA_DB_PATH": os.getenv("FILESYSTEM_METADATA_DB_PATH"),
+                "FILESYSTEM_AUTO_RECONCILE": os.getenv("FILESYSTEM_AUTO_RECONCILE"),
             }
         }

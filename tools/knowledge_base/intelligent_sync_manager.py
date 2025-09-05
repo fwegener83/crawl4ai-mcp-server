@@ -140,7 +140,7 @@ class IntelligentSyncManager:
             if not success:
                 logger.warning(f"Failed to save persistent sync status for collection {collection_name}")
     
-    def get_collection_sync_status(self, collection_name: str) -> VectorSyncStatus:
+    async def get_collection_sync_status(self, collection_name: str) -> VectorSyncStatus:
         """Get current sync status for a collection with live change detection."""
         if collection_name not in self.sync_status:
             # Initialize status for new collection
@@ -156,12 +156,12 @@ class IntelligentSyncManager:
         if sync_status.status == SyncStatus.IN_SYNC and sync_status.sync_enabled:
             try:
                 # Quick change detection without full file processing
-                has_changes = self._quick_change_detection(collection_name)
+                has_changes = await self._quick_change_detection(collection_name)
                 if has_changes:
                     logger.info(f"Live change detection: Collection '{collection_name}' has file changes - updating status to out_of_sync")
                     sync_status.status = SyncStatus.OUT_OF_SYNC
                     # Get actual changed files count from quick detection
-                    changed_count = self._get_changed_files_count(collection_name)
+                    changed_count = await self._get_changed_files_count(collection_name)
                     sync_status.changed_files_count = changed_count
                     
                     # Save updated status
@@ -211,7 +211,7 @@ class IntelligentSyncManager:
         logger.info(f"Starting sync for collection '{collection_name}' (job_id: {job_id})")
         
         # Initialize sync status
-        sync_status = self.get_collection_sync_status(collection_name)
+        sync_status = await self.get_collection_sync_status(collection_name)
         sync_status.status = SyncStatus.SYNCING
         sync_status.last_sync_attempt = datetime.now(timezone.utc)
         sync_status.errors.clear()
@@ -231,12 +231,12 @@ class IntelligentSyncManager:
         
         try:
             # Check if collection exists
-            if not self._collection_exists(collection_name):
+            if not await self._collection_exists(collection_name):
                 result.errors.append(f"Collection '{collection_name}' does not exist")
                 return result
             
             # Get collection files info
-            files_info = self._get_collection_files(collection_name)
+            files_info = await self._get_collection_files(collection_name)
             
             if not files_info:
                 logger.warning(f"Collection '{collection_name}' has no files to sync")
@@ -375,7 +375,7 @@ class IntelligentSyncManager:
                     
                 try:
                     # Read file content and calculate hash
-                    read_result = self.collection_manager.read_file(
+                    read_result = await self.collection_manager.read_file(
                         collection_name, file_info['name'], file_info.get('folder', '')
                     )
                     
@@ -413,7 +413,7 @@ class IntelligentSyncManager:
             
             try:
                 # Read file content and calculate hash
-                read_result = self.collection_manager.read_file(
+                read_result = await self.collection_manager.read_file(
                     collection_name, file_info['name'], file_info.get('folder', '')
                 )
                 
@@ -826,18 +826,18 @@ class IntelligentSyncManager:
                 "results": []
             }
     
-    def _collection_exists(self, collection_name: str) -> bool:
+    async def _collection_exists(self, collection_name: str) -> bool:
         """Check if collection exists."""
         try:
-            result = self.collection_manager.get_collection_info(collection_name)
+            result = await self.collection_manager.get_collection_info(collection_name)
             return result.get('success', False)
         except Exception:
             return False
     
-    def _get_collection_files(self, collection_name: str) -> List[Dict[str, Any]]:
+    async def _get_collection_files(self, collection_name: str) -> List[Dict[str, Any]]:
         """Get list of files in collection."""
         try:
-            result = self.collection_manager.list_files_in_collection(collection_name)
+            result = await self.collection_manager.list_files_in_collection(collection_name)
             if result.get('success'):
                 return result.get('files', [])
             return []
@@ -866,15 +866,15 @@ class IntelligentSyncManager:
             logger.error(f"Error counting chunks for collection {collection_name}: {str(e)}")
             return 0
     
-    def enable_collection_sync(self, collection_name: str) -> None:
+    async def enable_collection_sync(self, collection_name: str) -> None:
         """Enable sync for a collection."""
-        sync_status = self.get_collection_sync_status(collection_name)
+        sync_status = await self.get_collection_sync_status(collection_name)
         sync_status.sync_enabled = True
         logger.info(f"Sync enabled for collection '{collection_name}'")
     
-    def disable_collection_sync(self, collection_name: str) -> None:
+    async def disable_collection_sync(self, collection_name: str) -> None:
         """Disable sync for a collection."""
-        sync_status = self.get_collection_sync_status(collection_name)
+        sync_status = await self.get_collection_sync_status(collection_name)
         sync_status.sync_enabled = False
         logger.info(f"Sync disabled for collection '{collection_name}'")
     
@@ -956,7 +956,7 @@ class IntelligentSyncManager:
         
         return stats
     
-    def _quick_change_detection(self, collection_name: str) -> bool:
+    async def _quick_change_detection(self, collection_name: str) -> bool:
         """
         Quick change detection without full file processing.
         
@@ -965,7 +965,7 @@ class IntelligentSyncManager:
         """
         try:
             # Get current files in collection
-            files_info = self._get_collection_files(collection_name)
+            files_info = await self._get_collection_files(collection_name)
             if not files_info:
                 return False  # No files, no changes
             
@@ -1002,7 +1002,7 @@ class IntelligentSyncManager:
                 
                 try:
                     # Read current file content and calculate hash
-                    read_result = self.collection_manager.read_file(
+                    read_result = await self.collection_manager.read_file(
                         collection_name, file_info['name'], file_info.get('folder', '')
                     )
                     
@@ -1037,13 +1037,13 @@ class IntelligentSyncManager:
             logger.error(f"Quick change detection failed for collection '{collection_name}': {e}")
             return False  # Assume no changes on error (conservative approach)
     
-    def _get_changed_files_count(self, collection_name: str) -> int:
+    async def _get_changed_files_count(self, collection_name: str) -> int:
         """
         Count the number of changed files in a collection.
         Similar to _quick_change_detection but returns the actual count.
         """
         try:
-            files_info = self._get_collection_files(collection_name)
+            files_info = await self._get_collection_files(collection_name)
             if not files_info:
                 return 0
             
@@ -1073,7 +1073,7 @@ class IntelligentSyncManager:
                 
                 try:
                     # Read and check hash
-                    read_result = self.collection_manager.read_file(
+                    read_result = await self.collection_manager.read_file(
                         collection_name, file_info['name'], file_info.get('folder', '')
                     )
                     

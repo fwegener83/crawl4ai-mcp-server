@@ -18,8 +18,16 @@ from .knowledge_base.vector_sync_schemas import (
     VectorSyncStatus, SyncConfiguration, SyncResult, SyncStatus
 )
 from .knowledge_base.vector_store import VectorStore
-# CollectionFileManager removed - using database-only DatabaseCollectionAdapter
-from .knowledge_base.database_collection_adapter import DatabaseCollectionAdapter
+# Support both collection manager types for backward compatibility
+try:
+    from .knowledge_base.database_collection_adapter import DatabaseCollectionAdapter
+except ImportError:
+    DatabaseCollectionAdapter = None
+
+try:
+    from .filesystem_collection_manager import FilesystemCollectionManager
+except ImportError:
+    FilesystemCollectionManager = None
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +90,7 @@ class VectorSyncAPI:
         self,
         sync_manager: IntelligentSyncManager,
         vector_store: VectorStore,
-        collection_manager: DatabaseCollectionAdapter
+        collection_manager  # Union[DatabaseCollectionAdapter, FilesystemCollectionManager, None]
     ):
         """Initialize the API handler.
         
@@ -117,7 +125,7 @@ class VectorSyncAPI:
         """
         try:
             # Validate collection exists
-            if not self._collection_exists(collection_name):
+            if not await self._collection_exists(collection_name):
                 return SyncCollectionResponse(
                     success=False,
                     job_id="",
@@ -126,7 +134,7 @@ class VectorSyncAPI:
                 )
             
             # Check if sync is enabled for this collection
-            sync_status = self.sync_manager.get_collection_sync_status(collection_name)
+            sync_status = await self.sync_manager.get_collection_sync_status(collection_name)
             if not sync_status.sync_enabled:
                 raise HTTPException(
                     status_code=400,
@@ -204,7 +212,7 @@ class VectorSyncAPI:
             }
             
             # Get updated sync status after successful sync
-            updated_sync_status = self.sync_manager.get_collection_sync_status(collection_name)
+            updated_sync_status = await self.sync_manager.get_collection_sync_status(collection_name)
             
             response = SyncCollectionResponse(
                 success=sync_result.success,
@@ -260,13 +268,13 @@ class VectorSyncAPI:
             Collection sync status
         """
         try:
-            if not self._collection_exists(collection_name):
+            if not await self._collection_exists(collection_name):
                 raise HTTPException(
                     status_code=404,
                     detail=f"Collection '{collection_name}' not found"
                 )
             
-            sync_status = self.sync_manager.get_collection_sync_status(collection_name)
+            sync_status = await self.sync_manager.get_collection_sync_status(collection_name)
             
             return CollectionSyncStatusResponse(
                 success=True,
@@ -344,7 +352,7 @@ class VectorSyncAPI:
     async def enable_collection_sync(self, collection_name: str) -> Dict[str, Any]:
         """Enable sync for a collection."""
         try:
-            if not self._collection_exists(collection_name):
+            if not await self._collection_exists(collection_name):
                 raise HTTPException(
                     status_code=404,
                     detail=f"Collection '{collection_name}' not found"
@@ -369,7 +377,7 @@ class VectorSyncAPI:
     async def disable_collection_sync(self, collection_name: str) -> Dict[str, Any]:
         """Disable sync for a collection."""
         try:
-            if not self._collection_exists(collection_name):
+            if not await self._collection_exists(collection_name):
                 raise HTTPException(
                     status_code=404,
                     detail=f"Collection '{collection_name}' not found"
@@ -394,7 +402,7 @@ class VectorSyncAPI:
     async def delete_collection_vectors(self, collection_name: str) -> Dict[str, Any]:
         """Delete all vectors for a collection."""
         try:
-            if not self._collection_exists(collection_name):
+            if not await self._collection_exists(collection_name):
                 raise HTTPException(
                     status_code=404,
                     detail=f"Collection '{collection_name}' not found"
@@ -432,7 +440,7 @@ class VectorSyncAPI:
             Search results with file location mapping
         """
         # Existenzprüfung für Collection
-        if request.collection_name and not self._collection_exists(request.collection_name):
+        if request.collection_name and not await self._collection_exists(request.collection_name):
             raise HTTPException(
                 status_code=404,
                 detail=f"Collection '{request.collection_name}' not found"
@@ -586,11 +594,11 @@ class VectorSyncAPI:
                 'error': str(e)
             }
     
-    def _collection_exists(self, collection_name: str) -> bool:
+    async def _collection_exists(self, collection_name: str) -> bool:
         """Check if collection exists."""
         try:
-            self.collection_manager.get_collection_info(collection_name)
-            return True
+            result = await self.collection_manager.get_collection_info(collection_name)
+            return result.get("success", False)
         except Exception:
             return False
 
